@@ -1,0 +1,10 @@
+fn say() std.println('Hello, World!')
+fn bye() {
+    std.println('Goodbye!')
+}
+
+if 1 + 2 {
+    3 -> say()
+}
+bye()
+
