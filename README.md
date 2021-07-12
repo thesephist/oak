@@ -31,7 +31,7 @@ listLiteral := '[' ( expr ',' )* ']' // last comma optional
 objectLiteral := '{' ( expr ':' expr ',' )* '}' // last comma optional
 fnLiteral := 'fn' '(' ( identifier ',' )* (identifier '...')? ')' expr
 
-identifier := \w_ (\w\d_?!)*
+identifier := \w_ (\w\d_?!)* | _
 
 assignment := (
     identifier '<-' expr | // nonlocal update
@@ -43,7 +43,7 @@ assignment := (
 propertyAccess := identifier ('.' identifier)+
 
 unaryExpr := ('!' | '-') expr
-binaryExpr := expr (+ - * / % ^ & |) binaryExpr
+binaryExpr := expr (+ - * / % ^ & | > < = >= <=) binaryExpr
 
 prefixCall := expr '(' (expr ',')* ')'
 infixCall := expr expr (
@@ -59,6 +59,27 @@ withExpr := 'with' prefixCall fnLiteral
 block := '{' expr* '}' | '(' expr* ')'
 ```
 
+### AST node types
+
+```
+nullLiteral
+stringLiteral
+numberLiteral
+booleanLiteral
+atomLiteral
+listLiteral
+objectLiteral
+fnLiteral
+identifier
+assignment
+propertyAccess
+unaryExpr
+binaryExpr
+fnCall
+ifExpr
+block
+```
+
 ## Code samples
 
 ```
@@ -69,6 +90,11 @@ std.println('Hello, World!')
 sq := fn(n) n * n
 fn sq(n) n * n
 fn sq(n) { n * n } // equivalent
+
+// side-effecting functions
+fn say() { std.println('Hi!') }
+// if no arguments, () is optiona
+fn { std.println('Hi!') }
 
 // factorial
 fn factorial(n) if n <= 1 {
@@ -97,7 +123,6 @@ with fetch('some.url.com')
 
 ```
 // file read
-// technically not accurate b/c open can fail, but you get the point
 with file := open('name.txt') fn(evt) if evt.type {
 	:error -> std.println(evt.message)
 	_ -> with read(file, 0, -1) fn(evt) {
@@ -118,8 +143,8 @@ with std.readFile('name.txt') fn(file) if file {
 
 ```
 // while loop
-fn () {
+fn {
     std.println('reading file...')
-} while fn() signal nil?
+} while fn { signal nil? }
 ```
 
