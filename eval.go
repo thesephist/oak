@@ -74,7 +74,7 @@ type StringValue []byte
 var emptyString = StringValue("")
 
 func (v StringValue) String() string {
-	return fmt.Sprintf("\"%v\"", string(v))
+	return fmt.Sprintf("'%s'", string(v))
 }
 func (v StringValue) Eq(u Value) bool {
 	if _, ok := u.(EmptyValue); ok {
@@ -121,6 +121,10 @@ func (v FloatValue) Eq(u Value) bool {
 }
 
 type BoolValue bool
+
+// interned booleans
+const mgnTrue = BoolValue(true)
+const mgnFalse = BoolValue(false)
 
 func (v BoolValue) String() string {
 	if v {
@@ -285,7 +289,7 @@ type Context struct {
 	scope
 }
 
-func NewContext(path string, cwd string) Context {
+func NewContext(path, cwd string) Context {
 	return Context{
 		Cwd:        cwd,
 		SourcePath: path,
@@ -326,26 +330,26 @@ func (e runtimeError) Error() string {
 }
 
 func (c *Context) Eval(programReader io.Reader) (Value, error) {
-	_, err := io.ReadAll(programReader)
+	program, err := io.ReadAll(programReader)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: tokenize and eval
+	tokenizer := newTokenizer(string(program))
+	tokens := tokenizer.tokenize()
 
-	return null, nil
+	parser := newParser(tokens)
+	nodes, err := parser.parse()
+	if err != nil {
+		return nil, err
+	}
+
+	return c.evalProgram(nodes)
 }
 
 func (c *Context) evalProgram(nodes []astNode) (Value, error) {
-	var val Value
-	var err error
-	for _, expr := range nodes {
-		val, err = c.evalExpr(expr, c.scope)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return val, nil
+	programBlock := blockNode{exprs: nodes}
+	return c.evalExpr(programBlock, c.scope)
 }
 
 func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
@@ -440,10 +444,61 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			// TODO: implement list destructuring assignment
 		case objectNode:
 			// TODO: implement object destructuring assignment
+		case propertyAccessNode:
+			// TODO: implement object property assignment
 		}
 		panic(fmt.Sprintf("Illegal left-hand side of assignment in %s", n))
 	case propertyAccessNode:
-		// TODO: implement
+		left, err := c.evalExpr(n.left, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		right, err := c.evalExpr(n.right, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		switch target := left.(type) {
+		case StringValue:
+			byteIndex, ok := right.(IntValue)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("Cannot index into string with non-integer index %s", right),
+				}
+			}
+
+			if byteIndex < 0 || int64(byteIndex) > int64(len(target)) {
+				return null, nil
+			}
+
+			return StringValue([]byte{target[byteIndex]}), nil
+		case ListValue:
+			listIndex, ok := right.(IntValue)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("Cannot index into list with non-integer index %s", right),
+				}
+			}
+
+			if listIndex < 0 || int64(listIndex) > int64(len(target)) {
+				return null, nil
+			}
+
+			return target[listIndex], nil
+		case ObjectValue:
+			objKey := right.String()
+
+			if val, ok := target[objKey]; ok {
+				return val, nil
+			}
+
+			return null, nil
+		}
+
+		return nil, runtimeError{
+			reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property access, got %s", left.String()),
+		}
 	case unaryNode:
 		// TODO: implement
 	case binaryNode:
@@ -466,7 +521,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			// TODO: implement restArgs
 			args = args[:len(fn.defn.args)]
 			fnScope := scope{
-				parent: &sc,
+				parent: &fn.scope,
 				vars:   map[string]Value{},
 			}
 			for i, argName := range fn.defn.args {
@@ -484,10 +539,15 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		// TODO: implement
 	case blockNode:
 		var err error
+		blockScope := scope{
+			parent: &sc,
+			vars:   map[string]Value{},
+		}
+
 		// empty block returns ? (null)
 		var returnVal Value = null
 		for _, expr := range n.exprs {
-			returnVal, err = c.evalExpr(expr, sc)
+			returnVal, err = c.evalExpr(expr, blockScope)
 			if err != nil {
 				return nil, err
 			}

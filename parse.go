@@ -27,7 +27,7 @@ type stringNode struct {
 }
 
 func (n stringNode) String() string {
-	return fmt.Sprintf("\"%s\"", strconv.Quote(n.payload))
+	return fmt.Sprintf("%s", strconv.Quote(n.payload))
 }
 
 type numberNode struct {

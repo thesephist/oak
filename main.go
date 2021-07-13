@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const progSample = `
 x := 42
@@ -41,38 +44,31 @@ const prog = `
 fn main {
 	print('Hello, World!\n')
 }
-
-curried := fn (a) fn (b) fn (c) {
-	print(a)
-	print(b)
-	print(c)
-	print('\n')
-}
-
 main()
+
+fn println(x) {
+	print(x), print('\n')
+}
+curried := fn(a) fn(b) fn(c) {
+	println(a)
+	println(b)
+	println(c)
+}
 
 curried('first')('second')('third')
 `
 
+/*
+ */
+
 func main() {
-	tokenizer := newTokenizer(prog)
-	tokens := tokenizer.tokenize()
-	fmt.Println(tokens)
-
-	parser := newParser(tokens)
-	nodes, err := parser.parse()
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	fmt.Println(nodes)
-
 	ctx := NewContext("<input>", "/tmp")
 	ctx.LoadBuiltins()
 
-	val, err := ctx.evalProgram(nodes)
+	val, err := ctx.Eval(strings.NewReader(prog))
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	fmt.Println(val)
 }
