@@ -3,11 +3,39 @@ package main
 import "fmt"
 
 const prog = `
-fn say(a, b, c...) {
-	std.println.do('Hello, World!')
+x := 42
+
+fn getTwo 2
+
+fn getThree() {
+	3
 }
 
-say(1, 2, 3)(xyz)`
+fn getFour {
+	a := 4
+	b := 10
+	a
+}
+
+fn getSecondArg(a, b) {
+	b
+}
+
+getFive := fn() {
+	getSecondArg(2, 5)
+}
+
+getFive()
+
+[1, 2, 3]
+{
+	a: 12
+	b: 'hello'
+	c: {
+		d: getFour()
+	}
+}
+`
 
 func main() {
 	tokenizer := newTokenizer(prog)

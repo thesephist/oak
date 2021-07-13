@@ -68,7 +68,7 @@ const (
 	withKeyword
 
 	// identifiers and literals
-	empty
+	underscore
 	identifier
 	trueLiteral
 	falseLiteral
@@ -146,7 +146,7 @@ func (t token) String() string {
 		return "fn"
 	case withKeyword:
 		return "with"
-	case empty:
+	case underscore:
 		return "_"
 	case identifier:
 		return fmt.Sprintf("var(%s)", t.payload)
@@ -242,6 +242,25 @@ func (t *tokenizer) readValidIdentifier() string {
 	return string(accumulator)
 }
 
+func (t *tokenizer) readValidNumeral() string {
+	accumulator := []rune{}
+	for {
+		if t.isEOF() {
+			break
+		}
+
+		c := t.next()
+		// TODO: make more robust, so 2.3.4 can't break it
+		if unicode.IsDigit(c) || c == '.' {
+			accumulator = append(accumulator, c)
+		} else {
+			t.back()
+			break
+		}
+	}
+	return string(accumulator)
+}
+
 func (t *tokenizer) nextToken() token {
 	c := t.next()
 
@@ -250,7 +269,10 @@ func (t *tokenizer) nextToken() token {
 	case ',':
 		return token{kind: comma, pos: t.currentPos()}
 	case '.':
-		if t.peek() == '.' && t.peekAhead(1) == '.' {
+		if unicode.IsDigit(t.peek()) {
+			// TODO: finish dot-leading decimals
+			return token{kind: unknown, pos: t.currentPos()}
+		} else if t.peek() == '.' && t.peekAhead(1) == '.' {
 			pos := t.currentPos()
 			t.next()
 			t.next()
@@ -270,10 +292,7 @@ func (t *tokenizer) nextToken() token {
 	case '}':
 		return token{kind: rightBrace, pos: t.currentPos()}
 	case ':':
-		if unicode.IsDigit(t.peekAhead(1)) {
-			// TODO: finish dot-leading decimals
-			return token{kind: comma, pos: t.currentPos()}
-		} else if t.peekAhead(1) == '=' {
+		if t.peek() == '=' {
 			pos := t.currentPos()
 			t.next()
 			return token{kind: assign, pos: pos}
@@ -296,7 +315,7 @@ func (t *tokenizer) nextToken() token {
 	case '+':
 		return token{kind: plus, pos: t.currentPos()}
 	case '-':
-		switch t.peekAhead(1) {
+		switch t.peek() {
 		case '>':
 			t.next()
 			return token{kind: branchArrow, pos: t.currentPos()}
@@ -315,7 +334,7 @@ func (t *tokenizer) nextToken() token {
 	case '|':
 		return token{kind: or, pos: t.currentPos()}
 	case '>':
-		if t.peekAhead(1) == '=' {
+		if t.peek() == '=' {
 			pos := t.currentPos()
 			t.next()
 			return token{kind: geq, pos: pos}
@@ -336,14 +355,19 @@ func (t *tokenizer) nextToken() token {
 			payload: payload,
 		}
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		// TODO: implement
-		fallthrough
+		pos := t.currentPos()
+		payload := string(c) + t.readValidNumeral()
+		return token{
+			kind:    numberLiteral,
+			pos:     pos,
+			payload: payload,
+		}
 	default:
 		pos := t.currentPos()
 		payload := string(c) + t.readValidIdentifier()
 		switch payload {
 		case "_":
-			return token{kind: empty, pos: pos}
+			return token{kind: underscore, pos: pos}
 		case "if":
 			return token{kind: ifKeyword, pos: pos}
 		case "fn":

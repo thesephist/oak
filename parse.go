@@ -10,6 +10,12 @@ type astNode interface {
 	String() string
 }
 
+type emptyNode struct{}
+
+func (n emptyNode) String() string {
+	return "_"
+}
+
 type nullNode struct{}
 
 func (n nullNode) String() string {
@@ -111,12 +117,6 @@ func (n fnNode) String() string {
 	}
 
 	return head + " " + n.body.String()
-}
-
-type emptyNode struct{}
-
-func (n emptyNode) String() string {
-	return "_"
 }
 
 type identifierNode struct {
@@ -364,15 +364,22 @@ func (p *parser) parseAtom() (astNode, error) {
 			if err != nil {
 				return nil, err
 			}
+			if _, err := p.expect(comma); err != nil {
+				return nil, err
+			}
+
 			itemNodes = append(itemNodes, node)
 		}
-		p.expect(rightBracket)
+		if _, err := p.expect(rightBracket); err != nil {
+			return nil, err
+		}
 
 		node := listNode{elems: itemNodes}
 		return p.parseMaybeAssignment(node)
 	case leftBrace:
 		// empty {} is always considered an object -- an empty block is illegal
 		if p.peek().kind == rightBrace {
+			p.next() // eat the rightBrace
 			return objectNode{entries: []objectEntryNode{}}, nil
 		}
 
@@ -423,7 +430,9 @@ func (p *parser) parseAtom() (astNode, error) {
 					val: val,
 				})
 			}
-			p.expect(rightBrace)
+			if _, err := p.expect(rightBrace); err != nil {
+				return nil, err
+			}
 
 			node := objectNode{entries: entries}
 			return p.parseMaybeAssignment(node)
@@ -446,7 +455,10 @@ func (p *parser) parseAtom() (astNode, error) {
 
 			exprs = append(exprs, expr)
 		}
-		p.expect(rightBrace)
+		if _, err := p.expect(rightBrace); err != nil {
+			return nil, err
+		}
+
 		return blockNode{exprs: exprs}, nil
 	case fnKeyword:
 		name := ""
@@ -480,12 +492,13 @@ func (p *parser) parseAtom() (astNode, error) {
 
 				args = append(args, arg.payload)
 
-				_, err = p.expect(comma)
-				if err != nil {
+				if _, err := p.expect(comma); err != nil {
 					return nil, err
 				}
 			}
-			p.expect(rightParen)
+			if _, err := p.expect(rightParen); err != nil {
+				return nil, err
+			}
 		}
 
 		// Exception to the "{} is empty object" rule is that `fn {}` parses as
@@ -509,7 +522,7 @@ func (p *parser) parseAtom() (astNode, error) {
 			restArg: restArg,
 			body:    body,
 		}, nil
-	case empty:
+	case underscore:
 		return emptyNode{}, nil
 	case identifier:
 		node := identifierNode{
@@ -542,7 +555,9 @@ func (p *parser) parseAtom() (astNode, error) {
 
 			exprs = append(exprs, expr)
 		}
-		p.expect(rightParen)
+		if _, err := p.expect(rightParen); err != nil {
+			return nil, err
+		}
 		return blockNode{exprs: exprs}, nil
 	}
 	return booleanNode{payload: false}, nil
@@ -578,12 +593,13 @@ func (p *parser) nextNode() (astNode, error) {
 				}
 				args = append(args, arg)
 
-				_, err = p.expect(comma)
-				if err != nil {
+				if _, err = p.expect(comma); err != nil {
 					return nil, err
 				}
 			}
-			p.expect(rightParen)
+			if _, err := p.expect(rightParen); err != nil {
+				return nil, err
+			}
 
 			node = fnCallNode{
 				fn:   node,
@@ -591,6 +607,12 @@ func (p *parser) nextNode() (astNode, error) {
 			}
 		case plus, minus, times, divide, modulus, greater, less, eq, geq, leq:
 			// TODO: binaryNode
+		case colon:
+			// node is object key
+			return node, nil
+		case rightParen, rightBracket, rightBrace:
+			// mistyped right delimiter
+			return node, nil
 		default:
 			// TODO: infix call
 		}
@@ -609,8 +631,7 @@ func (p *parser) parse() ([]astNode, error) {
 			return nodes, err
 		}
 
-		_, err = p.expect(comma)
-		if err != nil {
+		if _, err = p.expect(comma); err != nil {
 			return nodes, err
 		}
 
