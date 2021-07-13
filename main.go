@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-const prog = `
+const progSample = `
 x := 42
 
 fn getTwo 2
@@ -37,6 +37,23 @@ getFive()
 }
 `
 
+const prog = `
+fn main {
+	print('Hello, World!\n')
+}
+
+curried := fn (a) fn (b) fn (c) {
+	print(a)
+	print(b)
+	print(c)
+	print('\n')
+}
+
+main()
+
+curried('first')('second')('third')
+`
+
 func main() {
 	tokenizer := newTokenizer(prog)
 	tokens := tokenizer.tokenize()
@@ -51,9 +68,11 @@ func main() {
 	fmt.Println(nodes)
 
 	ctx := NewContext("<input>", "/tmp")
+	ctx.LoadBuiltins()
+
 	val, err := ctx.evalProgram(nodes)
 	if err != nil {
-		fmt.Println("%v", err)
+		fmt.Println(err)
 	}
 	fmt.Println(val)
 }

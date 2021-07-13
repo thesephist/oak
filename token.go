@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -155,7 +157,7 @@ func (t token) String() string {
 	case falseLiteral:
 		return "false"
 	case stringLiteral:
-		return fmt.Sprintf("string(%s)", t.payload)
+		return fmt.Sprintf("string(%s)", strconv.Quote(t.payload))
 	case numberLiteral:
 		return fmt.Sprintf("number(%s)", t.payload)
 	default:
@@ -343,16 +345,32 @@ func (t *tokenizer) nextToken() token {
 	case '=':
 		return token{kind: eq, pos: t.currentPos()}
 	case '\'':
-		// TODO: support escape sequences
 		// TODO: support literal newlines, extra tabs collapsed to newlines
-		// TODO: support escaped quote
+		// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 		pos := t.currentPos()
-		payload := t.readUntilRune('\'')
+		payloadBuilder := strings.Builder{}
+		for t.peek() != '\'' {
+			charInString := t.next()
+			if charInString == '\\' {
+				charInString = t.next()
+				switch charInString {
+				case 'n':
+					charInString = '\n'
+				case 'r':
+					charInString = '\r'
+				case 'f':
+					charInString = '\f'
+				case 't':
+					charInString = '\t'
+				}
+			}
+			payloadBuilder.WriteRune(charInString)
+		}
 		t.next() // read ending quote
 		return token{
 			kind:    stringLiteral,
 			pos:     pos,
-			payload: payload,
+			payload: payloadBuilder.String(),
 		}
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		pos := t.currentPos()

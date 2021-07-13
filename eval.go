@@ -453,12 +453,6 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		fn, ok := maybeFn.(FnValue)
-		if !ok {
-			return nil, runtimeError{
-				reason: fmt.Sprintf("%s is not a function and cannot be called"),
-			}
-		}
 
 		args := make([]Value, len(n.args))
 		for i, argNode := range n.args {
@@ -467,16 +461,25 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				return nil, err
 			}
 		}
-		// TODO: implement restArgs
-		args = args[:len(fn.defn.args)]
-		fnScope := scope{
-			parent: &sc,
-			vars:   map[string]Value{},
+
+		if fn, ok := maybeFn.(FnValue); ok {
+			// TODO: implement restArgs
+			args = args[:len(fn.defn.args)]
+			fnScope := scope{
+				parent: &sc,
+				vars:   map[string]Value{},
+			}
+			for i, argName := range fn.defn.args {
+				fnScope.put(argName, args[i])
+			}
+			return c.evalExpr(fn.defn.body, fnScope)
+		} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
+			return fn.fn(args)
+		} else {
+			return nil, runtimeError{
+				reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
+			}
 		}
-		for i, argName := range fn.defn.args {
-			fnScope.put(argName, args[i])
-		}
-		return c.evalExpr(fn.defn.body, fnScope)
 	case ifExprNode:
 		// TODO: implement
 	case blockNode:
