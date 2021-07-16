@@ -442,10 +442,13 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			return assignedValue, nil
 		case listNode:
 			// TODO: implement list destructuring assignment
+			panic("list destructuring not implemented!")
 		case objectNode:
 			// TODO: implement object destructuring assignment
+			panic("object destructuring not implemented!")
 		case propertyAccessNode:
 			// TODO: implement object property assignment
+			panic("assign to property not implemented!")
 		}
 		panic(fmt.Sprintf("Illegal left-hand side of assignment in %s", n))
 	case propertyAccessNode:
@@ -501,8 +504,10 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		}
 	case unaryNode:
 		// TODO: implement
+		panic("unaryNode not implemented!")
 	case binaryNode:
 		// TODO: implement
+		panic("binaryNode not implemented!")
 	case fnCallNode:
 		maybeFn, err := c.evalExpr(n.fn, sc)
 		if err != nil {
@@ -536,7 +541,22 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 		}
 	case ifExprNode:
-		// TODO: implement
+		cond, err := c.evalExpr(n.cond, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, branch := range n.branches {
+			target, err := c.evalExpr(branch.target, sc)
+			if err != nil {
+				return nil, err
+			}
+
+			if cond.Eq(target) {
+				return c.evalExpr(branch.body, sc)
+			}
+		}
+		return null, nil
 	case blockNode:
 		var err error
 		blockScope := scope{

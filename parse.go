@@ -320,6 +320,7 @@ func (p *parser) parseMaybeAssignment(left astNode) (astNode, error) {
 	return node, nil
 }
 
+// TODO: change name so as not to conflict with the atom astNode type
 func (p *parser) parseAtom() (astNode, error) {
 	tok := p.next()
 	switch tok.kind {
@@ -539,9 +540,49 @@ func (p *parser) parseAtom() (astNode, error) {
 			right: right,
 		}, nil
 	case ifKeyword:
-		// TODO: ifExprNode
+		condNode, err := p.nextNode()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err = p.expect(leftBrace); err != nil {
+			return nil, err
+		}
+
+		branches := []ifBranchNode{}
+		for !p.isEOF() && p.peek().kind != rightBrace {
+			target, err := p.nextNode()
+			if err != nil {
+				return nil, err
+			}
+			if _, err := p.expect(branchArrow); err != nil {
+				return nil, err
+			}
+
+			body, err := p.nextNode()
+			if err != nil {
+				return nil, err
+			}
+			if _, err := p.expect(comma); err != nil {
+				return nil, err
+			}
+
+			branches = append(branches, ifBranchNode{
+				target: target,
+				body:   body,
+			})
+		}
+		if _, err := p.expect(rightBrace); err != nil {
+			return nil, err
+		}
+
+		return ifExprNode{
+			cond:     condNode,
+			branches: branches,
+		}, nil
 	case withKeyword:
 		// TODO: fnCallNode
+		panic("with expression not implemented")
 	case leftParen:
 		exprs := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightParen {
@@ -607,14 +648,19 @@ func (p *parser) nextNode() (astNode, error) {
 			}
 		case plus, minus, times, divide, modulus, greater, less, eq, geq, leq:
 			// TODO: binaryNode
-		case colon:
+			panic("binaryNode parse not implemented")
+		case colon,
 			// node is object key
-			return node, nil
-		case rightParen, rightBracket, rightBrace:
+			leftBrace,
+			// node is if expr condition
+			branchArrow,
+			// node is if branch target
+			rightParen, rightBracket, rightBrace:
 			// mistyped right delimiter
 			return node, nil
 		default:
 			// TODO: infix call
+			panic("infix call not implemented")
 		}
 	}
 	// the trailing comma is handled as necessary in callers of nextNode
@@ -626,6 +672,11 @@ func (p *parser) parse() ([]astNode, error) {
 	nodes := []astNode{}
 
 	for !p.isEOF() {
+		if p.peek().kind == comment {
+			p.next()
+			continue
+		}
+
 		node, err := p.nextNode()
 		if err != nil {
 			return nodes, err

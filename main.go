@@ -40,10 +40,9 @@ getFive()
 }
 `
 
-const prog = `
-fn main {
-	print('Hello, World!\n')
-}
+const prog2 = `
+// main loop
+fn main print('Hello, World!\n')
 main()
 
 fn println(x) {
@@ -58,8 +57,21 @@ curried := fn(a) fn(b) fn(c) {
 curried('first')('second')('third')
 `
 
-/*
- */
+const prog = `
+fn println(x) {
+	print(x)
+	print('\n')
+}
+
+fn one?(n) if n {
+	1 -> println('is true')
+	_ -> println('is false')
+}
+
+one?(1)
+one?(2)
+one?(3)
+`
 
 func main() {
 	ctx := NewContext("<input>", "/tmp")

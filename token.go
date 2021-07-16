@@ -31,6 +31,7 @@ type tokKind int
 const (
 	// sentinel
 	unknown tokKind = iota
+	comment
 
 	// language tokens
 	comma
@@ -86,6 +87,8 @@ type token struct {
 
 func (t token) String() string {
 	switch t.kind {
+	case comment:
+		return fmt.Sprintf("// %s", t.payload)
 	case comma:
 		return ","
 	case dot:
@@ -266,7 +269,6 @@ func (t *tokenizer) readValidNumeral() string {
 func (t *tokenizer) nextToken() token {
 	c := t.next()
 
-	// TODO: tokenize comments
 	switch c {
 	case ',':
 		return token{kind: comma, pos: t.currentPos()}
@@ -317,8 +319,7 @@ func (t *tokenizer) nextToken() token {
 	case '+':
 		return token{kind: plus, pos: t.currentPos()}
 	case '-':
-		switch t.peek() {
-		case '>':
+		if t.peek() == '>' {
 			t.next()
 			return token{kind: branchArrow, pos: t.currentPos()}
 		}
@@ -326,6 +327,17 @@ func (t *tokenizer) nextToken() token {
 	case '*':
 		return token{kind: times, pos: t.currentPos()}
 	case '/':
+		if t.peek() == '/' {
+			pos := t.currentPos()
+			t.next()
+			commentString := strings.TrimSpace(t.readUntilRune('\n'))
+			t.next() // eat the '\n'
+			return token{
+				kind:    comment,
+				pos:     pos,
+				payload: commentString,
+			}
+		}
 		return token{kind: divide, pos: t.currentPos()}
 	case '%':
 		return token{kind: modulus, pos: t.currentPos()}
