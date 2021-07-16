@@ -97,7 +97,7 @@ list := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 each(list, fn(i) println(fib(i)))
 `
 
-const prog = `
+const prog5 = `
 fn println(x) print(string(x) + '\n')
 
 fn count(max) {
@@ -113,6 +113,14 @@ fn count(max) {
 }
 
 count(20)
+`
+
+const prog = `
+fn add(a, b) {
+	a + b
+}
+
+with add(10) 40
 `
 
 func main() {

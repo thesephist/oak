@@ -691,7 +691,18 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 		if fn, ok := maybeFn.(FnValue); ok {
 			// TODO: implement restArgs
-			args = args[:len(fn.defn.args)]
+			if len(args) < len(fn.defn.args) {
+				// if not enough arguments, fill them with nulls
+				difference := len(fn.defn.args) - len(args)
+				extraArgs := make([]Value, difference)
+				for i := 0; i < difference; i++ {
+					extraArgs[i] = null
+				}
+				args = append(args, extraArgs...)
+			} else {
+				// if too many arguments, just slice to the right size
+				args = args[:len(fn.defn.args)]
+			}
 			fnScope := scope{
 				parent: &fn.scope,
 				vars:   map[string]Value{},

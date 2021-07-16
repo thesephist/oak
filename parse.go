@@ -339,8 +339,10 @@ func (p *parser) parseMaybeAssignment(left astNode) (astNode, error) {
 	return node, nil
 }
 
-// TODO: change name so as not to conflict with the atom astNode type
-func (p *parser) parseAtom() (astNode, error) {
+// parseUnit is responsible for parsing the smallest complete syntactic "units"
+// of Magnolia's syntax, like literals including function literals, grouped
+// expressions in blocks, and if/with expressions.
+func (p *parser) parseUnit() (astNode, error) {
 	tok := p.next()
 	switch tok.kind {
 	case qmark:
@@ -600,8 +602,25 @@ func (p *parser) parseAtom() (astNode, error) {
 			branches: branches,
 		}, nil
 	case withKeyword:
-		// TODO: fnCallNode
-		panic("with expression not implemented")
+		withExprBase, err := p.nextNode()
+		if err != nil {
+			return nil, err
+		}
+
+		withExprBaseCall, ok := withExprBase.(fnCallNode)
+		if !ok {
+			return nil, parseError{
+				reason: fmt.Sprintf("with keyword should be followed by a function call, found %s", withExprBase),
+			}
+		}
+
+		withExprLastArg, err := p.nextNode()
+		if err != nil {
+			return nil, err
+		}
+
+		withExprBaseCall.args = append(withExprBaseCall.args, withExprLastArg)
+		return withExprBaseCall, nil
 	case leftParen:
 		exprs := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightParen {
@@ -691,7 +710,7 @@ func (p *parser) parseBinaryExpr(left astNode) (astNode, error) {
 }
 
 func (p *parser) nextNode() (astNode, error) {
-	node, err := p.parseAtom()
+	node, err := p.parseUnit()
 	if err != nil {
 		return nil, err
 	}
@@ -700,7 +719,7 @@ func (p *parser) nextNode() (astNode, error) {
 		switch p.peek().kind {
 		case dot:
 			p.next() // eat the dot
-			right, err := p.parseAtom()
+			right, err := p.parseUnit()
 			if err != nil {
 				return nil, err
 			}
@@ -749,8 +768,9 @@ func (p *parser) nextNode() (astNode, error) {
 			// mistyped right delimiter
 			return node, nil
 		default:
-			// TODO: infix call
-			panic("infix call not implemented")
+			// TODO: infix call with a special token
+			// panic("infix call not implemented")
+			return node, nil
 		}
 	}
 	// the trailing comma is handled as necessary in callers of nextNode
