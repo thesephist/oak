@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 )
 
 func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
@@ -34,19 +36,18 @@ func (v BuiltinFnValue) Eq(u Value) bool {
 	return false
 }
 
+func (c *Context) LoadFunc(name string, fn func([]Value) (Value, error)) {
+	c.scope.put(name, BuiltinFnValue{
+		name: name,
+		fn:   fn,
+	})
+}
+
 func (c *Context) LoadBuiltins() {
-	c.scope.put("string", BuiltinFnValue{
-		name: "string",
-		fn:   c.mgnString,
-	})
-	c.scope.put("len", BuiltinFnValue{
-		name: "len",
-		fn:   c.mgnLen,
-	})
-	c.scope.put("print", BuiltinFnValue{
-		name: "print",
-		fn:   c.mgnPrint,
-	})
+	c.LoadFunc("import", c.mgnImport)
+	c.LoadFunc("string", c.mgnString)
+	c.LoadFunc("len", c.mgnLen)
+	c.LoadFunc("print", c.mgnPrint)
 }
 
 func (c *Context) mgnString(args []Value) (Value, error) {
@@ -60,6 +61,46 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 	default:
 		return StringValue([]byte(arg.String())), nil
 	}
+}
+
+func (c *Context) mgnImport(args []Value) (Value, error) {
+	if err := c.requireArgLen("import", args, 1); err != nil {
+		return nil, err
+	}
+
+	pathBytes, ok := args[0].(StringValue)
+	if !ok {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
+		}
+	}
+	path := string(pathBytes) + ".mgn"
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(c.rootPath, path)
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("could not open %s, %s", path, err.Error()),
+		}
+	}
+	defer file.Close()
+
+	if imported, ok := c.importMap[path]; ok {
+		return ObjectValue(imported.vars), nil
+	}
+
+	ctx := NewContext(path, c.rootPath)
+	ctx.importMap = c.importMap
+	ctx.LoadBuiltins()
+	_, err = ctx.Eval(file)
+	if err != nil {
+		return nil, err
+	}
+
+	c.importMap[path] = ctx.scope
+	return ObjectValue(ctx.scope.vars), nil
 }
 
 func (c *Context) mgnLen(args []Value) (Value, error) {
@@ -81,7 +122,6 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	}
 }
 
-// TODO: temp helper, remove when it's time
 func (c *Context) mgnPrint(args []Value) (Value, error) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
@@ -94,8 +134,8 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 		}
 	}
 
-	fmt.Print(string(outputString))
-	return null, nil
+	n, _ := os.Stdout.Write(outputString)
+	return IntValue(n), nil
 }
 
 func (c *Context) mgnOpen(

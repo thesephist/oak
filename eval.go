@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // byte slice helpers from the Ink interpreter source code,
@@ -281,23 +282,25 @@ func (sc *scope) update(name string, v Value) error {
 }
 
 type Context struct {
-	// current working directory of this context, used for loading other
-	// modules with relative paths / URLs
-	Cwd string
-	// path or descriptor of the file being run, used for error reporting
-	SourcePath string
+	// directory containing the root file of this context, used for loading
+	// other modules with relative paths / URLs
+	rootPath string
 	// top level ("global") scope of this context
 	scope
+	// interpreter lock to ensure lack of data races
+	sync.Mutex
+	// for deduplicating imports
+	importMap map[string]scope
 }
 
-func NewContext(path, cwd string) Context {
+func NewContext(path, rootPath string) Context {
 	return Context{
-		Cwd:        cwd,
-		SourcePath: path,
+		rootPath: rootPath,
 		scope: scope{
 			parent: nil,
 			vars:   map[string]Value{},
 		},
+		importMap: map[string]scope{},
 	}
 }
 
@@ -331,6 +334,9 @@ func (e runtimeError) Error() string {
 }
 
 func (c *Context) Eval(programReader io.Reader) (Value, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	program, err := io.ReadAll(programReader)
 	if err != nil {
 		return nil, err
@@ -416,6 +422,14 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
 }
 
+func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
+	if ident, ok := node.(identifierNode); ok {
+		return StringValue([]byte(ident.payload)), nil
+	}
+
+	return c.evalExpr(node, sc)
+}
+
 func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 	switch n := node.(type) {
 	case emptyNode:
@@ -493,6 +507,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		switch left := n.left.(type) {
 		case identifierNode:
 			if n.isLocal {
@@ -505,14 +520,96 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 			return assignedValue, nil
 		case listNode:
-			// TODO: implement list destructuring assignment
-			panic("list destructuring not implemented!")
+			assignedList, ok := assignedValue.(ListValue)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("right side %s of list destructuring is not a list", n.right),
+				}
+			}
+
+			for i, mustBeIdent := range left.elems {
+				ident, ok := mustBeIdent.(identifierNode)
+				if !ok {
+					if _, ok = mustBeIdent.(emptyNode); ok {
+						continue
+					}
+
+					return nil, runtimeError{
+						reason: fmt.Sprintf("element %s in destructured list %s is not an identifier", mustBeIdent, left),
+					}
+				}
+
+				var destructuredEl Value
+				if i < len(assignedList) {
+					destructuredEl = assignedList[i]
+				} else {
+					destructuredEl = null
+				}
+
+				if n.isLocal {
+					sc.put(ident.payload, destructuredEl)
+				} else {
+					err := sc.update(ident.payload, destructuredEl)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			return assignedValue, nil
 		case objectNode:
-			// TODO: implement object destructuring assignment
-			panic("object destructuring not implemented!")
+			assignedObj, ok := assignedValue.(ObjectValue)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("right side %s of object destructuring is not an object", n.right),
+				}
+			}
+
+			for _, entryNode := range left.entries {
+				key, err := c.evalAsObjKey(entryNode.key, sc)
+				if err != nil {
+					return nil, err
+				}
+
+				mustBeIdent := entryNode.val
+				ident, ok := mustBeIdent.(identifierNode)
+				if !ok {
+					if _, ok = mustBeIdent.(emptyNode); ok {
+						continue
+					}
+
+					return nil, runtimeError{
+						reason: fmt.Sprintf("value %s in destructured object %s is not an identifier", mustBeIdent, left),
+					}
+				}
+
+				var keyString string
+				if key, ok := key.(StringValue); ok {
+					keyString = string(key)
+				} else {
+					keyString = key.String()
+				}
+
+				var destructuredEl Value
+				if val, ok := assignedObj[keyString]; ok {
+					destructuredEl = val
+				} else {
+					destructuredEl = null
+				}
+
+				if n.isLocal {
+					sc.put(ident.payload, destructuredEl)
+				} else {
+					err := sc.update(ident.payload, destructuredEl)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			return assignedValue, nil
 		case propertyAccessNode:
 			// TODO: implement object property assignment
 			panic("assign to property not implemented!")
+			return assignedValue, nil
 		}
 		panic(fmt.Sprintf("Illegal left-hand side of assignment in %s", n))
 	case propertyAccessNode:
@@ -521,15 +618,9 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			return nil, err
 		}
 
-		var right Value
-		if rightIdent, ok := n.right.(identifierNode); ok {
-			right = StringValue([]byte(rightIdent.payload))
-		} else {
-			var err error
-			right, err = c.evalExpr(n.right, sc)
-			if err != nil {
-				return nil, err
-			}
+		right, err := c.evalAsObjKey(n.right, sc)
+		if err != nil {
+			return nil, err
 		}
 
 		switch target := left.(type) {

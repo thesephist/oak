@@ -1,0 +1,4 @@
+// core standard library
+
+fn println(x) print(string(x) + '\n')
+

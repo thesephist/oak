@@ -80,6 +80,57 @@ ifExpr
 block
 ```
 
+## Builtin functions
+
+```
+-- language
+import(path)
+string(x)
+int(x)
+float(x)
+atom(c)
+codepoint(c)
+char(n)
+type(x)
+len(x)
+keys(x)
+
+-- os
+args()
+env()
+time()
+exit(code)
+rand(type, max)
+wait(duration, cb)
+exec(path, args, stdin, cb) // cb receives stdout, stderr, end events
+---- sync APIs
+input()
+print()
+sleep(duration)
+---- async IO APIs
+ls(path, cb)
+mkdir(path, cb)
+rm(path, cb)
+stat(path, cb)
+open(path, flags, cb)
+read(fd, offset, length, cb)
+write(fd, offset, data, cb)
+close(fd, cb)
+-- networking APIs
+close := listen(host, handler)
+req(data, cb)
+
+-- math, all accept only floats except pow()
+sin(n)
+cos(n)
+tan(n)
+asin(n)
+acos(n)
+atan(n)
+pow(b, n)
+ln(base, n)
+```
+
 ## Code samples
 
 ```
@@ -123,14 +174,14 @@ with fetch('some.url.com')
 
 ```
 // file read
-with file := open('name.txt') fn(evt) if evt.type {
+with open('name.txt') fn(evt) if evt.type {
 	:error -> std.println(evt.message)
-	_ -> with read(file, 0, -1) fn(evt) {
+	_ -> with read(evt.fd, 0, -1) fn(evt) {
 		if evt.type {
 			:error -> std.println(evt.message)
 			_ -> std.printf('file data: {0}', evt.data)
 		}
-		close(file)
+		close(evt.fd)
 	}
 }
 

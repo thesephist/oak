@@ -543,7 +543,8 @@ func (p *parser) parseUnit() (astNode, error) {
 			body:    body,
 		}, nil
 	case underscore:
-		return emptyNode{}, nil
+		node := emptyNode{}
+		return p.parseMaybeAssignment(node)
 	case identifier:
 		node := identifierNode{
 			payload: tok.payload,

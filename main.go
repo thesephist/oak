@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -31,17 +32,6 @@ func main() {
 	runRepl()
 }
 
-func newOsCtx() Context {
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Could not get working directory")
-		os.Exit(1)
-	}
-	ctx := NewContext("<input>", cwd)
-	ctx.LoadBuiltins()
-	return ctx
-}
-
 func runRepl() {
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -50,7 +40,13 @@ func runRepl() {
 	}
 	defer rl.Close()
 
-	ctx := newOsCtx()
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Could not get working directory")
+		os.Exit(1)
+	}
+	ctx := NewContext("<input>", cwd)
+	ctx.LoadBuiltins()
 
 	for {
 		line, err := rl.Readline()
@@ -76,7 +72,9 @@ func runFile() {
 	}
 	defer file.Close()
 
-	ctx := newOsCtx()
+	ctx := NewContext("<input>", path.Dir(filePath))
+	ctx.LoadBuiltins()
+
 	_, err = ctx.Eval(file)
 	if err != nil {
 		fmt.Println(err.Error())
