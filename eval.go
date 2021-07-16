@@ -347,12 +347,19 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 	}
 	// fmt.Println(nodes)
 
-	return c.evalProgram(nodes)
+	return c.evalNodes(nodes)
 }
 
-func (c *Context) evalProgram(nodes []astNode) (Value, error) {
-	programBlock := blockNode{exprs: nodes}
-	return c.evalExpr(programBlock, c.scope)
+func (c *Context) evalNodes(nodes []astNode) (Value, error) {
+	var err error
+	var returnVal Value = null
+	for _, expr := range nodes {
+		returnVal, err = c.evalExpr(expr, c.scope)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return returnVal, nil
 }
 
 func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
@@ -514,9 +521,15 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			return nil, err
 		}
 
-		right, err := c.evalExpr(n.right, sc)
-		if err != nil {
-			return nil, err
+		var right Value
+		if rightIdent, ok := n.right.(identifierNode); ok {
+			right = StringValue([]byte(rightIdent.payload))
+		} else {
+			var err error
+			right, err = c.evalExpr(n.right, sc)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		switch target := left.(type) {
@@ -547,9 +560,14 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 			return target[listIndex], nil
 		case ObjectValue:
-			objKey := right.String()
+			var objKeyString string
+			if objKey, ok := right.(StringValue); ok {
+				objKeyString = string(objKey)
+			} else {
+				objKeyString = right.String()
+			}
 
-			if val, ok := target[objKey]; ok {
+			if val, ok := target[objKeyString]; ok {
 				return val, nil
 			}
 
@@ -574,7 +592,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		}
 
 		incompatibleError := runtimeError{
-			reason: fmt.Sprintf("Cannot add incompatible values %s, %s", leftComputed, rightComputed),
+			reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
+				token{kind: n.op}, leftComputed, rightComputed),
 		}
 
 		if n.op == eq {
@@ -715,7 +734,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			return fn.fn(args)
 		} else {
 			return nil, runtimeError{
-				reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
+				reason: fmt.Sprintf("%s (from %s) is not a function and cannot be called", maybeFn, n.fn),
 			}
 		}
 	case ifExprNode:

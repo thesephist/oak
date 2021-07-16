@@ -1,3 +1,9 @@
+// The first Magnolia program
+
+std := {
+    println: fn(x) print(string(x) + '\n')
+}
+
 fn say() std.println('Hello, World!')
 fn bye() {
     std.println('Goodbye!')
@@ -7,5 +13,6 @@ fn bye() {
 if 1 + 2 { // another comment!
     3 -> say()
 }
+
 bye()
 

@@ -283,7 +283,6 @@ func (p *parser) expect(kind tokKind) (token, error) {
 	tok := token{kind: kind}
 
 	if p.isEOF() {
-		panic("expected " + tok.String() + " got EOF")
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected end of input, expected %s", tok),
 		}
@@ -291,7 +290,6 @@ func (p *parser) expect(kind tokKind) (token, error) {
 
 	next := p.next()
 	if next.kind != kind {
-		panic("expected " + tok.String() + " got " + next.String())
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected token %s, expected %s", next, tok),
 		}
@@ -695,6 +693,7 @@ func (p *parser) parseBinaryExpr(left astNode) (astNode, error) {
 		p.pushMinPrec(prec)
 		right, err := p.nextNode()
 		if err != nil {
+			p.popMinPrec()
 			return nil, err
 		}
 		p.popMinPrec()
@@ -754,10 +753,9 @@ func (p *parser) nextNode() (astNode, error) {
 		case plus, minus, times, divide, modulus,
 			xor, and, or,
 			greater, less, eq, geq, leq, neq:
-			node, err = p.parseBinaryExpr(node)
-			if err != nil {
-				return nil, err
-			}
+			// whatever follows a binary expr cannot bind to the binary
+			// expression by syntax rule, so we simply return
+			return p.parseBinaryExpr(node)
 		case colon,
 			// node is object key
 			leftBrace,

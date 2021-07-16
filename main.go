@@ -2,135 +2,84 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
-const progSample = `
-x := 42
+const version = "0.1"
 
-fn getTwo 2
+const helpMsg = `
+Magnolia is a small, dynamic, functional programming language.
 
-fn getThree() {
-	3
-}
-
-fn getFour {
-	a := 4
-	b := 10
-	a
-}
-
-fn getSecondArg(a, b) {
-	b
-}
-
-getFive := fn() {
-	getSecondArg(2, 5)
-}
-
-getFive()
-
-[1, 2, 3]
-{
-	a: 12
-	b: 'hello'
-	c: {
-		d: getFour()
-	}
-}
-`
-
-const prog2 = `
-// main loop
-fn main print('Hello, World!\n')
-main()
-
-fn println(x) {
-	print(x), print('\n')
-}
-curried := fn(a) fn(b) fn(c) {
-	println(a)
-	println(b)
-	println(c)
-}
-
-curried('first')('second')('third')
-`
-
-const prog3 = `
-fn println(x) {
-	print(x)
-	print('\n')
-}
-
-fn one?(n) if n {
-	1 -> println('is true')
-	_ -> println('is false')
-}
-
-one?(1)
-one?(2)
-one?(3)
-`
-
-const prog4 = `
-fn println(x) print(string(x) + '\n')
-
-fn fib(n) if n <= 1 {
-	true -> 1
-	_ -> fib(n - 2) + fib(n - 1)
-}
-
-fn each(list, f) {
-	fn sub(i) if i {
-		len(list) -> ?
-		_ -> {
-			f(list.(i))
-			sub(i + 1)
-		}
-	}
-
-	sub(0)
-}
-
-list := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-each(list, fn(i) println(fib(i)))
-`
-
-const prog5 = `
-fn println(x) print(string(x) + '\n')
-
-fn count(max) {
-	fn sub(i) if i {
-		max -> ?
-		_ -> {
-			println(i)
-			sub(i + 1)
-		}
-	}
-
-	sub(0)
-}
-
-count(20)
-`
-
-const prog = `
-fn add(a, b) {
-	a + b
-}
-
-with add(10) 40
+By default, mgn interprets from standard input.
+	mgn < main.mgn
+Run Magnolia programs from a source file by passing it to mgn.
+	mgn main.mgn
+Run mgn with no arguments to start an interactive repl.
+	mgn
+	>
 `
 
 func main() {
-	ctx := NewContext("<input>", "/tmp")
-	ctx.LoadBuiltins()
-
-	val, err := ctx.Eval(strings.NewReader(prog))
-	if err != nil {
-		fmt.Println(err)
+	if len(os.Args) > 1 {
+		runFile()
 		return
 	}
-	fmt.Println(val)
+
+	runRepl()
+}
+
+func newOsCtx() Context {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Could not get working directory")
+		os.Exit(1)
+	}
+	ctx := NewContext("<input>", cwd)
+	ctx.LoadBuiltins()
+	return ctx
+}
+
+func runRepl() {
+	rl, err := readline.New("> ")
+	if err != nil {
+		fmt.Println("Could not open the repl.")
+		os.Exit(1)
+	}
+	defer rl.Close()
+
+	ctx := newOsCtx()
+
+	for {
+		line, err := rl.Readline()
+		if err != nil { // io.EOF
+			break
+		}
+
+		val, err := ctx.Eval(strings.NewReader(line))
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Println(val)
+	}
+}
+
+func runFile() {
+	filePath := os.Args[1]
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Printf("Could not open %s: %s\n", filePath, err.Error())
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	ctx := newOsCtx()
+	_, err = ctx.Eval(file)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }
