@@ -146,7 +146,7 @@ type propertyAccessNode struct {
 }
 
 func (n propertyAccessNode) String() string {
-	return n.left.String() + "." + n.right.String()
+	return "(" + n.left.String() + "." + n.right.String() + ")"
 }
 
 type unaryNode struct {
@@ -317,7 +317,7 @@ func (e parseError) Error() string {
 	return fmt.Sprintf("Parse error at %s: %s", e.pos.String(), e.reason)
 }
 
-func (p *parser) parseMaybeAssignment(left astNode) (astNode, error) {
+func (p *parser) parseAssignment(left astNode) (astNode, error) {
 	if p.peek().kind != assign &&
 		p.peek().kind != nonlocalAssign {
 		return left, nil
@@ -394,8 +394,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return nil, err
 		}
 
-		node := listNode{elems: itemNodes}
-		return p.parseMaybeAssignment(node)
+		return listNode{elems: itemNodes}, nil
 	case leftBrace:
 		// empty {} is always considered an object -- an empty block is illegal
 		if p.peek().kind == rightBrace {
@@ -454,8 +453,7 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			node := objectNode{entries: entries}
-			return p.parseMaybeAssignment(node)
+			return objectNode{entries: entries}, nil
 		}
 
 		// it's a block
@@ -543,13 +541,9 @@ func (p *parser) parseUnit() (astNode, error) {
 			body:    body,
 		}, nil
 	case underscore:
-		node := emptyNode{}
-		return p.parseMaybeAssignment(node)
+		return emptyNode{}, nil
 	case identifier:
-		node := identifierNode{
-			payload: tok.payload,
-		}
-		return p.parseMaybeAssignment(node)
+		return identifierNode{payload: tok.payload}, nil
 	case minus, exclam:
 		right, err := p.nextNode()
 		if err != nil {
@@ -751,6 +745,10 @@ func (p *parser) nextNode() (astNode, error) {
 				fn:   node,
 				args: args,
 			}
+		case assign, nonlocalAssign:
+			// whatever follows an assignment expr cannot bind to the
+			// assignment expression itself by syntax rule, so we simply return
+			return p.parseAssignment(node)
 		case plus, minus, times, divide, modulus,
 			xor, and, or,
 			greater, less, eq, geq, leq, neq:

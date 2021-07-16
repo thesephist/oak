@@ -607,11 +607,68 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 			return assignedValue, nil
 		case propertyAccessNode:
-			// TODO: implement object property assignment
-			panic("assign to property not implemented!")
-			return assignedValue, nil
+			assign := left
+
+			assignLeft, err := c.evalExpr(assign.left, sc)
+			if err != nil {
+				return nil, err
+			}
+
+			assignRight, err := c.evalAsObjKey(assign.right, sc)
+			if err != nil {
+				return nil, err
+			}
+
+			switch target := assignLeft.(type) {
+			case StringValue:
+				byteIndex, ok := assignRight.(IntValue)
+				if !ok {
+					return nil, runtimeError{
+						reason: fmt.Sprintf("Cannot index into string with non-integer index %s", assignRight),
+					}
+				}
+
+				if byteIndex < 0 || int64(byteIndex) > int64(len(target)+1) {
+					return nil, runtimeError{
+						reason: fmt.Sprintf("String assignment index %d out of range in %s", byteIndex, n),
+					}
+				}
+
+				// TODO: assignment to string, referencing Ink impl
+				panic("String assignment not implemented!")
+			case ListValue:
+				listIndex, ok := assignRight.(IntValue)
+				if !ok {
+					return nil, runtimeError{
+						reason: fmt.Sprintf("Cannot index into list with non-integer index %s", assignRight),
+					}
+				}
+
+				if listIndex < 0 || int64(listIndex) > int64(len(target)+1) {
+					return nil, runtimeError{
+						reason: fmt.Sprintf("List assignment index %d out of range in %s", listIndex, n),
+					}
+				}
+
+				// TODO: assignment to list, referencing above impl
+				panic("liist assignment not implemented!")
+			case ObjectValue:
+				var objKeyString string
+				if objKey, ok := assignRight.(StringValue); ok {
+					objKeyString = string(objKey)
+				} else {
+					objKeyString = assignRight.String()
+				}
+
+				target[objKeyString] = assignedValue
+			default:
+				return nil, runtimeError{
+					reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property assignment, got %s", left.String()),
+				}
+			}
+
+			return assignLeft, nil
 		}
-		panic(fmt.Sprintf("Illegal left-hand side of assignment in %s", n))
 	case propertyAccessNode:
 		left, err := c.evalExpr(n.left, sc)
 		if err != nil {
