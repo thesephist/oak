@@ -72,3 +72,7 @@ func TestFunctionDefAndCall(t *testing.T) {
 		t.Errorf("Expected basic function definition and call to work")
 	}
 }
+
+// TODO: write some more tests covering prog3, prog4, and prog5 which are
+// roughly if expressions, nested functions, recursion, and binary expressions
+// (equality), etc.

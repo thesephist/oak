@@ -64,6 +64,7 @@ const (
 	eq
 	geq
 	leq
+	neq
 
 	// keywords
 	ifKeyword
@@ -88,7 +89,7 @@ type token struct {
 func (t token) String() string {
 	switch t.kind {
 	case comment:
-		return fmt.Sprintf("// %s", t.payload)
+		return fmt.Sprintf("//(%s)", t.payload)
 	case comma:
 		return ","
 	case dot:
@@ -145,6 +146,8 @@ func (t token) String() string {
 		return ">="
 	case leq:
 		return "<="
+	case neq:
+		return "!="
 	case ifKeyword:
 		return "if"
 	case fnKeyword:
@@ -237,7 +240,7 @@ func (t *tokenizer) readValidIdentifier() string {
 		}
 
 		c := t.next()
-		if unicode.IsLetter(c) || c == '_' || c == '?' || c == '!' {
+		if unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_' || c == '?' || c == '!' {
 			accumulator = append(accumulator, c)
 		} else {
 			t.back()
@@ -275,6 +278,10 @@ func (t *tokenizer) nextToken() token {
 	case '.':
 		if unicode.IsDigit(t.peek()) {
 			// TODO: finish dot-leading decimals
+			//
+			// This is tricky because the string x.1 has to be parsed
+			// differently than x .1 and we currently don't have a great notion
+			// of significant whitespace. Maybe different syntax?
 			return token{kind: unknown, pos: t.currentPos()}
 		} else if t.peek() == '.' && t.peekAhead(1) == '.' {
 			pos := t.currentPos()
@@ -303,7 +310,7 @@ func (t *tokenizer) nextToken() token {
 		}
 		return token{kind: colon, pos: t.currentPos()}
 	case '<':
-		switch t.peekAhead(1) {
+		switch t.peek() {
 		case '-':
 			t.next()
 			return token{kind: nonlocalAssign, pos: t.currentPos()}
@@ -315,6 +322,10 @@ func (t *tokenizer) nextToken() token {
 	case '?':
 		return token{kind: qmark, pos: t.currentPos()}
 	case '!':
+		if t.peek() == '=' {
+			t.next()
+			return token{kind: neq, pos: t.currentPos()}
+		}
 		return token{kind: exclam, pos: t.currentPos()}
 	case '+':
 		return token{kind: plus, pos: t.currentPos()}
@@ -331,7 +342,6 @@ func (t *tokenizer) nextToken() token {
 			pos := t.currentPos()
 			t.next()
 			commentString := strings.TrimSpace(t.readUntilRune('\n'))
-			t.next() // eat the '\n'
 			return token{
 				kind:    comment,
 				pos:     pos,
@@ -425,6 +435,13 @@ func (t *tokenizer) tokenize() []token {
 	last := token{kind: comma}
 	for !t.isEOF() {
 		next := t.nextToken()
+		if next.kind == comment {
+			// for now, comments are not a formal part of the AST
+			for !t.isEOF() && unicode.IsSpace(t.peek()) {
+				t.next()
+			}
+			continue
+		}
 
 		if (last.kind != leftParen && last.kind != leftBracket &&
 			last.kind != leftBrace && last.kind != comma) &&

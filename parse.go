@@ -167,7 +167,7 @@ type binaryNode struct {
 
 func (n binaryNode) String() string {
 	opTok := token{kind: n.op}
-	return n.left.String() + " " + opTok.String() + " " + n.right.String()
+	return "(" + n.left.String() + " " + opTok.String() + " " + n.right.String() + ")"
 }
 
 type fnCallNode struct {
@@ -180,7 +180,7 @@ func (n fnCallNode) String() string {
 	for i, arg := range n.args {
 		argStrings[i] = arg.String()
 	}
-	return n.fn.String() + "(" + strings.Join(argStrings, ", ") + ")"
+	return fmt.Sprintf("call[%s](%s)", n.fn, strings.Join(argStrings, ", "))
 }
 
 type ifBranchNode struct {
@@ -218,15 +218,33 @@ func (n blockNode) String() string {
 }
 
 type parser struct {
-	tokens []token
-	index  int
+	tokens        []token
+	index         int
+	minBinaryPrec []int
 }
 
 func newParser(tokens []token) parser {
 	return parser{
-		tokens: tokens,
-		index:  0,
+		tokens:        tokens,
+		index:         0,
+		minBinaryPrec: []int{},
 	}
+}
+
+func (p *parser) lastMinPrec() int {
+	if len(p.minBinaryPrec) > 0 {
+		return p.minBinaryPrec[len(p.minBinaryPrec)-1]
+	}
+
+	return 0
+}
+
+func (p *parser) pushMinPrec(prec int) {
+	p.minBinaryPrec = append(p.minBinaryPrec, prec)
+}
+
+func (p *parser) popMinPrec() {
+	p.minBinaryPrec = p.minBinaryPrec[:len(p.minBinaryPrec)-1]
 }
 
 func (p *parser) isEOF() bool {
@@ -265,6 +283,7 @@ func (p *parser) expect(kind tokKind) (token, error) {
 	tok := token{kind: kind}
 
 	if p.isEOF() {
+		panic("expected " + tok.String() + " got EOF")
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected end of input, expected %s", tok),
 		}
@@ -601,7 +620,74 @@ func (p *parser) parseAtom() (astNode, error) {
 		}
 		return blockNode{exprs: exprs}, nil
 	}
-	return booleanNode{payload: false}, nil
+	return nil, parseError{
+		reason: fmt.Sprintf("Unexpected token %s", tok),
+	}
+}
+
+func infixOpPrecedence(op tokKind) int {
+	switch op {
+	case plus, minus:
+		return 40
+	case times, divide:
+		return 50
+	case modulus:
+		return 80
+	case eq, greater, less, geq, leq, neq:
+		return 30
+	case and:
+		return 20
+	case xor:
+		return 15
+	case or:
+		return 10
+	default:
+		return -1
+	}
+}
+
+// parseBinaryExpr implements a mini Pratt parser threaded through the larger
+// Magnolia syntax parser, using the parser struct itself to keep track of the
+// power / precedence stack since parseBinaryExpr doesn't directly recurse into
+// itself.
+func (p *parser) parseBinaryExpr(left astNode) (astNode, error) {
+	minPrec := p.lastMinPrec()
+
+	for {
+		if p.isEOF() {
+			return nil, parseError{
+				reason: "Incomplete binary expression",
+			}
+		}
+
+		op := p.peek().kind
+		prec := infixOpPrecedence(op)
+		if prec < minPrec {
+			break
+		}
+		p.next() // eat the operator
+
+		if p.isEOF() {
+			return nil, parseError{
+				reason: fmt.Sprintf("Incomplete binary expression with %s", token{kind: op}),
+			}
+		}
+
+		p.pushMinPrec(prec)
+		right, err := p.nextNode()
+		if err != nil {
+			return nil, err
+		}
+		p.popMinPrec()
+
+		left = binaryNode{
+			op:    op,
+			left:  left,
+			right: right,
+		}
+	}
+
+	return left, nil
 }
 
 func (p *parser) nextNode() (astNode, error) {
@@ -646,9 +732,13 @@ func (p *parser) nextNode() (astNode, error) {
 				fn:   node,
 				args: args,
 			}
-		case plus, minus, times, divide, modulus, greater, less, eq, geq, leq:
-			// TODO: binaryNode
-			panic("binaryNode parse not implemented")
+		case plus, minus, times, divide, modulus,
+			xor, and, or,
+			greater, less, eq, geq, leq, neq:
+			node, err = p.parseBinaryExpr(node)
+			if err != nil {
+				return nil, err
+			}
 		case colon,
 			// node is object key
 			leftBrace,
@@ -672,11 +762,6 @@ func (p *parser) parse() ([]astNode, error) {
 	nodes := []astNode{}
 
 	for !p.isEOF() {
-		if p.peek().kind == comment {
-			p.next()
-			continue
-		}
-
 		node, err := p.nextNode()
 		if err != nil {
 			return nodes, err

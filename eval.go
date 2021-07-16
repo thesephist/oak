@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -337,12 +338,14 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 
 	tokenizer := newTokenizer(string(program))
 	tokens := tokenizer.tokenize()
+	// fmt.Println(tokens)
 
 	parser := newParser(tokens)
 	nodes, err := parser.parse()
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println(nodes)
 
 	return c.evalProgram(nodes)
 }
@@ -350,6 +353,60 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 func (c *Context) evalProgram(nodes []astNode) (Value, error) {
 	programBlock := blockNode{exprs: nodes}
 	return c.evalExpr(programBlock, c.scope)
+}
+
+func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
+	switch op {
+	case plus:
+		return IntValue(int64(left) + int64(right)), nil
+	case minus:
+		return IntValue(int64(left) - int64(right)), nil
+	case times:
+		return IntValue(int64(left) * int64(right)), nil
+	case divide:
+		return IntValue(int64(left) / int64(right)), nil
+	case modulus:
+		return IntValue(int64(left) % int64(right)), nil
+	case xor:
+		return IntValue(int64(left) ^ int64(right)), nil
+	case and:
+		return IntValue(int64(left) & int64(right)), nil
+	case or:
+		return IntValue(int64(left) | int64(right)), nil
+	case greater:
+		return BoolValue(int64(left) > int64(right)), nil
+	case less:
+		return BoolValue(int64(left) < int64(right)), nil
+	case geq:
+		return BoolValue(int64(left) >= int64(right)), nil
+	case leq:
+		return BoolValue(int64(left) <= int64(right)), nil
+	}
+	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
+}
+
+func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
+	switch op {
+	case plus:
+		return FloatValue(float64(left) + float64(right)), nil
+	case minus:
+		return FloatValue(float64(left) - float64(right)), nil
+	case times:
+		return FloatValue(float64(left) * float64(right)), nil
+	case divide:
+		return FloatValue(float64(left) / float64(right)), nil
+	case modulus:
+		return FloatValue(math.Mod(float64(left), float64(right))), nil
+	case greater:
+		return BoolValue(int64(left) > int64(right)), nil
+	case less:
+		return BoolValue(int64(left) < int64(right)), nil
+	case geq:
+		return BoolValue(int64(left) >= int64(right)), nil
+	case leq:
+		return BoolValue(int64(left) <= int64(right)), nil
+	}
+	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
 }
 
 func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
@@ -506,8 +563,118 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		// TODO: implement
 		panic("unaryNode not implemented!")
 	case binaryNode:
-		// TODO: implement
-		panic("binaryNode not implemented!")
+		leftComputed, err := c.evalExpr(n.left, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		rightComputed, err := c.evalExpr(n.right, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		incompatibleError := runtimeError{
+			reason: fmt.Sprintf("Cannot add incompatible values %s, %s", leftComputed, rightComputed),
+		}
+
+		if n.op == eq {
+			return BoolValue(leftComputed.Eq(rightComputed)), nil
+		} else if n.op == neq {
+			return BoolValue(!leftComputed.Eq(rightComputed)), nil
+		}
+
+		switch left := leftComputed.(type) {
+		case IntValue:
+			right, ok := rightComputed.(IntValue)
+			if !ok {
+				rightFloat, ok := rightComputed.(FloatValue)
+				if !ok {
+					return nil, incompatibleError
+				}
+
+				leftFloat := FloatValue(float64(int64(left)))
+				return floatBinaryOp(n.op, leftFloat, rightFloat)
+			}
+
+			return intBinaryOp(n.op, left, right)
+		case FloatValue:
+			right, ok := rightComputed.(FloatValue)
+			if !ok {
+				rightInt, ok := rightComputed.(IntValue)
+				if !ok {
+					return nil, incompatibleError
+				}
+
+				leftInt := IntValue(math.Trunc(float64(left)))
+				return intBinaryOp(n.op, leftInt, rightInt)
+			}
+
+			return floatBinaryOp(n.op, left, right)
+		case StringValue:
+			right, ok := rightComputed.(StringValue)
+			if !ok {
+				return nil, incompatibleError
+			}
+
+			switch n.op {
+			case plus:
+				base := make([]byte, 0, len(left)+len(right))
+				base = append(base, left...)
+				return StringValue(append(base, right...)), nil
+			case xor:
+				max := maxLen(left, right)
+
+				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				res := make([]byte, max)
+				for i := range res {
+					res[i] = ls[i] ^ rs[i]
+				}
+				return StringValue(res), nil
+			case and:
+				max := maxLen(left, right)
+
+				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				res := make([]byte, max)
+				for i := range res {
+					res[i] = ls[i] & rs[i]
+				}
+				return StringValue(res), nil
+			case or:
+				max := maxLen(left, right)
+
+				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				res := make([]byte, max)
+				for i := range res {
+					res[i] = ls[i] | rs[i]
+				}
+				return StringValue(res), nil
+			case greater:
+				return BoolValue(bytes.Compare(left, right) > 0), nil
+			case less:
+				return BoolValue(bytes.Compare(left, right) < 0), nil
+			case geq:
+				return BoolValue(bytes.Compare(left, right) >= 0), nil
+			case leq:
+				return BoolValue(bytes.Compare(left, right) <= 0), nil
+			}
+			panic(fmt.Sprintf("Invalid binary operator %s", token{kind: n.op}))
+		case BoolValue:
+			right, ok := rightComputed.(BoolValue)
+			if !ok {
+				return nil, incompatibleError
+			}
+
+			switch n.op {
+			case plus, or:
+				return BoolValue(left || right), nil
+			case times, and:
+				return BoolValue(left && right), nil
+			case xor:
+				return BoolValue(left != right), nil
+			}
+		}
+		panic(fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
+			token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed))
 	case fnCallNode:
 		maybeFn, err := c.evalExpr(n.fn, sc)
 		if err != nil {
