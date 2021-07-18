@@ -167,29 +167,27 @@ func (v AtomValue) Eq(u Value) bool {
 	return false
 }
 
-type ListValue struct {
-	elems []Value
-}
+type ListValue []Value
 
-func (v ListValue) String() string {
-	valStrings := make([]string, len(v.elems))
-	for i, val := range v.elems {
+func (v *ListValue) String() string {
+	valStrings := make([]string, len(*v))
+	for i, val := range *v {
 		valStrings[i] = val.String()
 	}
 	return "[" + strings.Join(valStrings, ", ") + "]"
 }
-func (v ListValue) Eq(u Value) bool {
+func (v *ListValue) Eq(u Value) bool {
 	if _, ok := u.(EmptyValue); ok {
 		return true
 	}
 
-	if w, ok := u.(ListValue); ok {
-		if len(v.elems) != len(w.elems) {
+	if w, ok := u.(*ListValue); ok {
+		if len(*v) != len(*w) {
 			return false
 		}
 
-		for i, el := range v.elems {
-			if !el.Eq(w.elems[i]) {
+		for i, el := range *v {
+			if !el.Eq((*w)[i]) {
 				return false
 			}
 		}
@@ -461,7 +459,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				return nil, err
 			}
 		}
-		return ListValue{elems: elems}, nil
+		list := ListValue(elems)
+		return &list, nil
 	case objectNode:
 		obj := ObjectValue{}
 		for _, entry := range n.entries {
@@ -525,7 +524,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 			return assignedValue, nil
 		case listNode:
-			assignedList, ok := assignedValue.(ListValue)
+			assignedList, ok := assignedValue.(*ListValue)
 			if !ok {
 				return nil, runtimeError{
 					reason: fmt.Sprintf("right side %s of list destructuring is not a list", n.right),
@@ -545,8 +544,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 
 				var destructuredEl Value
-				if i < len(assignedList.elems) {
-					destructuredEl = assignedList.elems[i]
+				if i < len(*assignedList) {
+					destructuredEl = (*assignedList)[i]
 				} else {
 					destructuredEl = null
 				}
@@ -659,7 +658,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 						}
 					}
 				}
-			case ListValue:
+			case *ListValue:
 				listIndexVal, ok := assignRight.(IntValue)
 				if !ok {
 					return nil, runtimeError{
@@ -668,16 +667,16 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 				listIndex := int(listIndexVal)
 
-				if listIndex < 0 || listIndex > len(target.elems) {
+				if listIndex < 0 || listIndex > len(*target) {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("List assignment index %d out of range in %s", listIndex, n),
 					}
 				}
 
-				if listIndex == len(target.elems) {
-					target.elems = append(target.elems, assignedValue)
+				if listIndex == len(*target) {
+					*target = append(*target, assignedValue)
 				} else {
-					target.elems[listIndex] = assignedValue
+					(*target)[listIndex] = assignedValue
 				}
 			case ObjectValue:
 				var objKeyString string
@@ -722,7 +721,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 			targetByte := StringValue([]byte{(*target)[byteIndex]})
 			return &targetByte, nil
-		case ListValue:
+		case *ListValue:
 			listIndex, ok := right.(IntValue)
 			if !ok {
 				return nil, runtimeError{
@@ -730,11 +729,11 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 			}
 
-			if listIndex < 0 || int64(listIndex) > int64(len(target.elems)) {
+			if listIndex < 0 || int64(listIndex) > int64(len(*target)) {
 				return null, nil
 			}
 
-			return target.elems[listIndex], nil
+			return (*target)[listIndex], nil
 		case ObjectValue:
 			var objKeyString string
 			if objKey, ok := right.(*StringValue); ok {

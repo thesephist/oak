@@ -111,8 +111,8 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	switch arg := args[0].(type) {
 	case *StringValue:
 		return IntValue(len(*arg)), nil
-	case ListValue:
-		return IntValue(len(arg.elems)), nil
+	case *ListValue:
+		return IntValue(len(*arg)), nil
 	case ObjectValue:
 		return IntValue(len(arg)), nil
 	default:
