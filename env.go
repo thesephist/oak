@@ -63,6 +63,20 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 	}
 }
 
+func (c *Context) mgnType(args []Value) (Value, error) {
+	if err := c.requireArgLen("string", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	// TODO: write these cases!
+	default:
+		_ = arg
+	}
+
+	panic("Unimplemented!")
+}
+
 func (c *Context) mgnImport(args []Value) (Value, error) {
 	if err := c.requireArgLen("import", args, 1); err != nil {
 		return nil, err

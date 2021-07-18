@@ -169,6 +169,10 @@ func (v AtomValue) Eq(u Value) bool {
 
 type ListValue []Value
 
+func MakeList(xs ...Value) *ListValue {
+	v := ListValue(xs)
+	return &v
+}
 func (v *ListValue) String() string {
 	valStrings := make([]string, len(*v))
 	for i, val := range *v {
@@ -380,6 +384,11 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
 	case times:
 		return IntValue(int64(left) * int64(right)), nil
 	case divide:
+		if right == 0 {
+			return nil, runtimeError{
+				reason: fmt.Sprintf("Division by zero"),
+			}
+		}
 		return IntValue(int64(left) / int64(right)), nil
 	case modulus:
 		return IntValue(int64(left) % int64(right)), nil
@@ -410,6 +419,11 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 	case times:
 		return FloatValue(float64(left) * float64(right)), nil
 	case divide:
+		if right == 0 {
+			return nil, runtimeError{
+				reason: fmt.Sprintf("Division by zero"),
+			}
+		}
 		return FloatValue(float64(left) / float64(right)), nil
 	case modulus:
 		return FloatValue(math.Mod(float64(left), float64(right))), nil
@@ -686,7 +700,11 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 					objKeyString = assignRight.String()
 				}
 
-				target[objKeyString] = assignedValue
+				if _, ok := assignedValue.(EmptyValue); ok {
+					delete(target, objKeyString)
+				} else {
+					target[objKeyString] = assignedValue
+				}
 			default:
 				return nil, runtimeError{
 					reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property assignment, got %s", left.String()),
@@ -753,8 +771,35 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property access, got %s", left.String()),
 		}
 	case unaryNode:
-		// TODO: implement
-		panic("unaryNode not implemented!")
+		rightComputed, err := c.evalExpr(n.right, sc)
+		if err != nil {
+			return nil, err
+		}
+
+		switch right := rightComputed.(type) {
+		case IntValue:
+			switch n.op {
+			case plus:
+				return right, nil
+			case minus:
+				return -right, nil
+			}
+		case FloatValue:
+			switch n.op {
+			case plus:
+				return right, nil
+			case minus:
+				return -right, nil
+			}
+		case BoolValue:
+			switch n.op {
+			case exclam:
+				return !right, nil
+			}
+		}
+		return nil, runtimeError{
+			reason: fmt.Sprintf("%s is not a valid unary operator for %s", token{kind: n.op}, rightComputed),
+		}
 	case binaryNode:
 		leftComputed, err := c.evalExpr(n.left, sc)
 		if err != nil {

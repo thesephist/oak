@@ -227,16 +227,12 @@ func newParser(tokens []token) parser {
 	return parser{
 		tokens:        tokens,
 		index:         0,
-		minBinaryPrec: []int{},
+		minBinaryPrec: []int{0},
 	}
 }
 
 func (p *parser) lastMinPrec() int {
-	if len(p.minBinaryPrec) > 0 {
-		return p.minBinaryPrec[len(p.minBinaryPrec)-1]
-	}
-
-	return 0
+	return p.minBinaryPrec[len(p.minBinaryPrec)-1]
 }
 
 func (p *parser) pushMinPrec(prec int) {
@@ -378,6 +374,9 @@ func (p *parser) parseUnit() (astNode, error) {
 			reason: fmt.Sprintf("Expected identifier after ':', got %s", p.peek()),
 		}
 	case leftBracket:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		itemNodes := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightBracket {
 			node, err := p.nextNode()
@@ -396,6 +395,9 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		return listNode{elems: itemNodes}, nil
 	case leftBrace:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		// empty {} is always considered an object -- an empty block is illegal
 		if p.peek().kind == rightBrace {
 			p.next() // eat the rightBrace
@@ -479,6 +481,9 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		return blockNode{exprs: exprs}, nil
 	case fnKeyword:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		name := ""
 		if p.peek().kind == identifier {
 			// optional named fn
@@ -545,7 +550,7 @@ func (p *parser) parseUnit() (astNode, error) {
 	case identifier:
 		return identifierNode{payload: tok.payload}, nil
 	case minus, exclam:
-		right, err := p.nextNode()
+		right, err := p.parseUnit()
 		if err != nil {
 			return nil, err
 		}
@@ -554,6 +559,9 @@ func (p *parser) parseUnit() (astNode, error) {
 			right: right,
 		}, nil
 	case ifKeyword:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		condNode, err := p.nextNode()
 		if err != nil {
 			return nil, err
@@ -595,6 +603,9 @@ func (p *parser) parseUnit() (astNode, error) {
 			branches: branches,
 		}, nil
 	case withKeyword:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		withExprBase, err := p.nextNode()
 		if err != nil {
 			return nil, err
@@ -615,6 +626,9 @@ func (p *parser) parseUnit() (astNode, error) {
 		withExprBaseCall.args = append(withExprBaseCall.args, withExprLastArg)
 		return withExprBaseCall, nil
 	case leftParen:
+		p.pushMinPrec(0)
+		defer p.popMinPrec()
+
 		exprs := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightParen {
 			expr, err := p.nextNode()
@@ -656,51 +670,6 @@ func infixOpPrecedence(op tokKind) int {
 	default:
 		return -1
 	}
-}
-
-// parseBinaryExpr implements a mini Pratt parser threaded through the larger
-// Magnolia syntax parser, using the parser struct itself to keep track of the
-// power / precedence stack since parseBinaryExpr doesn't directly recurse into
-// itself.
-func (p *parser) parseBinaryExpr(left astNode) (astNode, error) {
-	minPrec := p.lastMinPrec()
-
-	for {
-		if p.isEOF() {
-			return nil, parseError{
-				reason: "Incomplete binary expression",
-			}
-		}
-
-		op := p.peek().kind
-		prec := infixOpPrecedence(op)
-		if prec < minPrec {
-			break
-		}
-		p.next() // eat the operator
-
-		if p.isEOF() {
-			return nil, parseError{
-				reason: fmt.Sprintf("Incomplete binary expression with %s", token{kind: op}),
-			}
-		}
-
-		p.pushMinPrec(prec)
-		right, err := p.nextNode()
-		if err != nil {
-			p.popMinPrec()
-			return nil, err
-		}
-		p.popMinPrec()
-
-		left = binaryNode{
-			op:    op,
-			left:  left,
-			right: right,
-		}
-	}
-
-	return left, nil
 }
 
 func (p *parser) nextNode() (astNode, error) {
@@ -752,9 +721,49 @@ func (p *parser) nextNode() (astNode, error) {
 		case plus, minus, times, divide, modulus,
 			xor, and, or,
 			greater, less, eq, geq, leq, neq:
+			// this case implements a mini Pratt parser threaded through the
+			// larger Magnolia syntax parser, using the parser struct itself to
+			// keep track of the power / precedence stack since other forms may
+			// be parsed in between, as in 1 + f(g(x := y)) + 2
+			minPrec := p.lastMinPrec()
+
+			for {
+				if p.isEOF() {
+					return nil, parseError{
+						reason: "Incomplete binary expression",
+					}
+				}
+
+				op := p.peek().kind
+				prec := infixOpPrecedence(op)
+				if prec <= minPrec {
+					break
+				}
+				p.next() // eat the operator
+
+				if p.isEOF() {
+					return nil, parseError{
+						reason: fmt.Sprintf("Incomplete binary expression with %s", token{kind: op}),
+					}
+				}
+
+				p.pushMinPrec(prec)
+				right, err := p.nextNode()
+				if err != nil {
+					return nil, err
+				}
+				p.popMinPrec()
+
+				node = binaryNode{
+					op:    op,
+					left:  node,
+					right: right,
+				}
+			}
+
 			// whatever follows a binary expr cannot bind to the binary
 			// expression by syntax rule, so we simply return
-			return p.parseBinaryExpr(node)
+			return node, nil
 		case colon,
 			// node is object key
 			leftBrace,

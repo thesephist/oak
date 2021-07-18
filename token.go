@@ -276,14 +276,7 @@ func (t *tokenizer) nextToken() token {
 	case ',':
 		return token{kind: comma, pos: t.currentPos()}
 	case '.':
-		if unicode.IsDigit(t.peek()) {
-			// TODO: finish dot-leading decimals
-			//
-			// This is tricky because the string x.1 has to be parsed
-			// differently than x .1 and we currently don't have a great notion
-			// of significant whitespace. Maybe different syntax?
-			return token{kind: unknown, pos: t.currentPos()}
-		} else if t.peek() == '.' && t.peekAhead(1) == '.' {
+		if t.peek() == '.' && t.peekAhead(1) == '.' {
 			pos := t.currentPos()
 			t.next()
 			t.next()

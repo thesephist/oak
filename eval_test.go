@@ -41,11 +41,33 @@ func TestIntegerLiteral(t *testing.T) {
 }
 
 func TestFloatLiteral(t *testing.T) {
+	expectProgramToReturn(t, "100.0", FloatValue(100))
 	expectProgramToReturn(t, "3.141592", FloatValue(3.141592))
 }
 
 func TestAtomLiteral(t *testing.T) {
 	expectProgramToReturn(t, ":not_found_404", AtomValue("not_found_404"))
+}
+
+func TestListLiteral(t *testing.T) {
+	expectProgramToReturn(t, `[1, [2, 'three'], :four]`, MakeList(
+		IntValue(1),
+		MakeList(
+			IntValue(2),
+			MakeString("three"),
+		),
+		AtomValue("four"),
+	))
+}
+
+func TestObjectLiteral(t *testing.T) {
+	expectProgramToReturn(t, `{a: 'ay', b: 200, c: {d: 'dee'}}`, ObjectValue{
+		"a": MakeString("ay"),
+		"b": IntValue(200),
+		"c": ObjectValue{
+			"d": MakeString("dee"),
+		},
+	})
 }
 
 func TestFunctionDefAndCall(t *testing.T) {
@@ -69,16 +91,26 @@ func TestNonlocalAssignment(t *testing.T) {
 	`, IntValue(400))
 }
 
+func TestUnaryExpr(t *testing.T) {
+	expectProgramToReturn(t, `!true`, BoolValue(false))
+	expectProgramToReturn(t, `!(false | true)`, BoolValue(false))
+
+	expectProgramToReturn(t, `-546`, IntValue(-546))
+	expectProgramToReturn(t, `-3.250`, FloatValue(-3.25))
+}
+
 func TestBasicBinaryExpr(t *testing.T) {
+	expectProgramToReturn(t, `2 * 3 + 1`, IntValue(7))
 	expectProgramToReturn(t, `1 + 2 * 3`, IntValue(7))
 }
 
+func TestOrderedBinaryExpr(t *testing.T) {
+	expectProgramToReturn(t, `-1.5 + -3.5 - 5 / 5 * 2`, IntValue(-7))
+	expectProgramToReturn(t, `(-1.5 + -3.5 - 5) / 5 * 2`, IntValue(-4))
+}
+
 func TestBinaryExprWithParens(t *testing.T) {
-	// NOTE: this program, in most other languages like C and Node, evaluate to
-	// 2. -2 is the result we get in Magnolia (and Ink) due to our specific
-	// operator precedence. We might change this later, but for now this is the
-	// designed behavior.
-	expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, IntValue(-2))
+	expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, IntValue(2))
 }
 
 func TestLongBinaryExprWithPrecedence(t *testing.T) {
@@ -111,6 +143,13 @@ func TestIfExprWithEmpty(t *testing.T) {
 		12 -> 'twelve'
 		_ -> 'wrong'
 	}`, MakeString("twelve"))
+}
+
+func TestIfExprWithAssignmentCond(t *testing.T) {
+	expectProgramToReturn(t, `if x := 2 + 4 {
+		6 -> x * x
+		_ -> x
+	}`, IntValue(36))
 }
 
 func TestIfExprInFunction(t *testing.T) {
@@ -183,4 +222,155 @@ func TestCurriedFunctionDef(t *testing.T) {
 	almost := addThree(15)(20)
 	almost(8)
 	`, IntValue(15+20+8))
+}
+
+// string ops
+
+func TestStringAccess(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := 'Hello, World!'
+	[
+		s.0 + s.2
+		s.-2
+		s.15
+	]
+	`, MakeList(MakeString("Hl"), null, null))
+}
+
+func TestStringAssign(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := {
+		payload: 'Magnolia'
+	}
+	t := s.payload
+	[s.payload.3 := 'pie', t]
+	`, MakeList(
+		MakeString("Magpieia"),
+		MakeString("Magpieia"),
+	))
+}
+
+func TestStringAppend(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := {
+		payload: 'Magnolia'
+	}
+	t := s.payload
+	[s.payload.(len(t)) := ' language', t]
+	`, MakeList(
+		MakeString("Magnolia language"),
+		MakeString("Magnolia language"),
+	))
+}
+
+// list ops
+
+func TestListAccess(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := [1, 2, 3, 4, 5]
+	[
+		s.0 + s.3
+		s.-2
+		s.15
+	]
+	`, MakeList(IntValue(5), null, null))
+}
+
+func TestListAssign(t *testing.T) {
+	result := MakeList(
+		IntValue(1),
+		IntValue(2),
+		MakeString("three"),
+		IntValue(4),
+	)
+
+	expectProgramToReturn(t, `
+	s := {
+		numbers: [1, 2, 3, 4]
+	}
+	t := s.numbers
+	[s.numbers.2 := 'three', t]
+	`, MakeList(result, result))
+}
+
+func TestListAppend(t *testing.T) {
+	result := MakeList(
+		IntValue(1),
+		IntValue(2),
+		IntValue(3),
+		IntValue(4),
+		IntValue(100),
+	)
+
+	expectProgramToReturn(t, `
+	s := {
+		numbers: [1, 2, 3, 4]
+	}
+	t := s.numbers
+	[s.numbers.(len(t)) := 100, t]
+	`, MakeList(result, result))
+}
+
+// object ops
+
+func TestObjectAccess(t *testing.T) {
+	expectProgramToReturn(t, `
+	obj := {
+		a: 'ay'
+		b: 'bee'
+		c: ['see', {
+			d: 'd'
+		}]
+	}
+	obj.c.(1).d
+	`, MakeString("d"))
+}
+
+func TestObjectAssign(t *testing.T) {
+	expectProgramToReturn(t, `
+	obj := {
+		a: 'ay'
+		b: 'bee'
+		c: ['see', {
+			d: 'd'
+		}]
+	}
+	[
+		obj.c.(1).e := 'hello'
+		obj.c
+	]
+	`, MakeList(
+		ObjectValue{
+			"d": MakeString("d"),
+			"e": MakeString("hello"),
+		},
+		MakeList(MakeString("see"), ObjectValue{
+			"d": MakeString("d"),
+			"e": MakeString("hello"),
+		}),
+	))
+}
+
+func TestObjectDelete(t *testing.T) {
+	expectProgramToReturn(t, `
+	obj := {
+		a: 'ay'
+		b: 'bee'
+		c: {
+			d: 'dee'
+			e: 'ee'
+		}
+	}
+	[
+		obj.c.d := _
+		obj.c
+	]
+	`, MakeList(
+		ObjectValue{
+			"e": MakeString("ee"),
+		},
+		ObjectValue{
+			"e": MakeString("ee"),
+		},
+	))
 }
