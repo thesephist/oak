@@ -112,7 +112,7 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	case StringValue:
 		return IntValue(len(arg.bytes)), nil
 	case ListValue:
-		return IntValue(len(arg)), nil
+		return IntValue(len(arg.elems)), nil
 	case ObjectValue:
 		return IntValue(len(arg)), nil
 	default:

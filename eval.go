@@ -168,11 +168,13 @@ func (v AtomValue) Eq(u Value) bool {
 	return false
 }
 
-type ListValue []Value
+type ListValue struct {
+	elems []Value
+}
 
 func (v ListValue) String() string {
-	valStrings := make([]string, len(v))
-	for i, val := range v {
+	valStrings := make([]string, len(v.elems))
+	for i, val := range v.elems {
 		valStrings[i] = val.String()
 	}
 	return "[" + strings.Join(valStrings, ", ") + "]"
@@ -183,12 +185,12 @@ func (v ListValue) Eq(u Value) bool {
 	}
 
 	if w, ok := u.(ListValue); ok {
-		if len(v) != len(w) {
+		if len(v.elems) != len(w.elems) {
 			return false
 		}
 
-		for i, el := range v {
-			if !el.Eq(w[i]) {
+		for i, el := range v.elems {
+			if !el.Eq(w.elems[i]) {
 				return false
 			}
 		}
@@ -460,7 +462,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				return nil, err
 			}
 		}
-		return ListValue(elems), nil
+		return ListValue{elems: elems}, nil
 	case objectNode:
 		obj := ObjectValue{}
 		for _, entry := range n.entries {
@@ -544,8 +546,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 
 				var destructuredEl Value
-				if i < len(assignedList) {
-					destructuredEl = assignedList[i]
+				if i < len(assignedList.elems) {
+					destructuredEl = assignedList.elems[i]
 				} else {
 					destructuredEl = null
 				}
@@ -625,37 +627,59 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 			switch target := assignLeft.(type) {
 			case StringValue:
-				byteIndex, ok := assignRight.(IntValue)
+				assignedString, ok := assignedValue.(StringValue)
+				if !ok {
+					return nil, runtimeError{
+						reason: fmt.Sprintf("Cannot assign non-string value %s to string in %s", assignedValue, assign),
+					}
+				}
+
+				byteIndexVal, ok := assignRight.(IntValue)
 				if !ok {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("Cannot index into string with non-integer index %s", assignRight),
 					}
 				}
+				byteIndex := int(byteIndexVal)
 
-				if byteIndex < 0 || int64(byteIndex) > int64(len(target.bytes)+1) {
+				if byteIndex < 0 || byteIndex > len(target.bytes) {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("String assignment index %d out of range in %s", byteIndex, n),
 					}
 				}
 
-				// TODO: assignment to string, referencing Ink impl
-				panic("String assignment not implemented!")
+				if byteIndex == len(target.bytes) {
+					// append
+					target.bytes = append(target.bytes, assignedString.bytes...)
+				} else {
+					for byteOffset, byteAtOffset := range assignedString.bytes {
+						if byteIndex+byteOffset < len(target.bytes) {
+							target.bytes[byteIndex+byteOffset] = byteAtOffset
+						} else {
+							target.bytes = append(target.bytes, byteAtOffset)
+						}
+					}
+				}
 			case ListValue:
-				listIndex, ok := assignRight.(IntValue)
+				listIndexVal, ok := assignRight.(IntValue)
 				if !ok {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("Cannot index into list with non-integer index %s", assignRight),
 					}
 				}
+				listIndex := int(listIndexVal)
 
-				if listIndex < 0 || int64(listIndex) > int64(len(target)+1) {
+				if listIndex < 0 || listIndex > len(target.elems) {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("List assignment index %d out of range in %s", listIndex, n),
 					}
 				}
 
-				// TODO: assignment to list, referencing above impl
-				panic("liist assignment not implemented!")
+				if listIndex == len(target.elems) {
+					target.elems = append(target.elems, assignedValue)
+				} else {
+					target.elems[listIndex] = assignedValue
+				}
 			case ObjectValue:
 				var objKeyString string
 				if objKey, ok := assignRight.(StringValue); ok {
@@ -706,11 +730,11 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 			}
 
-			if listIndex < 0 || int64(listIndex) > int64(len(target)) {
+			if listIndex < 0 || int64(listIndex) > int64(len(target.elems)) {
 				return null, nil
 			}
 
-			return target[listIndex], nil
+			return target.elems[listIndex], nil
 		case ObjectValue:
 			var objKeyString string
 			if objKey, ok := right.(StringValue); ok {
