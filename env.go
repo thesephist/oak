@@ -59,7 +59,7 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 	case StringValue:
 		return arg, nil
 	default:
-		return StringValue([]byte(arg.String())), nil
+		return StringValue{bytes: []byte(arg.String())}, nil
 	}
 }
 
@@ -74,7 +74,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
 		}
 	}
-	path := string(pathBytes) + ".mgn"
+	path := string(pathBytes.bytes) + ".mgn"
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(c.rootPath, path)
 	}
@@ -110,7 +110,7 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 
 	switch arg := args[0].(type) {
 	case StringValue:
-		return IntValue(len(arg)), nil
+		return IntValue(len(arg.bytes)), nil
 	case ListValue:
 		return IntValue(len(arg)), nil
 	case ObjectValue:
@@ -134,7 +134,7 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 		}
 	}
 
-	n, _ := os.Stdout.Write(outputString)
+	n, _ := os.Stdout.Write(outputString.bytes)
 	return IntValue(n), nil
 }
 

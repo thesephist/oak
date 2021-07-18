@@ -71,12 +71,17 @@ func (v NullValue) Eq(u Value) bool {
 	return false
 }
 
-type StringValue []byte
+type StringValue struct {
+	bytes []byte
+}
 
-var emptyString = StringValue("")
+var emptyString = StringValue{bytes: []byte{}}
 
+func MakeString(s string) StringValue {
+	return StringValue{bytes: []byte(s)}
+}
 func (v StringValue) String() string {
-	return fmt.Sprintf("'%s'", string(v))
+	return fmt.Sprintf("'%s'", string(v.bytes))
 }
 func (v StringValue) Eq(u Value) bool {
 	if _, ok := u.(EmptyValue); ok {
@@ -84,7 +89,7 @@ func (v StringValue) Eq(u Value) bool {
 	}
 
 	if w, ok := u.(StringValue); ok {
-		return bytes.Equal(v, w)
+		return bytes.Equal(v.bytes, w.bytes)
 	}
 	return false
 }
@@ -423,7 +428,7 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 
 func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
 	if ident, ok := node.(identifierNode); ok {
-		return StringValue([]byte(ident.payload)), nil
+		return StringValue{bytes: []byte(ident.payload)}, nil
 	}
 
 	return c.evalExpr(node, sc)
@@ -436,7 +441,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 	case nullNode:
 		return null, nil
 	case stringNode:
-		return StringValue([]byte(n.payload)), nil
+		return StringValue{bytes: []byte(n.payload)}, nil
 	case numberNode:
 		if n.isInteger {
 			return IntValue(n.intPayload), nil
@@ -470,7 +475,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 				switch typedKey := key.(type) {
 				case StringValue:
-					keyString = string(typedKey)
+					keyString = string(typedKey.bytes)
 				case IntValue:
 					keyString = typedKey.String()
 				case FloatValue:
@@ -583,7 +588,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 				var keyString string
 				if key, ok := key.(StringValue); ok {
-					keyString = string(key)
+					keyString = string(key.bytes)
 				} else {
 					keyString = key.String()
 				}
@@ -627,7 +632,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 					}
 				}
 
-				if byteIndex < 0 || int64(byteIndex) > int64(len(target)+1) {
+				if byteIndex < 0 || int64(byteIndex) > int64(len(target.bytes)+1) {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("String assignment index %d out of range in %s", byteIndex, n),
 					}
@@ -654,7 +659,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			case ObjectValue:
 				var objKeyString string
 				if objKey, ok := assignRight.(StringValue); ok {
-					objKeyString = string(objKey)
+					objKeyString = string(objKey.bytes)
 				} else {
 					objKeyString = assignRight.String()
 				}
@@ -688,11 +693,11 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 			}
 
-			if byteIndex < 0 || int64(byteIndex) > int64(len(target)) {
+			if byteIndex < 0 || int64(byteIndex) > int64(len(target.bytes)) {
 				return null, nil
 			}
 
-			return StringValue([]byte{target[byteIndex]}), nil
+			return StringValue{bytes: []byte{target.bytes[byteIndex]}}, nil
 		case ListValue:
 			listIndex, ok := right.(IntValue)
 			if !ok {
@@ -709,7 +714,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		case ObjectValue:
 			var objKeyString string
 			if objKey, ok := right.(StringValue); ok {
-				objKeyString = string(objKey)
+				objKeyString = string(objKey.bytes)
 			} else {
 				objKeyString = right.String()
 			}
@@ -784,44 +789,44 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 
 			switch n.op {
 			case plus:
-				base := make([]byte, 0, len(left)+len(right))
-				base = append(base, left...)
-				return StringValue(append(base, right...)), nil
+				base := make([]byte, 0, len(left.bytes)+len(right.bytes))
+				base = append(base, left.bytes...)
+				return StringValue{bytes: append(base, right.bytes...)}, nil
 			case xor:
-				max := maxLen(left, right)
+				max := maxLen(left.bytes, right.bytes)
 
-				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				ls, rs := zeroExtend(left.bytes, max), zeroExtend(right.bytes, max)
 				res := make([]byte, max)
 				for i := range res {
 					res[i] = ls[i] ^ rs[i]
 				}
-				return StringValue(res), nil
+				return StringValue{bytes: res}, nil
 			case and:
-				max := maxLen(left, right)
+				max := maxLen(left.bytes, right.bytes)
 
-				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				ls, rs := zeroExtend(left.bytes, max), zeroExtend(right.bytes, max)
 				res := make([]byte, max)
 				for i := range res {
 					res[i] = ls[i] & rs[i]
 				}
-				return StringValue(res), nil
+				return StringValue{bytes: res}, nil
 			case or:
-				max := maxLen(left, right)
+				max := maxLen(left.bytes, right.bytes)
 
-				ls, rs := zeroExtend(left, max), zeroExtend(right, max)
+				ls, rs := zeroExtend(left.bytes, max), zeroExtend(right.bytes, max)
 				res := make([]byte, max)
 				for i := range res {
 					res[i] = ls[i] | rs[i]
 				}
-				return StringValue(res), nil
+				return StringValue{bytes: res}, nil
 			case greater:
-				return BoolValue(bytes.Compare(left, right) > 0), nil
+				return BoolValue(bytes.Compare(left.bytes, right.bytes) > 0), nil
 			case less:
-				return BoolValue(bytes.Compare(left, right) < 0), nil
+				return BoolValue(bytes.Compare(left.bytes, right.bytes) < 0), nil
 			case geq:
-				return BoolValue(bytes.Compare(left, right) >= 0), nil
+				return BoolValue(bytes.Compare(left.bytes, right.bytes) >= 0), nil
 			case leq:
-				return BoolValue(bytes.Compare(left, right) <= 0), nil
+				return BoolValue(bytes.Compare(left.bytes, right.bytes) <= 0), nil
 			}
 			panic(fmt.Sprintf("Invalid binary operator %s", token{kind: n.op}))
 		case BoolValue:

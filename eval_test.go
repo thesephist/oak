@@ -33,7 +33,7 @@ func TestNullLiteral(t *testing.T) {
 }
 
 func TestStringLiteral(t *testing.T) {
-	expectProgramToReturn(t, "'Hello, World!\\n'", StringValue([]byte("Hello, World!\n")))
+	expectProgramToReturn(t, "'Hello, World!\\n'", MakeString("Hello, World!\n"))
 }
 
 func TestIntegerLiteral(t *testing.T) {
@@ -103,14 +103,14 @@ func TestBasicIfExpr(t *testing.T) {
 		{ a: 'b' } -> 200
 		5 -> 'five'
 		4 -> 'four'
-	}`, StringValue([]byte("four")))
+	}`, MakeString("four"))
 }
 
 func TestIfExprWithEmpty(t *testing.T) {
 	expectProgramToReturn(t, `if 10 + 2 {
 		12 -> 'twelve'
 		_ -> 'wrong'
-	}`, StringValue([]byte("twelve")))
+	}`, MakeString("twelve"))
 }
 
 func TestIfExprInFunction(t *testing.T) {
