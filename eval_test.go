@@ -74,9 +74,11 @@ func TestBasicBinaryExpr(t *testing.T) {
 }
 
 func TestBinaryExprWithParens(t *testing.T) {
-	// TODO: fix this
-	// expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, IntValue(2))
-	// expectProgramToReturn(t, `3 / 3 - 1 + 14 % 3`, IntValue(2))
+	// NOTE: this program, in most other languages like C and Node, evaluate to
+	// 2. -2 is the result we get in Magnolia (and Ink) due to our specific
+	// operator precedence. We might change this later, but for now this is the
+	// designed behavior.
+	expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, IntValue(-2))
 }
 
 func TestLongBinaryExprWithPrecedence(t *testing.T) {

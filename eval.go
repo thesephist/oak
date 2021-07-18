@@ -344,7 +344,6 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 
 	tokenizer := newTokenizer(string(program))
 	tokens := tokenizer.tokenize()
-	// fmt.Println(tokens)
 
 	parser := newParser(tokens)
 	nodes, err := parser.parse()
