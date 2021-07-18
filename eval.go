@@ -75,20 +75,20 @@ type StringValue struct {
 	bytes []byte
 }
 
-var emptyString = StringValue{bytes: []byte{}}
+var emptyString = &StringValue{bytes: []byte{}}
 
-func MakeString(s string) StringValue {
-	return StringValue{bytes: []byte(s)}
+func MakeString(s string) *StringValue {
+	return &StringValue{bytes: []byte(s)}
 }
-func (v StringValue) String() string {
+func (v *StringValue) String() string {
 	return fmt.Sprintf("'%s'", string(v.bytes))
 }
-func (v StringValue) Eq(u Value) bool {
+func (v *StringValue) Eq(u Value) bool {
 	if _, ok := u.(EmptyValue); ok {
 		return true
 	}
 
-	if w, ok := u.(StringValue); ok {
+	if w, ok := u.(*StringValue); ok {
 		return bytes.Equal(v.bytes, w.bytes)
 	}
 	return false
@@ -430,7 +430,7 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 
 func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
 	if ident, ok := node.(identifierNode); ok {
-		return StringValue{bytes: []byte(ident.payload)}, nil
+		return &StringValue{bytes: []byte(ident.payload)}, nil
 	}
 
 	return c.evalExpr(node, sc)
@@ -443,7 +443,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 	case nullNode:
 		return null, nil
 	case stringNode:
-		return StringValue{bytes: []byte(n.payload)}, nil
+		return &StringValue{bytes: []byte(n.payload)}, nil
 	case numberNode:
 		if n.isInteger {
 			return IntValue(n.intPayload), nil
@@ -476,7 +476,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 					return nil, err
 				}
 				switch typedKey := key.(type) {
-				case StringValue:
+				case *StringValue:
 					keyString = string(typedKey.bytes)
 				case IntValue:
 					keyString = typedKey.String()
@@ -589,7 +589,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 
 				var keyString string
-				if key, ok := key.(StringValue); ok {
+				if key, ok := key.(*StringValue); ok {
 					keyString = string(key.bytes)
 				} else {
 					keyString = key.String()
@@ -626,8 +626,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 
 			switch target := assignLeft.(type) {
-			case StringValue:
-				assignedString, ok := assignedValue.(StringValue)
+			case *StringValue:
+				assignedString, ok := assignedValue.(*StringValue)
 				if !ok {
 					return nil, runtimeError{
 						reason: fmt.Sprintf("Cannot assign non-string value %s to string in %s", assignedValue, assign),
@@ -682,7 +682,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				}
 			case ObjectValue:
 				var objKeyString string
-				if objKey, ok := assignRight.(StringValue); ok {
+				if objKey, ok := assignRight.(*StringValue); ok {
 					objKeyString = string(objKey.bytes)
 				} else {
 					objKeyString = assignRight.String()
@@ -709,7 +709,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 		}
 
 		switch target := left.(type) {
-		case StringValue:
+		case *StringValue:
 			byteIndex, ok := right.(IntValue)
 			if !ok {
 				return nil, runtimeError{
@@ -721,7 +721,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				return null, nil
 			}
 
-			return StringValue{bytes: []byte{target.bytes[byteIndex]}}, nil
+			return &StringValue{bytes: []byte{target.bytes[byteIndex]}}, nil
 		case ListValue:
 			listIndex, ok := right.(IntValue)
 			if !ok {
@@ -737,7 +737,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			return target.elems[listIndex], nil
 		case ObjectValue:
 			var objKeyString string
-			if objKey, ok := right.(StringValue); ok {
+			if objKey, ok := right.(*StringValue); ok {
 				objKeyString = string(objKey.bytes)
 			} else {
 				objKeyString = right.String()
@@ -805,8 +805,8 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 
 			return floatBinaryOp(n.op, left, right)
-		case StringValue:
-			right, ok := rightComputed.(StringValue)
+		case *StringValue:
+			right, ok := rightComputed.(*StringValue)
 			if !ok {
 				return nil, incompatibleError
 			}
@@ -815,7 +815,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			case plus:
 				base := make([]byte, 0, len(left.bytes)+len(right.bytes))
 				base = append(base, left.bytes...)
-				return StringValue{bytes: append(base, right.bytes...)}, nil
+				return &StringValue{bytes: append(base, right.bytes...)}, nil
 			case xor:
 				max := maxLen(left.bytes, right.bytes)
 
@@ -824,7 +824,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				for i := range res {
 					res[i] = ls[i] ^ rs[i]
 				}
-				return StringValue{bytes: res}, nil
+				return &StringValue{bytes: res}, nil
 			case and:
 				max := maxLen(left.bytes, right.bytes)
 
@@ -833,7 +833,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				for i := range res {
 					res[i] = ls[i] & rs[i]
 				}
-				return StringValue{bytes: res}, nil
+				return &StringValue{bytes: res}, nil
 			case or:
 				max := maxLen(left.bytes, right.bytes)
 
@@ -842,7 +842,7 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 				for i := range res {
 					res[i] = ls[i] | rs[i]
 				}
-				return StringValue{bytes: res}, nil
+				return &StringValue{bytes: res}, nil
 			case greater:
 				return BoolValue(bytes.Compare(left.bytes, right.bytes) > 0), nil
 			case less:

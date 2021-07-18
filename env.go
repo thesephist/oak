@@ -56,10 +56,10 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 	}
 
 	switch arg := args[0].(type) {
-	case StringValue:
+	case *StringValue:
 		return arg, nil
 	default:
-		return StringValue{bytes: []byte(arg.String())}, nil
+		return &StringValue{bytes: []byte(arg.String())}, nil
 	}
 }
 
@@ -68,7 +68,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 		return nil, err
 	}
 
-	pathBytes, ok := args[0].(StringValue)
+	pathBytes, ok := args[0].(*StringValue)
 	if !ok {
 		return nil, runtimeError{
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
@@ -109,7 +109,7 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	}
 
 	switch arg := args[0].(type) {
-	case StringValue:
+	case *StringValue:
 		return IntValue(len(arg.bytes)), nil
 	case ListValue:
 		return IntValue(len(arg.elems)), nil
@@ -127,7 +127,7 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 		return nil, err
 	}
 
-	outputString, ok := args[0].(StringValue)
+	outputString, ok := args[0].(*StringValue)
 	if !ok {
 		return nil, runtimeError{
 			reason: fmt.Sprintf("unexpected argument to print: %s", args[0]),
@@ -136,19 +136,4 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 
 	n, _ := os.Stdout.Write(outputString.bytes)
 	return IntValue(n), nil
-}
-
-func (c *Context) mgnOpen(
-	path StringValue, mode IntValue, cb FnValue) (Value, error) {
-	return emptyString, nil
-}
-
-func (c *Context) mgnRead(
-	fd IntValue, offset IntValue, length IntValue, cb FnValue) (Value, error) {
-	return emptyString, nil
-}
-
-func (c *Context) mgnWrite(
-	fd IntValue, offset IntValue, data StringValue, cb FnValue) (Value, error) {
-	return emptyString, nil
 }
