@@ -45,6 +45,7 @@ highlight link mgnMatch Conditional
 
 " functions
 syntax keyword mgnFunction fn
+syntax keyword mgnFunction with
 syntax match mgnFunction "\v\|\>"
 highlight link mgnFunction Type
 
@@ -52,8 +53,12 @@ highlight link mgnFunction Type
 syntax keyword mgnBoolean true false
 highlight link mgnBoolean Boolean
 
+" constants
+syntax keyword mgnConst _
+highlight link mgnConst Constant
+
 " atoms
-syntax match mgnAtom "\v:[A-Za-z_!?][A-Za-z0-9_!?]*"
+syntax match mgnAtom "\v:[A-Za-z_!][A-Za-z0-9_!?]*"
 highlight link mgnAtom Special
 
 " numbers should be consumed first by identifiers, so comes before
@@ -62,10 +67,10 @@ syntax match mgnNumber "\v\d+\.\d+"
 highlight link mgnNumber Number
 
 " functions
-syntax match mgnFnCall "\v[A-Za-z_!?][A-Za-z0-9_!?]*\(" contains=mgnFunctionName,mgnBuiltin
+syntax match mgnFnCall "\v[A-Za-z_!][A-Za-z0-9_!?]*\(" contains=mgnFunctionName,mgnBuiltin
 
 " identifiers
-syntax match mgnFunctionName "\v[A-Za-z_!?][A-Za-z0-9_!?]*" contained
+syntax match mgnFunctionName "\v[A-Za-z_!][A-Za-z0-9_!?]*" contained
 highlight link mgnFunctionName Identifier
 
 syntax keyword mgnBuiltin import contained
