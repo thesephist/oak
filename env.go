@@ -45,6 +45,7 @@ func (c *Context) LoadFunc(name string, fn func([]Value) (Value, error)) {
 
 func (c *Context) LoadBuiltins() {
 	c.LoadFunc("import", c.mgnImport)
+	c.LoadFunc("type", c.mgnType)
 	c.LoadFunc("string", c.mgnString)
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
@@ -64,17 +65,34 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 }
 
 func (c *Context) mgnType(args []Value) (Value, error) {
-	if err := c.requireArgLen("string", args, 1); err != nil {
+	if err := c.requireArgLen("type", args, 1); err != nil {
 		return nil, err
 	}
 
-	switch arg := args[0].(type) {
-	// TODO: write these cases!
-	default:
-		_ = arg
+	switch args[0].(type) {
+	case NullValue:
+		return AtomValue("null"), nil
+	case EmptyValue:
+		return AtomValue("empty"), nil
+	case IntValue:
+		return AtomValue("int"), nil
+	case FloatValue:
+		return AtomValue("float"), nil
+	case BoolValue:
+		return AtomValue("bool"), nil
+	case AtomValue:
+		return AtomValue("atom"), nil
+	case *StringValue:
+		return AtomValue("string"), nil
+	case *ListValue:
+		return AtomValue("list"), nil
+	case ObjectValue:
+		return AtomValue("object"), nil
+	case FnValue, BuiltinFnValue:
+		return AtomValue("function"), nil
 	}
 
-	panic("Unimplemented!")
+	panic("Unreachable!")
 }
 
 func (c *Context) mgnImport(args []Value) (Value, error) {
