@@ -399,3 +399,26 @@ func TestComplexPipe(t *testing.T) {
 	100 |> lib.add1() |> lib.double() |> getAdder(lib)()
 	`, IntValue(203))
 }
+
+func TestExtraArgs(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn getExtra(a, b, c) {
+		[b, c]
+	}
+	getExtra(1, ?)
+	`, MakeList(null, null))
+}
+
+func TestRestArgs(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn getRest(first, rest...) {
+		rest
+	}
+	getRest(1, 2, 3, 4, 5)
+	`, MakeList(
+		IntValue(2),
+		IntValue(3),
+		IntValue(4),
+		IntValue(5),
+	))
+}
