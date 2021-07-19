@@ -5,6 +5,7 @@
 
     range: range
     slice: slice
+    reverse: reverse
     map: map
     each: each
     filter: filter
@@ -14,18 +15,22 @@
 nums := range(1, 11)
 
 // slice
-println(nums |> slice(3, 7))
+println('slice:', nums |> slice(3, 7))
+
+// reverse
+println('reverse:', nums |> reverse())
 
 // map
-println(nums |> map(fn(n) n * n))
+println('map:', nums |> map(fn(n) n * n))
 
 // each
-nums |> each(println)
+println('each:')
+nums |> each(fn(n) println(n))
 
 // filter
-println(nums |> filter(fn even?(n) n % 2 = 0))
+println('filter:', nums |> filter(fn even?(n) n % 2 = 0))
 
 // reduce (sum)
 sum := fn(xs) xs |> reduce(0, fn(a, b) a + b)
-println(sum(nums))
+println('reduce (sum):', sum(nums))
 

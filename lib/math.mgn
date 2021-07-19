@@ -1,0 +1,28 @@
+// math library
+
+{
+    reduce: reduce
+} := import('std')
+
+sum := fn(xs) xs |> reduce(0, fn(a, b) a + b)
+
+minList := fn(xs) xs |> reduce(xs.0, fn(acc, n) if n < acc {
+    true -> n
+    _ -> acc
+})
+
+maxList := fn(xs) xs |> reduce(xs.0, fn(acc, n) if n > acc {
+    true -> n
+    _ -> acc
+})
+
+min := fn(xs...) if type(xs.0) {
+    :list -> minList(xs.0)
+    _ -> minList(xs)
+}
+
+max := fn(xs...) if type(xs.0) {
+    :list -> maxList(xs.0)
+    _ -> maxList(xs)
+}
+

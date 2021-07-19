@@ -1,6 +1,6 @@
 // core standard library
 
-fn println(x) print(string(x) + '\n')
+fn identity(x) x
 
 fn push(xs, x) xs.(len(xs)) := x
 
@@ -17,20 +17,20 @@ fn default(x, base) if x {
 
 fn clamp(min, max, n, m) {
     // assumes that at least min < max & n < m
-    n := if n < min :: {
+    n := if n < min {
         true -> min
         _ -> n
     }
-    m := if m < min :: {
+    m := if m < min {
         true -> min
         _ -> m
     }
 
-    m := if m > max :: {
+    m := if m > max {
         true -> max
         _ -> m
     }
-    n := if n > end :: {
+    n := if n > m {
         true -> m
         _ -> n
     }
@@ -53,6 +53,22 @@ fn slice(xs, min, max) {
     sub(baseIterator(xs), min)
 }
 
+fn clone(x) if type(x) {
+    :string -> '' + x
+    :list -> slice(x)
+    // TODO: implement!
+    :object -> x
+    _ -> x
+}
+
+fn append(xs, ys) {
+    xlen := len(xs)
+    ys |> each(fn(y, i) xs.(xlen + i) := y)
+    xs
+}
+
+fn join(xs, ys) clone(xs) |> append(ys)
+
 // functional iterators
 
 fn range(start, end, step) {
@@ -69,6 +85,17 @@ fn range(start, end, step) {
     }
 
     sub(start)
+}
+
+fn reverse(xs) {
+    fn sub(acc, i) if i < 0 {
+        true -> acc
+        _ -> sub(
+            push(acc, xs.(i))
+            i - 1
+        )
+    }
+    sub([], len(xs) - 1)
 }
 
 fn map(xs, f) {
@@ -115,5 +142,27 @@ fn reduce(xs, seed, f) {
         )
     }
     sub(seed, 0)
+}
+
+fn flatten(xs) xs |> reduce([], append)
+
+fn some(xs, pred) {
+    pred := default(pred, identity)
+    xs |> map(pred) |> reduce(false, fn(acc, x) acc | x)
+}
+
+fn every(xs, pred) {
+    pred := default(pred, identity)
+    xs |> map(pred) |> reduce(true, fn(acc, x) acc & x)
+}
+
+// OS interfaces
+
+fn println(xs...) {
+    xs |> each(fn(x, i) if i {
+        0 -> print(string(x))
+        _ -> print(' ' + string(x))
+    })
+    print('\n')
 }
 

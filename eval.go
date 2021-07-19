@@ -980,7 +980,6 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 			if fn.defn.restArg != "" {
 				var restList ListValue
-				fmt.Println("-> restArgs", args, len(args), len(fn.defn.args))
 				if len(args) > len(fn.defn.args) {
 					restList = ListValue(args[len(fn.defn.args):])
 				} else {

@@ -1,11 +1,84 @@
 // strings library
 
 {
+    map: map
     slice: slice
     reduce: reduce
 } := import('../lib/std')
+
+fn checkRange(lo, hi) fn(c) {
+    p := codepoint(c)
+    lo < p & p < hi
+}
+
+upper? := checkRange(codepoint('A') - 1, codepoint('Z') + 1)
+lower? := checkRange(codepoint('a') - 1, codepoint('z') + 1)
+digit? := checkRange(codepoint('0') - 1, codepoint('9') + 1)
+space? := fn(c) if c {
+    ' ' -> true
+    '\t' -> true
+    '\n' -> true
+    '\r' -> true
+    '\f' -> true
+    _ -> false
+}
+fn letter?(c) upper?(c) | lower?(c)
+fn word?(c) letter?(c) | digit?(c)
 
 fn join(strings, joiner) if len(strings) {
     0 -> ''
     _ -> strings |> slice(1) |> reduce(strings.0, fn(a, b) a + joiner + b)
 }
+
+fn startsWith?(s, prefix) prefix |> reduce(true, fn(acc, c, i) {
+    acc & (s.(i) = c)
+})
+
+fn endsWith?(s, suffix) {
+    diff := len(s) - len(suffix)
+    suffix |> reduce(true, fn(acc, c, i) {
+        acc & (s.(i + diff) = c)
+    })
+}
+
+fn _matchesAt?(s, substr, idx) if len(substr) {
+    0 -> true
+    1 -> s.(idx) = substr
+    _ -> {
+        max := len(substr)
+        fn sub(i) if i {
+            max -> true
+            _ -> if s.(idx + i) {
+                substr.(i) -> sub(i + 1)
+                _ -> false
+            }
+        }
+        sub(0)
+    }
+}
+
+fn indexOf(s, substr) {
+    max := len(s) - len(substr)
+    fn sub(i) if _matchesAt?(s, substr, i) {
+        true -> i
+        _ -> if i < max {
+            true -> sub(i + 1)
+            _ -> -1
+        }
+    }
+}
+
+fn contains?(s, substr) indexOf(s, substr) >= 0
+
+fn lower(s) s |> reduce('', fn(acc, c, i) if upper?(c) {
+    true -> acc.(i) := char(codepoint(c) + 32)
+    _ -> acc.(i) := c
+})
+
+fn upper(s) s |> reduce('', fn(acc, c, i) if lower?(c) {
+    true -> acc.(i) := char(codepoint(c) - 32)
+    _ -> acc.(i) := c
+})
+
+// TODO: replace, split, trimStart/trimEnd/trim
+

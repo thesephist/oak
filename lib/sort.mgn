@@ -1,0 +1,61 @@
+// quicksort + hoare partition
+
+{
+    identity: id
+    map: map
+    clone: clone
+} := import('std')
+
+fn sortBy(xs, pred) {
+    vpred := xs |> map(pred)
+
+    fn partition(xs, lo, hi) {
+        pivot := vpred.(lo)
+        fn lsub(i) if vpred.(i) < pivot {
+            true -> lsub(i + 1)
+            _ -> i
+        }
+        fn rsub(j) if vpred.(j) > pivot {
+            true -> rsub(j - 1)
+            _ -> j
+        }
+        fn sub(i, j) {
+            i := lsub(i)
+            j := rsub(j)
+            if i < j {
+                false -> j
+                _ -> {
+                    tmp := xs.(i)
+                    tmpPred := vpred.(i)
+                    xs.(i) := xs.(j)
+                    xs.(j) := tmp
+                    vpred.(i) := vpred.(j)
+                    vpred.(j) := tmpPred
+
+                    sub(i + 1, j - 1)
+                }
+            }
+        }
+        sub(lo, hi)
+    }
+
+    fn quicksort(xs, lo, hi) if len(xs) {
+        0 -> xs
+        1 -> xs
+        _ -> if lo < hi {
+            false -> xs
+            _ -> {
+                p := partition(xs, lo, hi)
+                quicksort(xs, lo, p)
+                quicksort(xs, p + 1, hi)
+            }
+        }
+    }
+
+    quicksort(xs, 0, len(xs) - 1)
+}
+
+fn sort!(xs) xs |> sortBy(id)
+
+fn sort(xs) xs |> clone() |> sort!()
+

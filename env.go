@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -106,24 +107,24 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
 		}
 	}
-	path := string(*pathBytes) + ".mgn"
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(c.rootPath, path)
+	filePath := string(*pathBytes) + ".mgn"
+	if !filepath.IsAbs(filePath) {
+		filePath = filepath.Join(c.rootPath, filePath)
 	}
 
-	file, err := os.Open(path)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, runtimeError{
-			reason: fmt.Sprintf("could not open %s, %s", path, err.Error()),
+			reason: fmt.Sprintf("could not open %s, %s", filePath, err.Error()),
 		}
 	}
 	defer file.Close()
 
-	if imported, ok := c.importMap[path]; ok {
+	if imported, ok := c.importMap[filePath]; ok {
 		return ObjectValue(imported.vars), nil
 	}
 
-	ctx := NewContext(path, c.rootPath)
+	ctx := NewContext(filePath, path.Dir(filePath))
 	ctx.importMap = c.importMap
 	ctx.LoadBuiltins()
 	_, err = ctx.Eval(file)
@@ -131,7 +132,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 		return nil, err
 	}
 
-	c.importMap[path] = ctx.scope
+	c.importMap[filePath] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
 }
 
