@@ -255,6 +255,28 @@ func (v FnValue) Eq(u Value) bool {
 	return false
 }
 
+type thunkValue struct {
+	expr astNode
+	scope
+}
+
+func (v thunkValue) String() string {
+	return fmt.Sprintf("thunk of %s", v.expr)
+}
+func (v thunkValue) Eq(u Value) bool {
+	panic("Illegal to compare thunk values!")
+}
+func (c *Context) unwrapThunk(thunk thunkValue) (v Value, err error) {
+	for isThunk := true; isThunk; thunk, isThunk = v.(thunkValue) {
+		v, err = c.evalExprWithOpt(thunk.expr, thunk.scope, true)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 type scope struct {
 	parent *scope
 	vars   map[string]Value
@@ -448,6 +470,10 @@ func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
 }
 
 func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
+	return c.evalExprWithOpt(node, sc, false)
+}
+
+func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value, error) {
 	switch n := node.(type) {
 	case emptyNode:
 		return empty, nil
@@ -954,7 +980,16 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			for i, argName := range fn.defn.args {
 				fnScope.put(argName, args[i])
 			}
-			return c.evalExpr(fn.defn.body, fnScope)
+
+			thunk := thunkValue{
+				expr:  fn.defn.body,
+				scope: fnScope,
+			}
+			if thunkable {
+				return thunk, nil
+			}
+
+			return c.unwrapThunk(thunk)
 		} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
 			return fn.fn(args)
 		} else {
@@ -975,26 +1010,31 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
 			}
 
 			if cond.Eq(target) {
-				return c.evalExpr(branch.body, sc)
+				return c.evalExprWithOpt(branch.body, sc, thunkable)
 			}
 		}
 		return null, nil
 	case blockNode:
-		var err error
+		if len(n.exprs) == 0 {
+			return null, nil
+		}
+
 		blockScope := scope{
 			parent: &sc,
 			vars:   map[string]Value{},
 		}
 
 		// empty block returns ? (null)
-		var returnVal Value = null
-		for _, expr := range n.exprs {
-			returnVal, err = c.evalExpr(expr, blockScope)
+		last := len(n.exprs) - 1
+		for _, expr := range n.exprs[:last] {
+			_, err := c.evalExprWithOpt(expr, blockScope, false)
 			if err != nil {
 				return nil, err
 			}
 		}
-		return returnVal, nil
+
+		return c.evalExprWithOpt(n.exprs[last], blockScope, thunkable)
 	}
-	return null, nil
+
+	panic("Invalid astNode type!")
 }

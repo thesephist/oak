@@ -1,0 +1,24 @@
+// tail call elimination test
+
+{
+    println: println
+} := import('../lib/std')
+
+// just counts up from 0, prints every 100k
+fn countUp(max) {
+    fn sub(i) if i {
+        max -> ?
+        _ -> if i % 100000 {
+            0 -> {
+                println(i)
+                sub(i + 1)
+            }
+            _ -> sub(i + 1)
+        }
+    }
+
+    sub(0)
+}
+
+countUp(1000000)
+
