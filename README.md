@@ -46,10 +46,7 @@ unaryExpr := ('!' | '-') expr
 binaryExpr := expr (+ - * / % ^ & | > < = >= <=) binaryExpr
 
 prefixCall := expr '(' (expr ',')* ')'
-infixCall := expr expr (
-    expr |
-    '(' (expr ',')* ')'
-)?
+infixCall := expr '|>' prefixCall
 
 ifExpr := 'if' expr '{' ifClause* '}'
 ifClause := expr '->' expr ','
@@ -150,26 +147,24 @@ fn { std.println('Hi!') }
 // factorial
 fn factorial(n) if n <= 1 {
 	true -> 1
-    _ -> n * (n - 1 factorial)
+    _ -> n * factorial(n - 1)
 }
 ```
 
 ```
-// methods are emulated by infix notation
-// for example, for lists
-n times fn(i) std.println(i)
-names join ', ' // join(names, ', ')
-scores sum // sum(scores)
-mgnFiles := fileNames std.filter fn(name) name endsWith? '.mgn'
-	// mgnFiles := std.filter(fileNames, fn(name) { endsWith?(name, '.mgn') })
-fn sum(xs...) xs std.reduce(fn(a, b) a + b, 0)
+// methods are emulated by pipe notation
+n |> times(fn(i) std.println(i))
+names |> join(', ')
+scores |> sum()
+mgnFiles := fileNames |> filter(fn(name) name |> endsWith?('.mgn')) 
+fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
 ```
 
 ```
 // "with" keyword just makes the last fn a callback as last arg
 with fetch('some.url.com')
 	fn(resp) with resp.json()
-		fn(json) console.log(json)
+    fn(json) console.log(json)
 ```
 
 ```
@@ -179,7 +174,7 @@ with open('name.txt') fn(evt) if evt.type {
 	_ -> with read(evt.fd, 0, -1) fn(evt) {
 		if evt.type {
 			:error -> std.println(evt.message)
-			_ -> std.printf('file data: {0}', evt.data)
+			_ -> std.printf('file data: {0}\n', evt.data)
 		}
 		close(evt.fd)
 	}
@@ -188,14 +183,7 @@ with open('name.txt') fn(evt) if evt.type {
 // with stdlib
 with std.readFile('name.txt') fn(file) if file {
     ? -> std.println('could not read file')
-    _ -> std.println(file slice(0, file len))
+    _ -> std.println(file |> slice(0))
 }
-```
-
-```
-// while loop
-fn {
-    std.println('reading file...')
-} while fn { signal nil? }
 ```
 
