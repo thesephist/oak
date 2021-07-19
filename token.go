@@ -44,6 +44,7 @@ const (
 	rightBrace
 	assign
 	nonlocalAssign
+	pipeArrow
 	branchArrow
 	colon
 	ellipsis
@@ -110,6 +111,8 @@ func (t token) String() string {
 		return ":="
 	case nonlocalAssign:
 		return "<-"
+	case pipeArrow:
+		return "|>"
 	case branchArrow:
 		return "->"
 	case colon:
@@ -349,6 +352,10 @@ func (t *tokenizer) nextToken() token {
 	case '&':
 		return token{kind: and, pos: t.currentPos()}
 	case '|':
+		if t.peek() == '>' {
+			t.next()
+			return token{kind: pipeArrow, pos: t.currentPos()}
+		}
 		return token{kind: or, pos: t.currentPos()}
 	case '>':
 		if t.peek() == '=' {

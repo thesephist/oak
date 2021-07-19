@@ -374,3 +374,28 @@ func TestObjectDelete(t *testing.T) {
 		},
 	))
 }
+
+func TestSinglePipe(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn append(a, b) a + b
+	'hello' |> append('world')
+	`, MakeString("helloworld"))
+}
+
+func TestMultiPipe(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn append(a, b) a + b
+	'hello' |> append('world') |> append('!')
+	`, MakeString("helloworld!"))
+}
+
+func TestComplexPipe(t *testing.T) {
+	expectProgramToReturn(t, `
+	lib := {
+		add1: fn(n) n + 1
+		double: fn(n) 2 * n
+	}
+	fn getAdder(env) { env.add1 }
+	100 |> lib.add1() |> lib.double() |> getAdder(lib)()
+	`, IntValue(203))
+}

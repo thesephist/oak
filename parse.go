@@ -673,6 +673,10 @@ func infixOpPrecedence(op tokKind) int {
 }
 
 func (p *parser) nextNode() (astNode, error) {
+	return p.nextNodeInPipe(false)
+}
+
+func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 	node, err := p.parseUnit()
 	if err != nil {
 		return nil, err
@@ -764,18 +768,23 @@ func (p *parser) nextNode() (astNode, error) {
 			// whatever follows a binary expr cannot bind to the binary
 			// expression by syntax rule, so we simply return
 			return node, nil
-		case colon,
-			// node is object key
-			leftBrace,
-			// node is if expr condition
-			branchArrow,
-			// node is if branch target
-			rightParen, rightBracket, rightBrace:
-			// mistyped right delimiter
-			return node, nil
+		case pipeArrow:
+			if inPipe {
+				return node, nil
+			}
+
+			p.next() // eat the pipe
+
+			pipeRight, err := p.nextNodeInPipe(true)
+			if err != nil {
+				return nil, err
+			}
+			// above is guaranteed to return a fnCallNode
+			pipedFnCall, _ := pipeRight.(fnCallNode)
+
+			pipedFnCall.args = append([]astNode{node}, pipedFnCall.args...)
+			node = pipedFnCall
 		default:
-			// TODO: infix call with a special token
-			// panic("infix call not implemented")
 			return node, nil
 		}
 	}
