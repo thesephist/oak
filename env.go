@@ -50,6 +50,7 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("string", c.mgnString)
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
+	c.LoadFunc("keys", c.mgnKeys)
 }
 
 func (c *Context) mgnString(args []Value) (Value, error) {
@@ -169,4 +170,35 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 
 	n, _ := os.Stdout.Write(*outputString)
 	return IntValue(n), nil
+}
+
+func makeIntListUpTo(max int) Value {
+	list := make(ListValue, max)
+	for i := 0; i < max; i++ {
+		list[i] = IntValue(i)
+	}
+	return &list
+}
+
+func (c *Context) mgnKeys(args []Value) (Value, error) {
+	if err := c.requireArgLen("print", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		return makeIntListUpTo(len(*arg)), nil
+	case *ListValue:
+		return makeIntListUpTo(len(*arg)), nil
+	case ObjectValue:
+		keys := make(ListValue, len(arg))
+		i := 0
+		for key := range arg {
+			keys[i] = MakeString(key)
+			i++
+		}
+		return &keys, nil
+	default:
+		return MakeList(), nil
+	}
 }

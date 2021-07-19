@@ -56,8 +56,7 @@ fn slice(xs, min, max) {
 fn clone(x) if type(x) {
     :string -> '' + x
     :list -> slice(x)
-    // TODO: implement!
-    :object -> x
+    :object -> keys(x) |> reduce({}, fn(acc, key) acc.(key) := x.(key))
     _ -> x
 }
 
