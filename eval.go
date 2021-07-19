@@ -1015,6 +1015,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		}
 		return null, nil
 	case blockNode:
+		// empty block returns ? (null)
 		if len(n.exprs) == 0 {
 			return null, nil
 		}
@@ -1024,7 +1025,6 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			vars:   map[string]Value{},
 		}
 
-		// empty block returns ? (null)
 		last := len(n.exprs) - 1
 		for _, expr := range n.exprs[:last] {
 			_, err := c.evalExprWithOpt(expr, blockScope, false)

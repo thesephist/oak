@@ -1,0 +1,31 @@
+// exercising list iterator functions
+
+{
+    println: println
+
+    range: range
+    slice: slice
+    map: map
+    each: each
+    filter: filter
+    reduce: reduce
+} := import('../lib/std')
+
+nums := range(1, 11)
+
+// slice
+println(nums |> slice(3, 7))
+
+// map
+println(nums |> map(fn(n) n * n))
+
+// each
+nums |> each(println)
+
+// filter
+println(nums |> filter(fn even?(n) n % 2 = 0))
+
+// reduce (sum)
+sum := fn(xs) xs |> reduce(0, fn(a, b) a + b)
+println(sum(nums))
+

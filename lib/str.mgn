@@ -1,1 +1,11 @@
 // strings library
+
+{
+    slice: slice
+    reduce: reduce
+} := import('../lib/std')
+
+fn join(strings, joiner) if len(strings) {
+    0 -> ''
+    _ -> strings |> slice(1) |> reduce(strings.0, fn(a, b) a + joiner + b)
+}

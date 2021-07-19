@@ -1,0 +1,12 @@
+// exercising string functions
+
+{
+    println: println
+} := import('../lib/std')
+{
+    join: join
+} := import('../lib/str')
+
+println(['one', 'two', 'three'] |> join(', '))
+
+

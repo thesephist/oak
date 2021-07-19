@@ -461,7 +461,7 @@ func (t *tokenizer) tokenize() []token {
 				case comma, leftParen, leftBracket, leftBrace, plus, minus,
 					times, divide, modulus, exclam, greater, less, eq, geq, leq,
 					assign, nonlocalAssign, dot, colon, fnKeyword, ifKeyword,
-					withKeyword, branchArrow:
+					withKeyword, pipeArrow, branchArrow:
 					// do nothing
 				default:
 					next = token{

@@ -2,14 +2,73 @@
 
 fn println(x) print(string(x) + '\n')
 
-// functional iterators
-
 fn push(xs, x) xs.(len(xs)) := x
 
 fn baseIterator(v) if type(v) {
     :string -> ''
     :list -> []
     :object -> {}
+}
+
+fn default(x, base) if x {
+    ? -> base
+    _ -> x
+}
+
+fn clamp(min, max, n, m) {
+    // assumes that at least min < max & n < m
+    n := if n < min :: {
+        true -> min
+        _ -> n
+    }
+    m := if m < min :: {
+        true -> min
+        _ -> m
+    }
+
+    m := if m > max :: {
+        true -> max
+        _ -> m
+    }
+    n := if n > end :: {
+        true -> m
+        _ -> n
+    }
+
+    [n, m]
+}
+
+fn slice(xs, min, max) {
+    min := default(min, 0)
+    max := default(max, len(xs))
+    [min, max] := clamp(0, len(xs), min, max)
+
+    fn sub(acc, i) if i {
+        max -> acc
+        _ -> sub(
+            push(acc, xs.(i))
+            i + 1
+        )
+    }
+    sub(baseIterator(xs), min)
+}
+
+// functional iterators
+
+fn range(start, end, step) {
+    step := default(step, 1)
+
+    list := []
+
+    fn sub(n) if n < end {
+        true -> {
+            push(list, n)
+            sub(n + step)
+        }
+        _ -> list
+    }
+
+    sub(start)
 }
 
 fn map(xs, f) {
@@ -38,7 +97,7 @@ fn filter(xs, f) {
     fn sub(acc, i) if i {
         len(xs) -> acc
         _ -> {
-            if x := f(xs.(i), i) {
+            if f(x := xs.(i), i) {
                 true -> push(acc, x)
             }
             sub(acc, i + 1)
@@ -47,7 +106,14 @@ fn filter(xs, f) {
     sub(baseIterator(xs), 0)
 }
 
-fn reduce(xs, f) {
-    // TODO: write reducer
+fn reduce(xs, seed, f) {
+    fn sub(acc, i) if i {
+        len(xs) -> acc
+        _ -> sub(
+            f(acc, xs.(i), i)
+            i + 1
+        )
+    }
+    sub(seed, 0)
 }
 
