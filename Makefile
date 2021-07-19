@@ -11,4 +11,5 @@ t: test
 
 # install as "mgn" binary
 install:
+	cp tools/magnolia.vim ~/.vim/syntax/magnolia.vim
 	go build -o ${GOPATH}/bin/mgn
