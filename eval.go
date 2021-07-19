@@ -960,7 +960,6 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		}
 
 		if fn, ok := maybeFn.(FnValue); ok {
-			// TODO: implement restArgs
 			if len(args) < len(fn.defn.args) {
 				// if not enough arguments, fill them with nulls
 				difference := len(fn.defn.args) - len(args)
@@ -969,16 +968,26 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 					extraArgs[i] = null
 				}
 				args = append(args, extraArgs...)
-			} else {
-				// if too many arguments, just slice to the right size
-				args = args[:len(fn.defn.args)]
 			}
+
 			fnScope := scope{
 				parent: &fn.scope,
 				vars:   map[string]Value{},
 			}
 			for i, argName := range fn.defn.args {
 				fnScope.put(argName, args[i])
+			}
+
+			if fn.defn.restArg != "" {
+				var restList ListValue
+				fmt.Println("-> restArgs", args, len(args), len(fn.defn.args))
+				if len(args) > len(fn.defn.args) {
+					restList = ListValue(args[len(fn.defn.args):])
+				} else {
+					restList = ListValue{}
+				}
+
+				fnScope.put(fn.defn.restArg, &restList)
 			}
 
 			thunk := thunkValue{
