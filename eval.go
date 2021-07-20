@@ -943,8 +943,10 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				return BoolValue(left != right), nil
 			}
 		}
-		panic(fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
-			token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed))
+		return nil, runtimeError{
+			reason: fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
+				token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed),
+		}
 	case fnCallNode:
 		maybeFn, err := c.evalExpr(n.fn, sc)
 		if err != nil {

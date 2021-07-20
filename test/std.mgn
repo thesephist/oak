@@ -19,21 +19,75 @@ t := test.new('libstd')
 		}
 		[1, 2, 3, 100]
 	)
-	'push list on list' |> t.eq(
+	'push list to list' |> t.eq(
 		[[10, 20]] |> push([30, 40])
 		[[10, 20], [30, 40]]
 	)
 
 	'push empty string' |> t.eq(push('', 'xyz'), 'xyz')
 	'push non-empty string' |> t.eq(push('abc', 'def'), 'abcdef')
-	// TODO: push tests on string
+	'push mutates string' |> t.eq(
+		{
+			s := 'hello'
+			s |> push(', world') |> push('!\n')
+			s
+		}
+		'hello, world!\n'
+	)
 }
 
 // default
 {
 	default := std.default
 
-	// TODO: default arg utility tests
+	'default given ?' |> t.eq(default(?, :fallback), :fallback)
+	'default given 0' |> t.eq(default(0, :fallback), 0)
+	'default given false' |> t.eq(default(false, :fallback), false)
+	'default given normal value' |> t.eq(default(10, :fallback), 10)
+}
+
+// clamp and slice
+{
+	{
+		clamp: clamp
+		slice: slice
+	} := std
+
+	'clamp(min, max)' |> t.eq(clamp(0, 10, 0, 10), [0, 10])
+	'clamp(< min, > max)' |> t.eq(clamp(0, 10, -5, 12), [0, 10])
+	'clamp(> min, < max)' |> t.eq(clamp(0, 10, 3, 7), [3, 7])
+	'clamp(< min, < min)' |> t.eq(clamp(0, 10, -8, -2), [0, 0])
+
+	'clamp(min, max) reversed arg' |> t.eq(clamp(0, 10, 10, 0), [0, 0])
+	'clamp(< min, > max) reversed arg' |> t.eq(clamp(0, 10, 12, -5), [0, 0])
+	'clamp(> min, < max) reversed arg' |> t.eq(clamp(0, 10, 7, 3), [3, 3])
+	'clamp(< min, < min) reversed arg' |> t.eq(clamp(0, 10, -2, -8), [0, 0])
+
+	// slice list
+
+	'slice() empty list' |> t.eq(slice([]), [])
+	'slice(start) empty list' |> t.eq(slice([], 1), [])
+	'slice(start, end) empty list' |> t.eq(slice([], 1, 10), [])
+
+	'slice() list' |> t.eq(slice([:a, :b, :c]), [:a, :b, :c])
+	'slice(start) list' |> t.eq(slice([:a, :b, :c], 1), [:b, :c])
+	'slice(start, end) list' |> t.eq(slice([:a, :b, :c, :d, :e], 1, 3), [:b, :c])
+	'slice(start, > end) list' |> t.eq(slice([:a, :b, :c, :d, :e], 1, 10), [:b, :c, :d, :e])
+
+	'slice() clones original list' |> t.eq(
+		{
+			original := [1, 2, 3]
+			new := slice(original)
+			new |> std.push(100)
+			[original, new]
+		}
+		[
+			[1, 2, 3]
+			[1, 2, 3, 100]
+		]
+	)
+
+	// TODO: slice string tests
 }
 
 t.report()
