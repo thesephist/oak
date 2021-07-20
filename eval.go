@@ -759,7 +759,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 			}
 
-			if byteIndex < 0 || int64(byteIndex) > int64(len(*target)) {
+			if byteIndex < 0 || int64(byteIndex) >= int64(len(*target)) {
 				return null, nil
 			}
 
@@ -773,7 +773,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 			}
 
-			if listIndex < 0 || int64(listIndex) > int64(len(*target)) {
+			if listIndex < 0 || int64(listIndex) >= int64(len(*target)) {
 				return null, nil
 			}
 
@@ -870,8 +870,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 					return nil, incompatibleError
 				}
 
-				leftInt := IntValue(math.Trunc(float64(left)))
-				return intBinaryOp(n.op, leftInt, rightInt)
+				right = FloatValue(float64(int64(rightInt)))
+				return floatBinaryOp(n.op, left, right)
 			}
 
 			return floatBinaryOp(n.op, left, right)
@@ -957,6 +957,21 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if err != nil {
 				return nil, err
 			}
+		}
+		if n.restArg != nil {
+			rest, err := c.evalExpr(n.restArg, sc)
+			if err != nil {
+				return nil, err
+			}
+
+			restList, ok := rest.(*ListValue)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("Cannot spread a non-list value %s in a function call %s", rest, n),
+				}
+			}
+
+			args = append(args, *restList...)
 		}
 
 		if fn, ok := maybeFn.(FnValue); ok {

@@ -105,8 +105,8 @@ func TestBasicBinaryExpr(t *testing.T) {
 }
 
 func TestOrderedBinaryExpr(t *testing.T) {
-	expectProgramToReturn(t, `-1.5 + -3.5 - 5 / 5 * 2`, IntValue(-7))
-	expectProgramToReturn(t, `(-1.5 + -3.5 - 5) / 5 * 2`, IntValue(-4))
+	expectProgramToReturn(t, `-1.5 + -3.5 - 5 / 5 * 2`, FloatValue(-7))
+	expectProgramToReturn(t, `(-1.5 + -3.5 - 5) / 5 * 2`, FloatValue(-4))
 }
 
 func TestBinaryExprWithParens(t *testing.T) {
