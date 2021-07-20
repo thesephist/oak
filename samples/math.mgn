@@ -5,6 +5,10 @@
 } := import('std')
 
 {
+	printf: printf
+} := import('fmt')
+
+{
     sum: sum
     min: min
     max: max
@@ -16,10 +20,10 @@
 
 nums := [1, 2, 6, 35, -24, 100, -2]
 
-println('sum:', sum(nums))
-println('min:', min(nums))
-println('max:', max(nums))
+printf('sum: {{ 0 }}', sum(nums...))
+printf('min: {{ 0 }}', min(nums...))
+printf('max: {{ 0 }}', max(nums...))
 
 // sorting
-println('sorted:', sort(nums))
+printf('sorted: {{ 0 }}', sort(nums))
 

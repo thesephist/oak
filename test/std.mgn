@@ -1,0 +1,12 @@
+// libstd tests
+
+std := import('std')
+test := import('test')
+
+t := test.new('libstd')
+
+'1 + 1 is 2' |> t.eq(1 + 1, 2)
+
+'1 + 2 is 3' |> t.eq(1 + 2, 3)
+
+t.report()

@@ -12,25 +12,29 @@
     reduce: reduce
 } := import('std')
 
+{
+	printf: printf
+} := import('fmt')
+
 nums := range(1, 11)
 
 // slice
-println('slice:', nums |> slice(3, 7))
+printf('slice: {{ 0 }}', nums |> slice(3, 7))
 
 // reverse
-println('reverse:', nums |> reverse())
+printf('reverse: {{ 0 }}', nums |> reverse())
 
 // map
-println('map:', nums |> map(fn(n) n * n))
+printf('map: {{ 0 }}', nums |> map(fn(n) n * n))
 
 // each
 println('each:')
 nums |> each(fn(n) println(n))
 
 // filter
-println('filter:', nums |> filter(fn even?(n) n % 2 = 0))
+printf('filter: {{ 0 }}', nums |> filter(fn even?(n) n % 2 = 0))
 
 // reduce (sum)
 sum := fn(xs) xs |> reduce(0, fn(a, b) a + b)
-println('reduce (sum):', sum(nums))
+printf('reduce (sum): {{ 0 }}', sum(nums))
 

@@ -1,1 +1,74 @@
 // string and data formatting library
+
+{
+	push: push
+	println: println
+} := import('std')
+
+// ported from Ink's std.format
+fn format(raw, values...) {
+	// parser state
+	idx := 0
+	// parser internal state
+	// 	0 -> normal
+	// 	1 -> seen one {
+	// 	2 -> seen two {
+	// 	3 -> seen a valid }
+	which := 0
+	// buffer for currently reading key
+	key := ''
+	// result build-up buffer
+	buf := ''
+
+	fn append(c) buf |> push(c)
+
+	fn readNext {
+		c := raw.(idx)
+
+	    if which {
+			0 -> if c {
+				'{' -> which <- 1
+				_ -> append(c)
+			}
+			1 -> if c {
+				'{' -> which <- 2
+				// if it turns out the earlier brce was not a part of a format
+				// expression, just backtrack
+				_ -> {
+					append('{' + c)
+					which <- 0
+				}
+			}
+			2 -> if c {
+				'}' -> {
+					append(string(values.(int(key))))
+					key <- ''
+					which <- 3
+				}
+				// ignore spaces in keys
+				' ' -> ?
+				_  -> key <- key + c
+			}
+			3 -> if c {
+				'}' -> which <- 0
+				// ignore invalid inputs -- treat them as nonexistent
+				_ -> ?
+			}
+	    }
+
+		idx <- idx + 1
+	}
+
+	fn sub if idx < len(raw) {
+		true -> {
+			readNext()
+			sub()
+		}
+		_ -> buf
+	}
+
+	sub()
+}
+
+fn printf(raw, values...) println(format(raw, values...))
+
