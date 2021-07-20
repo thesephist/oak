@@ -5,8 +5,35 @@ test := import('test')
 
 t := test.new('libstd')
 
-'1 + 1 is 2' |> t.eq(1 + 1, 2)
+// push
+{
+	push := std.push
 
-'1 + 2 is 3' |> t.eq(1 + 2, 3)
+	'push empty list' |> t.eq(push([], 12), [12])
+	'push non-empty list' |> t.eq(push([10, 20], 30), [10, 20, 30])
+	'push mutates list' |> t.eq(
+		{
+			arr := [1, 2, 3]
+			arr |> push(100)
+			arr
+		}
+		[1, 2, 3, 100]
+	)
+	'push list on list' |> t.eq(
+		[[10, 20]] |> push([30, 40])
+		[[10, 20], [30, 40]]
+	)
+
+	'push empty string' |> t.eq(push('', 'xyz'), 'xyz')
+	'push non-empty string' |> t.eq(push('abc', 'def'), 'abcdef')
+	// TODO: push tests on string
+}
+
+// default
+{
+	default := std.default
+
+	// TODO: default arg utility tests
+}
 
 t.report()

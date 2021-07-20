@@ -47,7 +47,7 @@ fn new(title) {
     fn reportAggregate {
 		failedTests := Tests |> filter(fn (t) !(t.succeeded?))
 	    if len(failedTests) {
-			0 -> println('All tests passed.')
+			0 -> printf('All {{ 0 }} tests passed.', len(Tests))
 			_ -> printf('{{ 0 }} / {{ 1 }} tests passed.', len(Tests) - len(failedTests), len(Tests))
 	    }
     }
@@ -61,7 +61,7 @@ fn new(title) {
 		})
 		failed: fn {
 			printf('Failed {{ 0 }} tests:', title)
-			Tests |> filter(fn (t) !(t.succeeded?)) |> reportTests()
+			Tests |> filter(fn (t) !t.succeeded?) |> reportTests()
 			reportAggregate()
 		}
 		report: fn {

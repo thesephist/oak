@@ -5,9 +5,9 @@ run:
 	go run .
 
 # run Go tests
-test:
+tests:
 	go test -v
-t: test
+t: tests
 
 # install as "mgn" binary
 install:

@@ -92,11 +92,23 @@ func TestNonlocalAssignment(t *testing.T) {
 }
 
 func TestUnaryExpr(t *testing.T) {
-	expectProgramToReturn(t, `!true`, BoolValue(false))
-	expectProgramToReturn(t, `!(false | true)`, BoolValue(false))
+	expectProgramToReturn(t, `!true`, mgnFalse)
+	expectProgramToReturn(t, `!(false | true)`, mgnFalse)
 
 	expectProgramToReturn(t, `-546`, IntValue(-546))
 	expectProgramToReturn(t, `-3.250`, FloatValue(-3.25))
+}
+
+func TestUnaryBindToProperty(t *testing.T) {
+	expectProgramToReturn(t, `!!false`, mgnFalse)
+	expectProgramToReturn(t, `--3`, IntValue(3))
+	expectProgramToReturn(t, `
+	obj := {k: false, n: 10}
+	[!obj.k, -obj.n]
+	`, MakeList(
+		mgnTrue,
+		IntValue(-10),
+	))
 }
 
 func TestBasicBinaryExpr(t *testing.T) {
@@ -159,7 +171,7 @@ func TestIfExprInFunction(t *testing.T) {
 		_ -> false
 	}
 	even?(100)
-	`, BoolValue(true))
+	`, mgnTrue)
 }
 
 func TestBasicWithExpr(t *testing.T) {

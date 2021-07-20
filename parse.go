@@ -326,7 +326,7 @@ func (p *parser) parseAssignment(left astNode) (astNode, error) {
 		left:    left,
 	}
 
-	right, err := p.nextNode()
+	right, err := p.parseNode()
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +381,7 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		itemNodes := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightBracket {
-			node, err := p.nextNode()
+			node, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -406,7 +406,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return objectNode{entries: []objectEntryNode{}}, nil
 		}
 
-		firstExpr, err := p.nextNode()
+		firstExpr, err := p.parseNode()
 		if err != nil {
 			return nil, err
 		}
@@ -419,7 +419,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if p.peek().kind == colon {
 			// it's an object
 			p.next() // eat the colon
-			valExpr, err := p.nextNode()
+			valExpr, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -432,7 +432,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			}
 
 			for !p.isEOF() && p.peek().kind != rightBrace {
-				key, err := p.nextNode()
+				key, err := p.parseNode()
 				if err != nil {
 					return nil, err
 				}
@@ -440,7 +440,7 @@ func (p *parser) parseUnit() (astNode, error) {
 					return nil, err
 				}
 
-				val, err := p.nextNode()
+				val, err := p.parseNode()
 				if err != nil {
 					return nil, err
 				}
@@ -467,7 +467,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		}
 
 		for !p.isEOF() && p.peek().kind != rightBrace {
-			expr, err := p.nextNode()
+			expr, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -535,7 +535,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			p.next()
 			body = blockNode{exprs: []astNode{}}
 		} else {
-			body, err = p.nextNode()
+			body, err = p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -552,7 +552,7 @@ func (p *parser) parseUnit() (astNode, error) {
 	case identifier:
 		return identifierNode{payload: tok.payload}, nil
 	case minus, exclam:
-		right, err := p.parseUnit()
+		right, err := p.parseSubNode()
 		if err != nil {
 			return nil, err
 		}
@@ -565,7 +565,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
 
-		condNode, err := p.nextNode()
+		condNode, err := p.parseNode()
 		if err != nil {
 			return nil, err
 		}
@@ -576,7 +576,7 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		branches := []ifBranchNode{}
 		for !p.isEOF() && p.peek().kind != rightBrace {
-			target, err := p.nextNode()
+			target, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -584,7 +584,7 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			body, err := p.nextNode()
+			body, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -609,7 +609,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
 
-		withExprBase, err := p.nextNode()
+		withExprBase, err := p.parseNode()
 		if err != nil {
 			return nil, err
 		}
@@ -621,7 +621,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			}
 		}
 
-		withExprLastArg, err := p.nextNode()
+		withExprLastArg, err := p.parseNode()
 		if err != nil {
 			return nil, err
 		}
@@ -634,7 +634,7 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		exprs := []astNode{}
 		for !p.isEOF() && p.peek().kind != rightParen {
-			expr, err := p.nextNode()
+			expr, err := p.parseNode()
 			if err != nil {
 				return nil, err
 			}
@@ -675,17 +675,16 @@ func infixOpPrecedence(op tokKind) int {
 	}
 }
 
-func (p *parser) nextNode() (astNode, error) {
-	return p.nextNodeInPipe(false)
-}
-
-func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
+// parseSubNode is responsible for parsing independent "terms" in the Magnolia
+// syntax, like terms in unary and binary expressions and in pipelines. It is
+// in between parseUnit and parseNode.
+func (p *parser) parseSubNode() (astNode, error) {
 	node, err := p.parseUnit()
 	if err != nil {
 		return nil, err
 	}
 
-	for !p.isEOF() && p.peek().kind != comma {
+	for !p.isEOF() {
 		switch p.peek().kind {
 		case dot:
 			p.next() // eat the dot
@@ -704,7 +703,7 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 			args := []astNode{}
 			var restArg astNode = nil
 			for !p.isEOF() && p.peek().kind != rightParen {
-				arg, err := p.nextNode()
+				arg, err := p.parseNode()
 				if err != nil {
 					return nil, err
 				}
@@ -735,6 +734,23 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 				args:    args,
 				restArg: restArg,
 			}
+		default:
+			return node, nil
+		}
+	}
+
+	return node, nil
+}
+
+// parseNode returns the next top-level astNode from the parser
+func (p *parser) parseNode() (astNode, error) {
+	node, err := p.parseSubNode()
+	if err != nil {
+		return nil, err
+	}
+
+	for !p.isEOF() && p.peek().kind != comma {
+		switch p.peek().kind {
 		case assign, nonlocalAssign:
 			// whatever follows an assignment expr cannot bind to the
 			// assignment expression itself by syntax rule, so we simply return
@@ -769,7 +785,7 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 				}
 
 				p.pushMinPrec(prec)
-				right, err := p.nextNode()
+				right, err := p.parseNode()
 				if err != nil {
 					return nil, err
 				}
@@ -786,13 +802,9 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 			// expression by syntax rule, so we simply return
 			return node, nil
 		case pipeArrow:
-			if inPipe {
-				return node, nil
-			}
-
 			p.next() // eat the pipe
 
-			pipeRight, err := p.nextNodeInPipe(true)
+			pipeRight, err := p.parseSubNode()
 			if err != nil {
 				return nil, err
 			}
@@ -805,7 +817,7 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 			return node, nil
 		}
 	}
-	// the trailing comma is handled as necessary in callers of nextNode
+	// the trailing comma is handled as necessary in callers of parseNode
 
 	return node, nil
 }
@@ -814,7 +826,7 @@ func (p *parser) parse() ([]astNode, error) {
 	nodes := []astNode{}
 
 	for !p.isEOF() {
-		node, err := p.nextNode()
+		node, err := p.parseNode()
 		if err != nil {
 			return nodes, err
 		}
