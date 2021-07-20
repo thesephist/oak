@@ -24,6 +24,9 @@ var libfs string
 //go:embed lib/fmt.mgn
 var libfmt string
 
+//go:embed lib/test.mgn
+var libtest string
+
 var stdlibs = map[string]string{
 	"std":  libstd,
 	"str":  libstr,
@@ -31,6 +34,7 @@ var stdlibs = map[string]string{
 	"sort": libsort,
 	"fs":   libfs,
 	"fmt":  libfmt,
+	"test": libtest,
 }
 
 func isStdLib(name string) bool {

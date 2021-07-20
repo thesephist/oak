@@ -171,11 +171,13 @@ func (n binaryNode) String() string {
 }
 
 type fnCallNode struct {
-	fn   astNode
-	args []astNode
+	fn      astNode
+	args    []astNode
+	restArg astNode
 }
 
 func (n fnCallNode) String() string {
+	// TODO: incorporate restArg
 	argStrings := make([]string, len(n.args))
 	for i, arg := range n.args {
 		argStrings[i] = arg.String()
@@ -554,6 +556,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		return unaryNode{
 			op:    tok.kind,
 			right: right,
@@ -699,12 +702,25 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 			p.next() // eat the leftParen
 
 			args := []astNode{}
+			var restArg astNode = nil
 			for !p.isEOF() && p.peek().kind != rightParen {
 				arg, err := p.nextNode()
 				if err != nil {
 					return nil, err
 				}
-				args = append(args, arg)
+				if p.peek().kind == ellipsis {
+					p.next() // eat the ellipsis
+
+					if _, err = p.expect(comma); err != nil {
+						return nil, err
+					}
+
+					restArg = arg
+
+					break
+				} else {
+					args = append(args, arg)
+				}
 
 				if _, err = p.expect(comma); err != nil {
 					return nil, err
@@ -715,8 +731,9 @@ func (p *parser) nextNodeInPipe(inPipe bool) (astNode, error) {
 			}
 
 			node = fnCallNode{
-				fn:   node,
-				args: args,
+				fn:      node,
+				args:    args,
+				restArg: restArg,
 			}
 		case assign, nonlocalAssign:
 			// whatever follows an assignment expr cannot bind to the
