@@ -45,7 +45,7 @@ func runRepl() {
 		fmt.Println("Could not get working directory")
 		os.Exit(1)
 	}
-	ctx := NewContext("<input>", cwd)
+	ctx := NewContext(cwd)
 	ctx.LoadBuiltins()
 
 	for {
@@ -72,7 +72,7 @@ func runFile() {
 	}
 	defer file.Close()
 
-	ctx := NewContext("<input>", path.Dir(filePath))
+	ctx := NewContext(path.Dir(filePath))
 	ctx.LoadBuiltins()
 
 	_, err = ctx.Eval(file)

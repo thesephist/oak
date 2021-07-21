@@ -2,7 +2,7 @@
 
 {
     println: println
-} := import('../lib/std')
+} := import('std')
 
 // just counts up from 0, prints every 100k
 fn countUp(max) {

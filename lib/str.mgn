@@ -4,7 +4,7 @@
     map: map
     slice: slice
     reduce: reduce
-} := import('../lib/std')
+} := import('std')
 
 fn checkRange(lo, hi) fn(c) {
     p := codepoint(c)

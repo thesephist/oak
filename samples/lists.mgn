@@ -10,7 +10,7 @@
     each: each
     filter: filter
     reduce: reduce
-} := import('../lib/std')
+} := import('std')
 
 nums := range(1, 11)
 

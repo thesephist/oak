@@ -108,7 +108,14 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
 		}
 	}
-	filePath := string(*pathBytes) + ".mgn"
+	pathStr := string(*pathBytes)
+
+	// if a stdlib, just import the library from binary
+	if isStdLib(pathStr) {
+		return c.LoadLib(pathStr)
+	}
+
+	filePath := pathStr + ".mgn"
 	if !filepath.IsAbs(filePath) {
 		filePath = filepath.Join(c.rootPath, filePath)
 	}
@@ -125,7 +132,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 		return ObjectValue(imported.vars), nil
 	}
 
-	ctx := NewContext(filePath, path.Dir(filePath))
+	ctx := NewContext(path.Dir(filePath))
 	ctx.importMap = c.importMap
 	ctx.LoadBuiltins()
 	_, err = ctx.Eval(file)

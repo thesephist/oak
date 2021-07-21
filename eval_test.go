@@ -7,7 +7,7 @@ import (
 )
 
 func expectProgramToReturn(t *testing.T, program string, expected Value) {
-	ctx := NewContext("<input>", "/tmp")
+	ctx := NewContext("/tmp")
 	ctx.LoadBuiltins()
 	val, err := ctx.Eval(strings.NewReader(program))
 	if err != nil {

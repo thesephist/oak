@@ -2,17 +2,17 @@
 
 {
     println: println
-} := import('../lib/std')
+} := import('std')
 
 {
     sum: sum
     min: min
     max: max
-} := import('../lib/math')
+} := import('math')
 
 {
     sort: sort
-} := import('../lib/sort')
+} := import('sort')
 
 nums := [1, 2, 6, 35, -24, 100, -2]
 

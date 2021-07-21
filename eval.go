@@ -323,7 +323,7 @@ type Context struct {
 	importMap map[string]scope
 }
 
-func NewContext(path, rootPath string) Context {
+func NewContext(rootPath string) Context {
 	return Context{
 		rootPath: rootPath,
 		scope: scope{
