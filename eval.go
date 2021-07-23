@@ -248,6 +248,10 @@ func (v FnValue) String() string {
 	return v.defn.String()
 }
 func (v FnValue) Eq(u Value) bool {
+	if _, ok := u.(EmptyValue); ok {
+		return true
+	}
+
 	if w, ok := u.(FnValue); ok {
 		return v.defn == w.defn
 	}
@@ -992,7 +996,9 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				vars:   map[string]Value{},
 			}
 			for i, argName := range fn.defn.args {
-				fnScope.put(argName, args[i])
+				if argName != "" {
+					fnScope.put(argName, args[i])
+				}
 			}
 
 			if fn.defn.restArg != "" {
@@ -1061,5 +1067,5 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		return c.evalExprWithOpt(n.exprs[last], blockScope, thunkable)
 	}
 
-	panic("Invalid astNode type!")
+	panic(fmt.Sprintf("Unexpected astNode type: %s", node))
 }

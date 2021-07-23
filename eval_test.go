@@ -74,6 +74,10 @@ func TestFunctionDefAndCall(t *testing.T) {
 	expectProgramToReturn(t, `fn getThree() { x := 4, 3 }, getThree()`, IntValue(3))
 }
 
+func TestFunctionDefWithEmpty(t *testing.T) {
+	expectProgramToReturn(t, `fn getThird(_, _, third) third, getThird(1, 2, 3)`, IntValue(3))
+}
+
 func TestLocalAssignment(t *testing.T) {
 	expectProgramToReturn(t, `x := 100, y := 200, x`, IntValue(100))
 }

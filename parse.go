@@ -500,7 +500,20 @@ func (p *parser) parseUnit() (astNode, error) {
 			for !p.isEOF() && p.peek().kind != rightParen {
 				arg, err := p.expect(identifier)
 				if err != nil {
-					return nil, err
+					p.back() // try again
+
+					_, err := p.expect(underscore)
+					if err != nil {
+						return nil, err
+					}
+
+					args = append(args, "")
+
+					if _, err := p.expect(comma); err != nil {
+						return nil, err
+					}
+
+					continue
 				}
 
 				// maybe this is a rest arg
@@ -808,8 +821,12 @@ func (p *parser) parseNode() (astNode, error) {
 			if err != nil {
 				return nil, err
 			}
-			// above is guaranteed to return a fnCallNode
-			pipedFnCall, _ := pipeRight.(fnCallNode)
+			pipedFnCall, ok := pipeRight.(fnCallNode)
+			if !ok {
+				return nil, runtimeError{
+					reason: fmt.Sprintf("Expected function call after |>, got %s", pipeRight),
+				}
+			}
 
 			pipedFnCall.args = append([]astNode{node}, pipedFnCall.args...)
 			node = pipedFnCall
