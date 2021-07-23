@@ -1,0 +1,345 @@
+// libstd tests
+
+std := import('std')
+fmt := import('fmt')
+
+fn run(t) {
+	// push
+	{
+		push := std.push
+
+		'push empty list' |> t.eq(push([], 12), [12])
+		'push non-empty list' |> t.eq(push([10, 20], 30), [10, 20, 30])
+		'push mutates list' |> t.eq(
+			{
+				arr := [1, 2, 3]
+				arr |> push(100)
+				arr
+			}
+			[1, 2, 3, 100]
+		)
+		'push list to list' |> t.eq(
+			[[10, 20]] |> push([30, 40])
+			[[10, 20], [30, 40]]
+		)
+		'push returns original mutated list' |> t.eq(
+			{
+				arr := [1, 2, 3]
+				arr |> push(:item)
+			}
+			[1, 2, 3, :item]
+		)
+
+		'push empty string' |> t.eq(push('', 'xyz'), 'xyz')
+		'push non-empty string' |> t.eq(push('abc', 'def'), 'abcdef')
+		'push mutates string' |> t.eq(
+			{
+				s := 'hello'
+				s |> push(', world') |> push('!\n')
+				s
+			}
+			'hello, world!\n'
+		)
+
+		'push returns original mutated string' |> t.eq(
+			{
+				arr := '123'
+				arr |> push('four')
+			}
+			'123four'
+		)
+	}
+
+	// default
+	{
+		default := std.default
+
+		'default given ?' |> t.eq(default(?, :fallback), :fallback)
+		'default given 0' |> t.eq(default(0, :fallback), 0)
+		'default given false' |> t.eq(default(false, :fallback), false)
+		'default given normal value' |> t.eq(default(10, :fallback), 10)
+	}
+
+	// clamp and slice
+	{
+		{
+			clamp: clamp
+			slice: slice
+		} := std
+
+		'clamp(min, max)' |> t.eq(clamp(0, 10, 0, 10), [0, 10])
+		'clamp(< min, > max)' |> t.eq(clamp(0, 10, -5, 12), [0, 10])
+		'clamp(> min, < max)' |> t.eq(clamp(0, 10, 3, 7), [3, 7])
+		'clamp(< min, < min)' |> t.eq(clamp(0, 10, -8, -2), [0, 0])
+
+		'clamp(min, max) reversed arg' |> t.eq(clamp(0, 10, 10, 0), [0, 0])
+		'clamp(< min, > max) reversed arg' |> t.eq(clamp(0, 10, 12, -5), [0, 0])
+		'clamp(> min, < max) reversed arg' |> t.eq(clamp(0, 10, 7, 3), [3, 3])
+		'clamp(< min, < min) reversed arg' |> t.eq(clamp(0, 10, -2, -8), [0, 0])
+
+		// slice list
+
+		'slice() empty list' |> t.eq(slice([]), [])
+		'slice(start) empty list' |> t.eq(slice([], 1), [])
+		'slice(start, end) empty list' |> t.eq(slice([], 1, 10), [])
+
+		'slice() list' |> t.eq(slice([:a, :b, :c]), [:a, :b, :c])
+		'slice(start) list' |> t.eq(slice([:a, :b, :c], 1), [:b, :c])
+		'slice(start, end) list' |> t.eq(slice([:a, :b, :c, :d, :e], 1, 3), [:b, :c])
+		'slice(start, > end) list' |> t.eq(slice([:a, :b, :c, :d, :e], 1, 10), [:b, :c, :d, :e])
+
+		'slice() clones original list' |> t.eq(
+			{
+				original := [1, 2, 3]
+				new := slice(original)
+				new |> std.push(100)
+				[original, new]
+			}
+			[
+				[1, 2, 3]
+				[1, 2, 3, 100]
+			]
+		)
+
+		'slice() empty string' |> t.eq(slice(''), '')
+		'slice(start) empty string' |> t.eq(slice('', 1), '')
+		'slice(start, end) empty string' |> t.eq(slice('', 1, 10), '')
+
+		'slice() string' |> t.eq(slice('abc'), 'abc')
+		'slice(start) string' |> t.eq(slice('abc', 1), 'bc')
+		'slice(start, end) string' |> t.eq(slice('abcde', 1, 3), 'bc')
+		'slice(start, > end) string' |> t.eq(slice('abcde', 1, 10), 'bcde')
+
+		'slice() clones original string' |> t.eq(
+			{
+				original := '12345'
+				new := slice(original)
+				new |> std.push('100')
+				[original, new]
+			}
+			['12345', '12345100']
+		)
+	}
+
+	// clone
+	{
+		{ clone: clone } := std
+
+		'clone() clones original string' |> t.eq(
+			{
+				original := '12345'
+				new := clone(original)
+				new |> std.push('100')
+				[original, new]
+			}
+			['12345', '12345100']
+		)
+		'clone() clones original list' |> t.eq(
+			{
+				original := [1, 2, 3]
+				new := clone(original)
+				new |> std.push(100)
+				[original, new]
+			}
+			[
+				[1, 2, 3]
+				[1, 2, 3, 100]
+			]
+		)
+		'clone() clones original object' |> t.eq(
+			{
+				original := { a: :ay, b: 'bee' }
+				new := clone(original)
+				new.c := :see
+				[original, new]
+			}
+			[
+				{ a: :ay, b: 'bee' }
+				{ a: :ay, b: 'bee', c: :see }
+			]
+		)
+	}
+
+	// append and join
+	{
+		{
+			append: append
+			join: join
+		} := std
+
+		'append to empty list' |> t.eq(
+			append([], [:a, :b, :c])
+			[:a, :b, :c]
+		)
+		'append to list' |> t.eq(
+			append([:a, :b], [:c, :d])
+			[:a, :b, :c, :d]
+		)
+		'apped mutates original list' |> t.eq(
+			{
+				original := [1, 2, 3]
+				append(original, [10, 20])
+				original
+			}
+			[1, 2, 3, 10, 20]
+		)
+
+		'join to empty list' |> t.eq(
+			join([], [:a, :b, :c])
+			[:a, :b, :c]
+		)
+		'join to list' |> t.eq(
+			join([:a, :b], [:c, :d])
+			[:a, :b, :c, :d]
+		)
+		'join does not mutate original list' |> t.eq(
+			{
+				original := [1, 2, 3]
+				join(original, [10, 20])
+				original
+			}
+			[1, 2, 3]
+		)
+	}
+
+	// range
+	{
+		range := std.range
+
+		'range(end)' |> t.eq(range(5), [0, 1, 2, 3, 4])
+		'range(end = 0)' |> t.eq(range(0), [])
+		'range(start = 0, end)' |> t.eq(range(0, 5), [0, 1, 2, 3, 4])
+		'range(start > 0, end)' |> t.eq(range(3, 6), [3, 4, 5])
+		'range(start, end) < 0' |> t.eq(range(-10, -5), [-10, -9, -8, -7, -6])
+		'range(start > end)' |> t.eq(range(10, 0), [])
+
+		'range(start, end, step)' |> t.eq(range(4, 10, 2), [4, 6, 8])
+		'range(start, end, step < 0)' |> t.eq(range(4, 10, -2), [])
+		'range(start > end, step < 0)' |> t.eq(range(10, -4, -2), [10, 8, 6, 4, 2, 0, -2])
+
+		'range(start, end, step) with off-step end' |> t.eq(range(2, 10, 3), [2, 5, 8])
+	}
+
+	// array functions -- reverse, map, each, filter, reduce, flatten, some, every
+	{
+		{
+			push: push
+			clone: clone
+
+			reverse: reverse
+			map: map
+			each: each
+			filter: filter
+			reduce: reduce
+			flatten: flatten
+			some: some
+			every: every
+		} := std
+
+		arr := [1, 2, 3, 4, 10]
+
+		fn ensureDoesNotMutate(name, f, list) {
+			list := std.default(list, arr)
+			fmt.format('{{ 0 }} does not mutate list arg', name) |> t.eq(
+				{
+					orig := clone(list)
+					new := f(orig) |> push(:invalid)
+					orig
+				}
+				list
+			)
+		}
+
+		fn double(x) 2 * x
+		fn even?(n) n % 2 = 0
+		fn add(a, b) a + b
+		fn index(_, i) i
+
+		ensureDoesNotMutate('reverse()', reverse)
+		ensureDoesNotMutate('map(f)', fn(xs) map(xs, double))
+		ensureDoesNotMutate('filter(f)', fn(xs) filter(xs, even?))
+		ensureDoesNotMutate('flatten(f)', flatten, [[1, 2], [10, 20]])
+
+		// reverse
+		'reverse() empty list' |> t.eq(reverse([]), [])
+		'reverse() len(1) list' |> t.eq(reverse([10]), [10])
+		'reverse() len(n) list' |> t.eq(reverse([10, 20, 30, 40]), [40, 30, 20, 10])
+
+		'map() empty list' |> t.eq(map([], double), [])
+		'map() list' |> t.eq(map(arr, double), [2, 4, 6, 8, 20])
+		'map() callback gets index' |> t.eq(map(arr, index), [0, 1, 2, 3, 4])
+
+		'each() empty list' |> t.eq(
+			{
+				toggle := false
+				each([], fn { toggle <- true })
+				toggle
+			}
+			false
+		)
+		'each() list' |> t.eq(
+			{
+				nums := []
+				each(arr, fn(n) { nums |> std.push(n) })
+				nums
+			}
+			[1, 2, 3, 4, 10]
+		)
+		'each() callback gets index' |> t.eq(
+			{
+				nums := []
+				each(arr, fn(_, i) { nums |> std.push(i) })
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+
+		'filter() empty list' |> t.eq(filter([], even?), [])
+		'filter() list' |> t.eq(filter(arr, even?), [2, 4, 10])
+		'filter() callback gets index' |> t.eq(
+			{
+				nums := []
+				filter(arr, fn(_, i) {
+					nums |> std.push(i)
+					true
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+
+		'reduce() empty list' |> t.eq(reduce([], 0, add), 0)
+		'reduce() list' |> t.eq(reduce(arr, 0, add), 20)
+		'reduce() callback gets index' |> t.eq(
+			{
+				nums := []
+				reduce(arr, 0, fn(_, _, i) {
+					nums |> std.push(i)
+					0
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+
+		'flatten() empty list' |> t.eq(flatten([]), [])
+		'flatten() list' |> t.eq(flatten([arr, arr]), [1, 2, 3, 4, 10, 1, 2, 3, 4, 10])
+		'flatten() only flattens 1 depth' |> t.eq(
+			flatten([[1, 2], [[3, 4], [5, 6]]])
+			[1, 2, [3, 4], [5, 6]]
+		)
+
+		'some() empty list' |> t.eq(some([]), false)
+		'some() list' |> t.eq(some([true, false]), true)
+		'some() empty list w/ pred' |> t.eq(some([], even?), false)
+		'some() list w/ pred' |> t.eq(some([1, 3, 5], even?), false)
+		'some() list w/ pred' |> t.eq(some(arr, even?), true)
+
+		'every() empty list' |> t.eq(every([]), true)
+		'every() list' |> t.eq(every([true, false]), false)
+		'every() empty list w/ pred' |> t.eq(every([], even?), true)
+		'every() list w/ pred' |> t.eq(every(arr, even?), false)
+		'every() list w/ pred' |> t.eq(every(arr |> filter(even?), even?), true)
+	}
+}
+

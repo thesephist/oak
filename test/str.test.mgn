@@ -1,0 +1,10 @@
+// libstr tests
+
+std := import('std')
+// str := import('str')
+fmt := import('fmt')
+
+fn run(t) {
+	// TODO: character range checks: upper, lower, digit, space, letter, word
+}
+

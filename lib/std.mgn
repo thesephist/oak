@@ -72,18 +72,34 @@ fn join(xs, ys) clone(xs) |> append(ys)
 
 fn range(start, end, step) {
     step := default(step, 1)
+	if end {
+		? -> [start, end] <- [0, start]
+	}
 
-    list := []
+    if step = 0 {
+		true -> []
+		_ -> {
+			list := []
 
-    fn sub(n) if n < end {
-        true -> {
-            push(list, n)
-            sub(n + step)
-        }
-        _ -> list
+			sub := if step > 0 {
+				true -> fn(n) if n < end {
+					true -> {
+				   		push(list, n)
+				   		sub(n + step)
+				    }
+				    _ -> list
+				}
+				_ -> fn(n) if n > end {
+					true -> {
+				   		push(list, n)
+				   		sub(n + step)
+				    }
+				    _ -> list
+				}
+			}
+			sub(start)
+		}
     }
-
-    sub(start)
 }
 
 fn reverse(xs) {

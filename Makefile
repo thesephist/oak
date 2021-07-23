@@ -11,9 +11,7 @@ t: tests
 
 # run Magnolia tests
 test-mgn:
-	go build -race -o ./mgn
-	./mgn test/std.mgn
-	rm ./mgn
+	go run -race . test/main.mgn
 tm: test-mgn
 
 # install as "mgn" binary
