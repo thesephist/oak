@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 )
 
 func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
@@ -48,6 +50,8 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("import", c.mgnImport)
 	c.LoadFunc("type", c.mgnType)
 	c.LoadFunc("string", c.mgnString)
+	c.LoadFunc("int", c.mgnInt)
+	c.LoadFunc("float", c.mgnFloat)
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
 	c.LoadFunc("keys", c.mgnKeys)
@@ -63,6 +67,48 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 		return arg, nil
 	default:
 		return MakeString(arg.String()), nil
+	}
+}
+
+func (c *Context) mgnInt(args []Value) (Value, error) {
+	if err := c.requireArgLen("int", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		return arg, nil
+	case FloatValue:
+		return IntValue(math.Trunc(float64(arg))), nil
+	case *StringValue:
+		n, err := strconv.ParseInt(string(*arg), 10, 64)
+		if err != nil {
+			return null, nil
+		}
+		return IntValue(n), nil
+	default:
+		return null, nil
+	}
+}
+
+func (c *Context) mgnFloat(args []Value) (Value, error) {
+	if err := c.requireArgLen("float", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		return FloatValue(arg), nil
+	case FloatValue:
+		return arg, nil
+	case *StringValue:
+		f, err := strconv.ParseFloat(string(*arg), 64)
+		if err != nil {
+			return null, nil
+		}
+		return FloatValue(f), nil
+	default:
+		return null, nil
 	}
 }
 
