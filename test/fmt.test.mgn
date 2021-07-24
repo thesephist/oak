@@ -1,0 +1,36 @@
+// libfmt tests
+
+std := import('std')
+fmt := import('fmt')
+
+fn run(t) {
+	// format
+	{
+		f := fmt.format
+
+		'Format string literally' |> t.eq(
+			'String literal' |> f()
+			'String literal'
+		)
+		'1 interpolated variable' |> t.eq(
+			'One {{ 0 }} Three' |> f('Two')
+			'One Two Three'
+		)
+		'Multiple interpolated variables' |> t.eq(
+			'One {{ 0 }} Three {{ 2 }}::{{ 1 }}' |> f('Two', 'Four', 'Five')
+			'One Two Three Five::Four'
+		)
+		'A variable interpolated multiple times' |> t.eq(
+			'One {{ 0 }} -- Two {{ 0 }}' |> f('hi')
+			'One hi -- Two hi'
+		)
+		'Non-string interpolated variables' |> t.eq(
+			'abc {{ 0 }} xyz {{ 1 }}' |> f(:atoms, 100)
+			'abc :atoms xyz 100'
+		)
+		'Non-given variables show as ?' |> t.eq(
+			'Hello, {{ 0 }}!' |> f()
+			'Hello, ?!'
+		)
+	}
+}

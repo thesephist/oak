@@ -1,12 +1,15 @@
 // quicksort + hoare partition
 
 {
+	default: default
     identity: id
     map: map
     clone: clone
 } := import('std')
 
-fn sortBy(xs, pred) {
+fn sort!(xs, pred) {
+	pred := default(pred, id)
+
     vpred := xs |> map(pred)
 
     fn partition(xs, lo, hi) {
@@ -55,7 +58,5 @@ fn sortBy(xs, pred) {
     quicksort(xs, 0, len(xs) - 1)
 }
 
-fn sort!(xs) xs |> sortBy(id)
-
-fn sort(xs) xs |> clone() |> sort!()
+fn sort(xs, pred) xs |> clone() |> sort!(pred)
 

@@ -1,6 +1,7 @@
 // strings library
 
 {
+	default: default
     map: map
     slice: slice
     reduce: reduce
@@ -25,9 +26,12 @@ space? := fn(c) if c {
 fn letter?(c) upper?(c) | lower?(c)
 fn word?(c) letter?(c) | digit?(c)
 
-fn join(strings, joiner) if len(strings) {
-    0 -> ''
-    _ -> strings |> slice(1) |> reduce(strings.0, fn(a, b) a + joiner + b)
+fn join(strings, joiner) {
+	joiner := default(joiner, '')
+	if len(strings) {
+		0 -> ''
+		_ -> strings |> slice(1) |> reduce(strings.0, fn(a, b) a + joiner + b)
+	}
 }
 
 fn startsWith?(s, prefix) prefix |> reduce(true, fn(acc, c, i) {
@@ -80,5 +84,5 @@ fn upper(s) s |> reduce('', fn(acc, c, i) if lower?(c) {
     _ -> acc.(i) := c
 })
 
-// TODO: replace, split, trimStart/trimEnd/trim
+// TODO: replace, split, trimStart/trimEnd/trim/trimSpace
 

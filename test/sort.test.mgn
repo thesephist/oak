@@ -1,0 +1,78 @@
+// libsort tests
+
+std := import('std')
+sort := import('sort')
+
+fn run(t) {
+	id := std.identity
+
+	{
+		sort!: sort!
+		sort: sort
+	} := sort
+
+	// without predicates
+	'sort! empty list' |> t.eq(
+		sort!([])
+		[]
+	)
+	'sort! small list' |> t.eq(
+		sort!([1, 40, 20, -4])
+		[-4, 1, 20, 40]
+	)
+	'sort! list with dups' |> t.eq(
+		sort!([1, 40, 20, -4, 20])
+		[-4, 1, 20, 20, 40]
+	)
+
+	'sort! mutates arg' |> t.eq(
+		{
+			arr := [1, 2, 20, 3, -3]
+			sort!(arr)
+			arr
+		}
+		[-3, 1, 2, 3, 20]
+	)
+	'sort does not mutate arg' |> t.eq(
+		{
+			arr := [1, 2, 20, 3, -3]
+			sort(arr)
+			arr
+		}
+		[1, 2, 20, 3, -3]
+	)
+
+	// with predicates
+	fn o(n) { key: n }
+	fn get(o) o.key
+
+	'sort! empty list by predicate' |> t.eq(
+		sort!([], get)
+		[]
+	)
+	'sort! small list by predicate' |> t.eq(
+		sort!([o(1), o(40), o(20), o(-4)], get)
+		[o(-4), o(1), o(20), o(40)]
+	)
+	'sort! list with dups by predicate' |> t.eq(
+		sort!([o(1), o(40), o(20), o(-4), o(20)], get)
+		[o(-4), o(1), o(20), o(20), o(40)]
+	)
+
+	'sort! mutates arg by predicate' |> t.eq(
+		{
+			arr := [o(1), o(2), o(20), o(3), o(-3)]
+			sort!(arr, get)
+			arr
+		}
+		[o(-3), o(1), o(2), o(3), o(20)]
+	)
+	'sort does not mutate arg by predicate' |> t.eq(
+		{
+			arr := [o(1), o(2), o(20), o(3), o(-3)]
+			sort(arr, get)
+			arr
+		}
+		[o(1), o(2), o(20), o(3), o(-3)]
+	)
+}

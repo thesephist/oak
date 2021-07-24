@@ -1,16 +1,20 @@
 // standard library tests
 
-std := import('std')
-fmt := import('fmt')
 test := import('test')
 
-runStd := import('std.test').run
-runStr := import('str.test').run
+runner := {
+	std: import('std.test')
+	str: import('str.test')
+	sort: import('sort.test')
+	fmt: import('fmt.test')
+}
 
 t := test.new('Magnolia stdlib')
 
-runStd(t)
-runStr(t)
+runner.std.run(t)
+runner.str.run(t)
+runner.sort.run(t)
+runner.fmt.run(t)
 
 t.report()
 

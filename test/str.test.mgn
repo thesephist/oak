@@ -1,10 +1,133 @@
 // libstr tests
 
 std := import('std')
-// str := import('str')
+str := import('str')
 fmt := import('fmt')
 
 fn run(t) {
-	// TODO: character range checks: upper, lower, digit, space, letter, word
+	// character range checks: upper, lower, digit, space, letter, word
+	{
+		{
+			upper?: upper?
+			lower?: lower?
+			digit?: digit?
+			space?: space?
+			letter?: letter?
+			word?: word?
+		} := str
+
+		'upper? = true for all uppercase' |> t.eq(
+			std.range(codepoint('A'), codepoint('Z') + 1) |>
+				std.map(char) |> std.every(upper?)
+			true
+		)
+		'upper? = false for all lowercase' |> t.eq(
+			std.range(codepoint('a'), codepoint('z') + 1) |>
+				std.map(char) |> std.some(upper?)
+			false
+		)
+		'lower? = true for all lowercase' |> t.eq(
+			std.range(codepoint('a'), codepoint('z') + 1) |>
+				std.map(char) |> std.every(lower?)
+			true
+		)
+		'lower? = false for all uppercase' |> t.eq(
+			std.range(codepoint('A'), codepoint('Z') + 1) |>
+				std.map(char) |> std.some(lower?)
+			false
+		)
+
+		'digit? = true for all digits' |> t.eq(
+			std.range(codepoint('0'), codepoint('9') + 1) |>
+				std.map(char) |> std.every(digit?)
+			true
+		)
+		'digit? = false for non-digits' |> t.eq(
+			['A', 'z', '-', '.', '?'] |> std.some(digit?)
+			false
+		)
+		'space? = true for whitespace' |> t.eq(
+			[' ', '\n', '\t', '\r', '\f'] |> std.every(space?)
+			true
+		)
+		'space? = false for non-whitespace' |> t.eq(
+			['A', 'z', '-', '.', '?', '0'] |> std.some(space?)
+			false
+		)
+		'letter? = true for all letters' |> t.eq(
+			['A', 'z'] |> std.every(letter?)
+			true
+		)
+		'letter? = false for non-letters' |> t.eq(
+			['0', '-', ' '] |> std.some(letter?)
+			false
+		)
+		'word? = true for all letters and numbers' |> t.eq(
+			['A', 'z', '0'] |> std.every(word?)
+			true
+		)
+		'letter? = false for non-letters' |> t.eq(
+			['-', ' '] |> std.some(word?)
+			false
+		)
+	}
+
+	// join
+	{
+		join := str.join
+
+		'join empty list' |> t.eq(
+			[] |> join(', ')
+			''
+		)
+		'join list with no joiner' |> t.eq(
+			['cat', 'dog', 'horse'] |> join()
+			'catdoghorse'
+		)
+		'join list with empty string' |> t.eq(
+			['cat', 'dog', 'horse'] |> join('')
+			'catdoghorse'
+		)
+		'join list with string' |> t.eq(
+			['cat', 'dog', 'horse'] |> join(', ')
+			'cat, dog, horse'
+		)
+	}
+
+	// startsWith? and endsWith?
+	{
+		{
+			startsWith?: startsWith?
+			endsWith?: endsWith?
+		} := str
+
+		'startsWith?(empty string)' |> t.eq(
+			'Hello' |> startsWith?('')
+			true
+		)
+		'startsWith?(string)' |> t.eq(
+			'Hello' |> startsWith?('Hel')
+			true
+		)
+		'startsWith?(incorrect string)' |> t.eq(
+			'Hello' |> startsWith?('Helo')
+			false
+		)
+
+		'endsWith?(empty string)' |> t.eq(
+			'Hello' |> endsWith?('')
+			true
+		)
+		'endsWith?(string)' |> t.eq(
+			'Hello' |> endsWith?('llo')
+			true
+		)
+		'endsWith?(incorrect string)' |> t.eq(
+			'Hello' |> endsWith?('elo')
+			false
+		)
+	}
+
+	// TODO: indexOf, contains?, lower, upper
 }
 

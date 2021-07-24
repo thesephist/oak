@@ -163,13 +163,26 @@ fn flatten(xs) xs |> reduce([], append)
 
 fn some(xs, pred) {
     pred := default(pred, identity)
-    xs |> map(pred) |> reduce(false, fn(acc, x) acc | x)
+    xs |> reduce(false, fn(acc, x) acc | pred(x))
 }
 
 fn every(xs, pred) {
     pred := default(pred, identity)
-    xs |> map(pred) |> reduce(true, fn(acc, x) acc & x)
+    xs |> reduce(true, fn(acc, x) acc & pred(x))
 }
+
+fn indexOf(xs, x) {
+	fn sub(i) if i {
+		len(xs) -> -1
+		_ -> if xs.(i) {
+			x -> i
+			_ -> sub(i + 1)
+		}
+	}
+	sub(0)
+}
+
+fn contains?(xs, x) indexOf(xs, x) > -1
 
 // OS interfaces
 
