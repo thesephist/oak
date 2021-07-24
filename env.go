@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
-	if len(args) != count {
+	if len(args) < count {
 		return runtimeError{
 			reason:     fmt.Sprintf("%s requires %d arguments, got %d", fnName, count, len(args)),
 			stackTrace: c.generateStackTrace(),
@@ -52,6 +52,8 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("string", c.mgnString)
 	c.LoadFunc("int", c.mgnInt)
 	c.LoadFunc("float", c.mgnFloat)
+	c.LoadFunc("codepoint", c.mgnCodepoint)
+	c.LoadFunc("char", c.mgnChar)
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
 	c.LoadFunc("keys", c.mgnKeys)
@@ -107,6 +109,43 @@ func (c *Context) mgnFloat(args []Value) (Value, error) {
 			return null, nil
 		}
 		return FloatValue(f), nil
+	default:
+		return null, nil
+	}
+}
+
+func (c *Context) mgnCodepoint(args []Value) (Value, error) {
+	if err := c.requireArgLen("codepoint", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		if len(*arg) != 1 {
+			return null, nil
+		}
+		return IntValue(int64((*arg)[0])), nil
+	default:
+		return null, nil
+	}
+}
+
+func (c *Context) mgnChar(args []Value) (Value, error) {
+	if err := c.requireArgLen("char", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		codepoint := int64(arg)
+		if codepoint < 0 {
+			codepoint = 0
+		}
+		if codepoint > 255 {
+			codepoint = 255
+		}
+		bytes := StringValue([]byte{byte(codepoint)})
+		return &bytes, nil
 	default:
 		return null, nil
 	}
