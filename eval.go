@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,6 +92,9 @@ func (v *StringValue) Eq(u Value) bool {
 		return bytes.Equal(*v, *w)
 	}
 	return false
+}
+func (v *StringValue) stringContent() string {
+	return string(*v)
 }
 
 type IntValue int64
@@ -325,6 +329,8 @@ type Context struct {
 	sync.Mutex
 	// for deduplicating imports
 	importMap map[string]scope
+	// file fd -> Go's File map
+	fileMap map[uintptr]*os.File
 }
 
 func NewContext(rootPath string) Context {
@@ -335,6 +341,7 @@ func NewContext(rootPath string) Context {
 			vars:   map[string]Value{},
 		},
 		importMap: map[string]scope{},
+		fileMap:   map[uintptr]*os.File{},
 	}
 }
 

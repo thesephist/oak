@@ -2,12 +2,23 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
 )
+
+type typeError struct {
+	reason     string
+	stackTrace stackEntry
+}
+
+func (e typeError) Error() string {
+	// TODO: display stacktrace
+	return fmt.Sprintf("Type error: %s", e.reason)
+}
 
 func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
 	if len(args) < count {
@@ -57,6 +68,17 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
 	c.LoadFunc("keys", c.mgnKeys)
+	c.LoadFunc("open", c.mgnOpen)
+	c.LoadFunc("close", c.mgnClose)
+	c.LoadFunc("read", c.mgnRead)
+	c.LoadFunc("write", c.mgnWrite)
+}
+
+func errObj(message string) ObjectValue {
+	return ObjectValue{
+		"type":  AtomValue("error"),
+		"error": MakeString(message),
+	}
 }
 
 func (c *Context) mgnString(args []Value) (Value, error) {
@@ -293,4 +315,155 @@ func (c *Context) mgnKeys(args []Value) (Value, error) {
 	default:
 		return MakeList(), nil
 	}
+}
+
+// TODO: update the way the flags arg works, to be a bitmask of flags from the
+// set [:read, :write, :append, :create, :truncate] that gets translated into
+// the bitmask Go expects.
+func (c *Context) mgnOpen(args []Value) (Value, error) {
+	if err := c.requireArgLen("open", args, 1); err != nil {
+		return nil, err
+	}
+
+	// second arg is optional
+	if len(args) < 2 {
+		args = append(args, IntValue(os.O_RDWR))
+	}
+
+	// third arg is optional
+	if len(args) < 3 {
+		args = append(args, IntValue(0644))
+	}
+
+	pathString, ok1 := args[0].(*StringValue)
+	flagsInt, ok2 := args[1].(IntValue)
+	permInt, ok3 := args[2].(IntValue)
+	if !ok1 || !ok2 || !ok3 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call open(%s, %s)", args[0], args[1]),
+		}
+	}
+
+	file, err := os.OpenFile(pathString.stringContent(), int(flagsInt), os.FileMode(permInt))
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not open file: %s", err.Error())), nil
+	}
+
+	fd := file.Fd()
+	c.fileMap[fd] = file
+	return ObjectValue{
+		"type": AtomValue("file"),
+		"fd":   IntValue(fd),
+	}, nil
+}
+
+func (c *Context) mgnClose(args []Value) (Value, error) {
+	if err := c.requireArgLen("close", args, 1); err != nil {
+		return nil, err
+	}
+
+	fdInt, ok1 := args[0].(IntValue)
+	if !ok1 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call close(%s)", args[0]),
+		}
+	}
+
+	file, ok := c.fileMap[uintptr(fdInt)]
+	if !ok {
+		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
+	}
+
+	err := file.Close()
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not close file: %s", err.Error())), nil
+	}
+
+	delete(c.fileMap, uintptr(fdInt))
+
+	return ObjectValue{
+		"type": AtomValue("end"),
+	}, nil
+}
+
+func (c *Context) mgnRead(args []Value) (Value, error) {
+	if err := c.requireArgLen("read", args, 3); err != nil {
+		return nil, err
+	}
+
+	fdInt, ok1 := args[0].(IntValue)
+	offsetInt, ok2 := args[1].(IntValue)
+	lengthInt, ok3 := args[2].(IntValue)
+	if !ok1 || !ok2 || !ok3 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call read(%s, %s, %s)", args[0], args[1], args[2]),
+		}
+	}
+
+	file, ok := c.fileMap[uintptr(fdInt)]
+	if !ok {
+		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
+	}
+
+	offset := int64(offsetInt)
+	length := int64(lengthInt)
+
+	_, err := file.Seek(offset, 0)
+	if err != nil {
+		return errObj(fmt.Sprintf("Error reading file during seek: %s", err.Error())), nil
+	}
+
+	readBuf := make([]byte, length)
+	count, err := file.Read(readBuf)
+	if err != nil && err != io.EOF {
+		return errObj(fmt.Sprintf("Error reading file: %s", err.Error())), nil
+	}
+
+	fileData := StringValue(readBuf[:count])
+	return ObjectValue{
+		"type": AtomValue("data"),
+		"data": &fileData,
+	}, nil
+}
+
+func (c *Context) mgnWrite(args []Value) (Value, error) {
+	if err := c.requireArgLen("write", args, 3); err != nil {
+		return nil, err
+	}
+
+	fdInt, ok1 := args[0].(IntValue)
+	offsetInt, ok2 := args[1].(IntValue)
+	dataString, ok3 := args[2].(*StringValue)
+	if !ok1 || !ok2 || !ok3 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call write(%s, %s, %s)", args[0], args[1], args[2]),
+		}
+	}
+
+	file, ok := c.fileMap[uintptr(fdInt)]
+	if !ok {
+		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
+	}
+
+	offset := int64(offsetInt)
+	writeBuf := []byte(*dataString)
+
+	var err error
+	if offset == -1 {
+		_, err = file.Seek(0, 2) // "2" is relative to end of file
+	} else {
+		_, err = file.Seek(offset, 0)
+	}
+	if err != nil {
+		return errObj(fmt.Sprintf("Error writing file during seek: %s", err.Error())), nil
+	}
+
+	_, err = file.Write(writeBuf)
+	if err != nil && err != io.EOF {
+		return errObj(fmt.Sprintf("Error writing file: %s", err.Error())), nil
+	}
+
+	return ObjectValue{
+		"type": AtomValue("end"),
+	}, nil
 }
