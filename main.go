@@ -80,4 +80,6 @@ func runFile() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+
+	ctx.Wait()
 }

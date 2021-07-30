@@ -1,0 +1,40 @@
+// Raw file operations with the asynchronous native file API
+// creates a readme.lower.md that's an all-lowercase version of the README
+
+{
+	println: println
+} := import('std')
+{
+	printf: printf
+} := import('fmt')
+{
+	lower: lower
+} := import('str')
+
+ReadBuf := 4096
+
+// write the readme.lower
+fn writeLower(text, done) with open('./readme.lower.md', :create) fn(evt) if evt.type {
+	:error -> printf('Could not open readme: {{ 0 }}', evt.error)
+	_ -> with write(fd := evt.fd, 0, lower(text)) fn(evt) {
+		if evt.type {
+			:error -> printf('Could not write readme: {{ 0 }}', evt.error)
+		}
+		close(fd, done)
+	}
+}
+
+// read the README
+with open('./README.md') fn(evt) if evt.type {
+	:error -> printf('Could not open README: {{ 0 }}', evt.error)
+	_ -> with read(fd := evt.fd, 0, ReadBuf) fn(evt) {
+		if evt.type {
+			:error -> printf('Could not read README: {{ 0 }}', evt.error)
+			_ -> with writeLower(evt.data) fn {
+				println('Done!')
+			}
+		}
+		close(fd)
+	}
+}
+

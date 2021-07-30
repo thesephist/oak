@@ -34,7 +34,7 @@ fn writeLower(text) {
 // read the README
 readmeFile := open('./README.md')
 if readmeFile.type {
-	:error -> printf('Could not read README: {{ 0 }}', readmeFile.error)
+	:error -> printf('Could not open README: {{ 0 }}', readmeFile.error)
 	_ -> {
 		{ fd: fd } := readmeFile
 		readResult := read(fd, 0, ReadBuf)

@@ -327,10 +327,15 @@ type Context struct {
 	scope
 	// interpreter lock to ensure lack of data races
 	sync.Mutex
+	// interpreter event loop waitgroup
+	sync.WaitGroup
 	// for deduplicating imports
 	importMap map[string]scope
 	// file fd -> Go's File map
 	fileMap map[uintptr]*os.File
+	fdLock  sync.Mutex
+	// log async error streams through this
+	reportErr func(error)
 }
 
 func NewContext(rootPath string) Context {
@@ -342,6 +347,9 @@ func NewContext(rootPath string) Context {
 		},
 		importMap: map[string]scope{},
 		fileMap:   map[uintptr]*os.File{},
+		reportErr: func(err error) {
+			fmt.Println(err)
+		},
 	}
 }
 
@@ -394,6 +402,57 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 	// fmt.Println(nodes)
 
 	return c.evalNodes(nodes)
+}
+
+func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Value, error) {
+	if fn, ok := maybeFn.(FnValue); ok {
+		if len(args) < len(fn.defn.args) {
+			// if not enough arguments, fill them with nulls
+			difference := len(fn.defn.args) - len(args)
+			extraArgs := make([]Value, difference)
+			for i := 0; i < difference; i++ {
+				extraArgs[i] = null
+			}
+			args = append(args, extraArgs...)
+		}
+
+		fnScope := scope{
+			parent: &fn.scope,
+			vars:   map[string]Value{},
+		}
+		for i, argName := range fn.defn.args {
+			if argName != "" {
+				fnScope.put(argName, args[i])
+			}
+		}
+
+		if fn.defn.restArg != "" {
+			var restList ListValue
+			if len(args) > len(fn.defn.args) {
+				restList = ListValue(args[len(fn.defn.args):])
+			} else {
+				restList = ListValue{}
+			}
+
+			fnScope.put(fn.defn.restArg, &restList)
+		}
+
+		thunk := thunkValue{
+			expr:  fn.defn.body,
+			scope: fnScope,
+		}
+		if thunkable {
+			return thunk, nil
+		}
+
+		return c.unwrapThunk(thunk)
+	} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
+		return fn.fn(args)
+	} else {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
+		}
+	}
 }
 
 func (c *Context) evalNodes(nodes []astNode) (Value, error) {
@@ -987,54 +1046,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			args = append(args, *restList...)
 		}
 
-		if fn, ok := maybeFn.(FnValue); ok {
-			if len(args) < len(fn.defn.args) {
-				// if not enough arguments, fill them with nulls
-				difference := len(fn.defn.args) - len(args)
-				extraArgs := make([]Value, difference)
-				for i := 0; i < difference; i++ {
-					extraArgs[i] = null
-				}
-				args = append(args, extraArgs...)
-			}
-
-			fnScope := scope{
-				parent: &fn.scope,
-				vars:   map[string]Value{},
-			}
-			for i, argName := range fn.defn.args {
-				if argName != "" {
-					fnScope.put(argName, args[i])
-				}
-			}
-
-			if fn.defn.restArg != "" {
-				var restList ListValue
-				if len(args) > len(fn.defn.args) {
-					restList = ListValue(args[len(fn.defn.args):])
-				} else {
-					restList = ListValue{}
-				}
-
-				fnScope.put(fn.defn.restArg, &restList)
-			}
-
-			thunk := thunkValue{
-				expr:  fn.defn.body,
-				scope: fnScope,
-			}
-			if thunkable {
-				return thunk, nil
-			}
-
-			return c.unwrapThunk(thunk)
-		} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
-			return fn.fn(args)
-		} else {
-			return nil, runtimeError{
-				reason: fmt.Sprintf("%s (from %s) is not a function and cannot be called", maybeFn, n.fn),
-			}
-		}
+		return c.EvalFnValue(maybeFn, thunkable, args...)
 	case ifExprNode:
 		cond, err := c.evalExpr(n.cond, sc)
 		if err != nil {

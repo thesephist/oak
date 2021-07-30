@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 type typeError struct {
@@ -31,9 +32,11 @@ func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
 	return nil
 }
 
+type builtinFn func([]Value) (Value, error)
+
 type BuiltinFnValue struct {
 	name string
-	fn   func([]Value) (Value, error)
+	fn   builtinFn
 }
 
 func (v BuiltinFnValue) String() string {
@@ -50,7 +53,7 @@ func (v BuiltinFnValue) Eq(u Value) bool {
 	return false
 }
 
-func (c *Context) LoadFunc(name string, fn func([]Value) (Value, error)) {
+func (c *Context) LoadFunc(name string, fn builtinFn) {
 	c.scope.put(name, BuiltinFnValue{
 		name: name,
 		fn:   fn,
@@ -68,16 +71,48 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("len", c.mgnLen)
 	c.LoadFunc("print", c.mgnPrint)
 	c.LoadFunc("keys", c.mgnKeys)
-	c.LoadFunc("open", c.mgnOpen)
-	c.LoadFunc("close", c.mgnClose)
-	c.LoadFunc("read", c.mgnRead)
-	c.LoadFunc("write", c.mgnWrite)
+	c.LoadFunc("wait", c.callbackify(c.mgnWait))
+	c.LoadFunc("open", c.callbackify(c.mgnOpen))
+	c.LoadFunc("close", c.callbackify(c.mgnClose))
+	c.LoadFunc("read", c.callbackify(c.mgnRead))
+	c.LoadFunc("write", c.callbackify(c.mgnWrite))
 }
 
 func errObj(message string) ObjectValue {
 	return ObjectValue{
 		"type":  AtomValue("error"),
 		"error": MakeString(message),
+	}
+}
+
+func (c *Context) callbackify(syncFn builtinFn) builtinFn {
+	return func(args []Value) (Value, error) {
+		if len(args) == 0 {
+			return syncFn(args)
+		}
+
+		lastArg := args[len(args)-1]
+		callback, isCallbackFn := lastArg.(FnValue)
+		if !isCallbackFn {
+			return syncFn(args)
+		}
+
+		syncArgs := args[:len(args)-1]
+		c.Add(1)
+		go func() {
+			defer c.Done()
+
+			evt, err := syncFn(syncArgs)
+			if err != nil {
+				c.reportErr(err)
+			}
+
+			c.Lock()
+			defer c.Unlock()
+			c.EvalFnValue(callback, false, evt)
+		}()
+
+		return null, nil
 	}
 }
 
@@ -317,6 +352,25 @@ func (c *Context) mgnKeys(args []Value) (Value, error) {
 	}
 }
 
+func (c *Context) mgnWait(args []Value) (Value, error) {
+	if err := c.requireArgLen("wait", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
+	case FloatValue:
+		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call wait(%s)", args[0]),
+		}
+	}
+
+	return null, nil
+}
+
 func (c *Context) mgnOpen(args []Value) (Value, error) {
 	if err := c.requireArgLen("open", args, 1); err != nil {
 		return nil, err
@@ -363,7 +417,11 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	}
 
 	fd := file.Fd()
+
+	c.fdLock.Lock()
+	defer c.fdLock.Unlock()
 	c.fileMap[fd] = file
+
 	return ObjectValue{
 		"type": AtomValue("file"),
 		"fd":   IntValue(fd),
@@ -382,7 +440,10 @@ func (c *Context) mgnClose(args []Value) (Value, error) {
 		}
 	}
 
+	c.fdLock.Lock()
+	defer c.fdLock.Unlock()
 	file, ok := c.fileMap[uintptr(fdInt)]
+
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
 	}
@@ -413,7 +474,10 @@ func (c *Context) mgnRead(args []Value) (Value, error) {
 		}
 	}
 
+	c.fdLock.Lock()
 	file, ok := c.fileMap[uintptr(fdInt)]
+	c.fdLock.Unlock()
+
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
 	}
@@ -453,7 +517,9 @@ func (c *Context) mgnWrite(args []Value) (Value, error) {
 		}
 	}
 
+	c.fdLock.Lock()
 	file, ok := c.fileMap[uintptr(fdInt)]
+	c.fdLock.Unlock()
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
 	}
