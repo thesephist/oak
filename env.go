@@ -317,26 +317,23 @@ func (c *Context) mgnKeys(args []Value) (Value, error) {
 	}
 }
 
-// TODO: update the way the flags arg works, to be a bitmask of flags from the
-// set [:read, :write, :append, :create, :truncate] that gets translated into
-// the bitmask Go expects.
 func (c *Context) mgnOpen(args []Value) (Value, error) {
 	if err := c.requireArgLen("open", args, 1); err != nil {
 		return nil, err
 	}
 
-	// second arg is optional
+	// flags arg is optional
 	if len(args) < 2 {
-		args = append(args, IntValue(os.O_RDWR))
+		args = append(args, AtomValue("readwrite"))
 	}
 
-	// third arg is optional
+	// perm arg is optional
 	if len(args) < 3 {
 		args = append(args, IntValue(0644))
 	}
 
 	pathString, ok1 := args[0].(*StringValue)
-	flagsInt, ok2 := args[1].(IntValue)
+	flagsAtom, ok2 := args[1].(AtomValue)
 	permInt, ok3 := args[2].(IntValue)
 	if !ok1 || !ok2 || !ok3 {
 		return nil, typeError{
@@ -344,7 +341,23 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 		}
 	}
 
-	file, err := os.OpenFile(pathString.stringContent(), int(flagsInt), os.FileMode(permInt))
+	var flags int
+	switch string(flagsAtom) {
+	case "readwrite":
+		flags = os.O_RDWR
+	case "append":
+		flags = os.O_RDWR | os.O_APPEND
+	case "create":
+		flags = os.O_RDWR | os.O_CREATE
+	case "truncate":
+		flags = os.O_RDWR | os.O_TRUNC
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Invalid flag for open(): %s", flagsAtom),
+		}
+	}
+
+	file, err := os.OpenFile(pathString.stringContent(), flags, os.FileMode(permInt))
 	if err != nil {
 		return errObj(fmt.Sprintf("Could not open file: %s", err.Error())), nil
 	}
