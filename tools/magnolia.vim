@@ -95,7 +95,6 @@ syntax keyword mgnBuiltin wait contained
 syntax keyword mgnBuiltin exec contained
 syntax keyword mgnBuiltin input contained
 syntax keyword mgnBuiltin print contained
-syntax keyword mgnBuiltin sleep contained
 syntax keyword mgnBuiltin ls contained
 syntax keyword mgnBuiltin mkdir contained
 syntax keyword mgnBuiltin rm contained

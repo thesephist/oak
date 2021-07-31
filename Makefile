@@ -6,7 +6,7 @@ run:
 
 # run Go tests
 tests:
-	go test -v
+	go test .
 t: tests
 
 # run Magnolia tests
