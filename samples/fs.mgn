@@ -1,0 +1,33 @@
+// more user-friendly filesystem APIs
+
+{
+	println: println
+} := import('std')
+{
+	upper: upper
+	lower: lower
+} := import('str')
+{
+	readFile: readFile
+	writeFile: writeFile
+} := import('fs')
+
+println('Reading README')
+if readme := readFile('./README.md') {
+	? -> println('sync read: failed')
+	_ -> println(upper(readme))
+}
+with readFile('./README.md') fn(file) if file {
+	? -> println('async read: failed')
+	_ -> println(lower(file))
+}
+
+println('Writing trash file to /tmp/trash')
+Trash := 'So trashy!\n'
+if writeFile('/tmp/trash-sync', Trash) {
+	? -> prinltn('sync write: failed')
+}
+with writeFile('/tmp/trash-async', Trash) fn(end) if end {
+	? -> println('async write: failed')
+}
+

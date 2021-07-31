@@ -1,35 +1,100 @@
 // filesystems library
 // offers useful utility wrappers around the built-in filesystem functions
 
-{
-	println: println
-} := import('std')
+ReadBufSize := 4096 // 4k read buffer
 
-ReadBufSize := 4096 * 4 // 16k read buffer
+fn readFileSync(path) {
+	evt := open(path)
+	if evt.type {
+		:error -> ?
+		_ -> {
+			fd := evt.fd
+			fn sub(file, offset) {
+				evt := read(fd, offset, ReadBufSize)
+				if evt.type {
+					:error -> {
+						close(fd)
+						?
+					}
+					_ -> if len(evt.data) {
+						ReadBufSize -> sub(
+							file.(len(file)) := evt.data
+							offset + ReadBufSize
+						)
+						_ -> {
+							close(fd)
+							file.(len(file)) := evt.data
+						}
+					}
+				}
+			}
 
-// TODO: fopen flags
-Flag := {
-	Create: 0
-	Read: 0
-	Write: 0
-	Trunc: 0
+			sub('', 0)
+		}
+	}
 }
 
-fn readFile(path, withFile) with open(path) fn(evt) if evt.type {
+fn readFileAsync(path, withFile) with open(path) fn(evt) if evt.type {
 	:error -> withFile(?)
 	_ -> {
-		// TODO: buffered read
-		close(evt.fd)
-		withFile('')
+		fd := evt.fd
+
+		fn sub(file, offset) with read(fd, offset, ReadBufSize) fn(evt) if evt.type {
+			:error -> with close(fd) fn {
+				withFile(?)
+			}
+			_ -> if len(evt.data) {
+				ReadBufSize -> sub(
+					file.(len(file)) := evt.data
+					offset + ReadBufSize
+				)
+				_ -> with close(fd) fn {
+					withFile(file.(len(file)) := evt.data)
+				}
+			}
+		}
+
+		sub('', 0)
 	}
 }
 
-// TODO: open with O_TRUNC flag set
-fn writeFile(path, data, withResult) with open(path) fn(evt) if evt.type {
-	:error -> withResult(false)
-	_ -> with write(evt.fd, 0, data) fn(evt) {
-		close(evt.fd)
-		withResult(evt.type != :error)
+fn readFile(path, withFile) if withFile {
+	? -> readFileSync(path)
+	_ -> readFileAsync(path, withFile)
+}
+
+fn writeFileSync(path, file) {
+	evt := open(path, :truncate)
+	if evt.type {
+		:error -> ?
+		_ -> {
+			fd := evt.fd
+			{
+				evt := write(fd, 0, file)
+				close(fd)
+				if evt.type {
+					:error -> ?
+					_ -> true
+				}
+			}
+		}
 	}
+}
+
+fn writeFileAsync(path, file, withEnd) with open(path, :truncate) fn(evt) if evt.type {
+	:error -> withEnd(?)
+	_ -> with write(fd := evt.fd, 0, file) fn(evt) if evt.type {
+		:error -> with close(fd) fn {
+			withEnd(?)
+		}
+		_ -> with close(fd) fn {
+			withEnd(true)
+		}
+	}
+}
+
+fn writeFile(path, file, withEnd) if withEnd {
+	? -> writeFileSync(path, file)
+	_ -> writeFileAsync(path, file, withEnd)
 }
 
