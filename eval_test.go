@@ -24,6 +24,23 @@ func TestEvalEmptyProgram(t *testing.T) {
 	expectProgramToReturn(t, "", null)
 }
 
+func TestCommentProgram(t *testing.T) {
+	expectProgramToReturn(t, "// this is a comment", null)
+	expectProgramToReturn(t, "// this is a comment\n", null)
+}
+
+func TestCommentInBinaryExpr(t *testing.T) {
+	expectProgramToReturn(t, "1 + // this is a comment\n2", IntValue(3))
+}
+
+func TestCommentAndNewline(t *testing.T) {
+	expectProgramToReturn(t, "1 + 2 // this is a comment\n", IntValue(3))
+}
+
+func TestIdentifierAfterComment(t *testing.T) {
+	expectProgramToReturn(t, "x := 10 // this is a comment\nx + x", IntValue(20))
+}
+
 func TestEmptyLiteral(t *testing.T) {
 	expectProgramToReturn(t, "_", empty)
 }

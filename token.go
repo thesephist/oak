@@ -435,13 +435,6 @@ func (t *tokenizer) tokenize() []token {
 	last := token{kind: comma}
 	for !t.isEOF() {
 		next := t.nextToken()
-		if next.kind == comment {
-			// for now, comments are not a formal part of the AST
-			for !t.isEOF() && unicode.IsSpace(t.peek()) {
-				t.next()
-			}
-			continue
-		}
 
 		if (last.kind != leftParen && last.kind != leftBracket &&
 			last.kind != leftBrace && last.kind != comma) &&
@@ -452,7 +445,12 @@ func (t *tokenizer) tokenize() []token {
 				pos:  t.currentPos(),
 			})
 		}
-		tokens = append(tokens, next)
+
+		if next.kind == comment {
+			next = last
+		} else {
+			tokens = append(tokens, next)
+		}
 
 		// snip whitespace after
 		for !t.isEOF() && unicode.IsSpace(t.peek()) {
@@ -474,7 +472,9 @@ func (t *tokenizer) tokenize() []token {
 			t.next()
 		}
 
-		last = next
+		if next.kind != comment {
+			last = next
+		}
 	}
 
 	if last.kind != comma {
