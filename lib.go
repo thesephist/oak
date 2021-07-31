@@ -50,18 +50,20 @@ func (c *Context) LoadLib(name string) (Value, error) {
 		}
 	}
 
-	if imported, ok := c.importMap[name]; ok {
+	if imported, ok := c.eng.importMap[name]; ok {
 		return ObjectValue(imported.vars), nil
 	}
 
-	ctx := NewContext(c.rootPath)
-	ctx.importMap = c.importMap
+	ctx := c.ChildContext(c.rootPath)
 	ctx.LoadBuiltins()
+
+	ctx.Unlock()
 	_, err := ctx.Eval(strings.NewReader(program))
+	ctx.Lock()
 	if err != nil {
 		return nil, err
 	}
 
-	c.importMap[name] = ctx.scope
+	c.eng.importMap[name] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
 }

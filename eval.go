@@ -319,12 +319,7 @@ func (sc *scope) update(name string, v Value) error {
 	}
 }
 
-type Context struct {
-	// directory containing the root file of this context, used for loading
-	// other modules with relative paths / URLs
-	rootPath string
-	// top level ("global") scope of this context
-	scope
+type engine struct {
 	// interpreter lock to ensure lack of data races
 	sync.Mutex
 	// interpreter event loop waitgroup
@@ -338,19 +333,55 @@ type Context struct {
 	reportErr func(error)
 }
 
+type Context struct {
+	// shared interpreter state
+	eng *engine
+	// directory containing the root file of this context, used for loading
+	// other modules with relative paths / URLs
+	rootPath string
+	// top level ("global") scope of this context
+	scope
+}
+
 func NewContext(rootPath string) Context {
-	return Context{
-		rootPath: rootPath,
-		scope: scope{
-			parent: nil,
-			vars:   map[string]Value{},
-		},
+	eng := engine{
 		importMap: map[string]scope{},
 		fileMap:   map[uintptr]*os.File{},
 		reportErr: func(err error) {
 			fmt.Println(err)
 		},
 	}
+	return Context{
+		eng:      &eng,
+		rootPath: rootPath,
+		scope: scope{
+			parent: nil,
+			vars:   map[string]Value{},
+		},
+	}
+}
+
+func (c *Context) ChildContext(rootPath string) Context {
+	return Context{
+		eng:      c.eng,
+		rootPath: rootPath,
+		scope: scope{
+			parent: nil,
+			vars:   map[string]Value{},
+		},
+	}
+}
+
+func (c *Context) Lock() {
+	c.eng.Lock()
+}
+
+func (c *Context) Unlock() {
+	c.eng.Unlock()
+}
+
+func (c *Context) Wait() {
+	c.eng.Wait()
 }
 
 func (c *Context) generateStackTrace() stackEntry {
@@ -362,14 +393,6 @@ type stackEntry struct {
 	fnName      string
 	parentStack *stackEntry
 	pos
-}
-
-type vmError struct {
-	reason string
-}
-
-func (e vmError) Error() string {
-	return fmt.Sprintf("VM error: %s", e.reason)
 }
 
 type runtimeError struct {
@@ -399,7 +422,6 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println(nodes)
 
 	return c.evalNodes(nodes)
 }

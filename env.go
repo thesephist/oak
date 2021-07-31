@@ -98,18 +98,23 @@ func (c *Context) callbackify(syncFn builtinFn) builtinFn {
 		}
 
 		syncArgs := args[:len(args)-1]
-		c.Add(1)
+		c.eng.Add(1)
 		go func() {
-			defer c.Done()
+			defer c.eng.Done()
 
 			evt, err := syncFn(syncArgs)
 			if err != nil {
-				c.reportErr(err)
+				c.eng.reportErr(err)
+				return
 			}
 
 			c.Lock()
 			defer c.Unlock()
-			c.EvalFnValue(callback, false, evt)
+			_, err = c.EvalFnValue(callback, false, evt)
+			if err != nil {
+				c.eng.reportErr(err)
+				return
+			}
 		}()
 
 		return null, nil
@@ -270,19 +275,21 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 	}
 	defer file.Close()
 
-	if imported, ok := c.importMap[filePath]; ok {
+	if imported, ok := c.eng.importMap[filePath]; ok {
 		return ObjectValue(imported.vars), nil
 	}
 
-	ctx := NewContext(path.Dir(filePath))
-	ctx.importMap = c.importMap
+	ctx := c.ChildContext(path.Dir(filePath))
 	ctx.LoadBuiltins()
+
+	ctx.Unlock()
 	_, err = ctx.Eval(file)
+	ctx.Lock()
 	if err != nil {
 		return nil, err
 	}
 
-	c.importMap[filePath] = ctx.scope
+	c.eng.importMap[filePath] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
 }
 
@@ -397,6 +404,8 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 
 	var flags int
 	switch string(flagsAtom) {
+	case "readonly":
+		flags = os.O_RDONLY
 	case "readwrite":
 		flags = os.O_RDWR
 	case "append":
@@ -404,7 +413,7 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	case "create":
 		flags = os.O_RDWR | os.O_CREATE
 	case "truncate":
-		flags = os.O_RDWR | os.O_TRUNC
+		flags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	default:
 		return nil, typeError{
 			reason: fmt.Sprintf("Invalid flag for open(): %s", flagsAtom),
@@ -418,9 +427,9 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 
 	fd := file.Fd()
 
-	c.fdLock.Lock()
-	defer c.fdLock.Unlock()
-	c.fileMap[fd] = file
+	c.eng.fdLock.Lock()
+	defer c.eng.fdLock.Unlock()
+	c.eng.fileMap[fd] = file
 
 	return ObjectValue{
 		"type": AtomValue("file"),
@@ -440,9 +449,9 @@ func (c *Context) mgnClose(args []Value) (Value, error) {
 		}
 	}
 
-	c.fdLock.Lock()
-	defer c.fdLock.Unlock()
-	file, ok := c.fileMap[uintptr(fdInt)]
+	c.eng.fdLock.Lock()
+	defer c.eng.fdLock.Unlock()
+	file, ok := c.eng.fileMap[uintptr(fdInt)]
 
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
@@ -453,7 +462,7 @@ func (c *Context) mgnClose(args []Value) (Value, error) {
 		return errObj(fmt.Sprintf("Could not close file: %s", err.Error())), nil
 	}
 
-	delete(c.fileMap, uintptr(fdInt))
+	delete(c.eng.fileMap, uintptr(fdInt))
 
 	return ObjectValue{
 		"type": AtomValue("end"),
@@ -474,9 +483,9 @@ func (c *Context) mgnRead(args []Value) (Value, error) {
 		}
 	}
 
-	c.fdLock.Lock()
-	file, ok := c.fileMap[uintptr(fdInt)]
-	c.fdLock.Unlock()
+	c.eng.fdLock.Lock()
+	file, ok := c.eng.fileMap[uintptr(fdInt)]
+	c.eng.fdLock.Unlock()
 
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
@@ -517,9 +526,9 @@ func (c *Context) mgnWrite(args []Value) (Value, error) {
 		}
 	}
 
-	c.fdLock.Lock()
-	file, ok := c.fileMap[uintptr(fdInt)]
-	c.fdLock.Unlock()
+	c.eng.fdLock.Lock()
+	file, ok := c.eng.fileMap[uintptr(fdInt)]
+	c.eng.fdLock.Unlock()
 	if !ok {
 		return errObj(fmt.Sprintf("Unknown fd %d", fdInt)), nil
 	}
