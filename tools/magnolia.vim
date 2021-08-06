@@ -88,11 +88,12 @@ syntax keyword mgnBuiltin keys contained
 syntax keyword mgnBuiltin args contained
 syntax keyword mgnBuiltin env contained
 syntax keyword mgnBuiltin time contained
+syntax keyword mgnBuiltin nanotime contained
 syntax keyword mgnBuiltin exit contained
 syntax keyword mgnBuiltin rand contained
-
 syntax keyword mgnBuiltin wait contained
 syntax keyword mgnBuiltin exec contained
+
 syntax keyword mgnBuiltin input contained
 syntax keyword mgnBuiltin print contained
 syntax keyword mgnBuiltin ls contained
@@ -100,11 +101,12 @@ syntax keyword mgnBuiltin mkdir contained
 syntax keyword mgnBuiltin rm contained
 syntax keyword mgnBuiltin stat contained
 syntax keyword mgnBuiltin open contained
+syntax keyword mgnBuiltin close contained
 syntax keyword mgnBuiltin read contained
 syntax keyword mgnBuiltin write contained
-syntax keyword mgnBuiltin close contained
 syntax keyword mgnBuiltin listen contained
 syntax keyword mgnBuiltin req contained
+
 syntax keyword mgnBuiltin sin contained
 syntax keyword mgnBuiltin cos contained
 syntax keyword mgnBuiltin tan contained
@@ -112,7 +114,7 @@ syntax keyword mgnBuiltin asin contained
 syntax keyword mgnBuiltin acos contained
 syntax keyword mgnBuiltin atan contained
 syntax keyword mgnBuiltin pow contained
-syntax keyword mgnBuiltin ln contained
+syntax keyword mgnBuiltin log contained
 highlight link mgnBuiltin Keyword
 
 " strings
