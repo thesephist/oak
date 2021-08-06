@@ -54,6 +54,11 @@ func runRepl() {
 			break
 		}
 
+		// if no input, don't print the null output
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
 		val, err := ctx.Eval(strings.NewReader(line))
 		if err != nil {
 			fmt.Println(err)
