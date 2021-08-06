@@ -158,6 +158,13 @@ func TestBinaryExprWithComplexTerms(t *testing.T) {
 	`, IntValue(30))
 }
 
+func TestBinaryExprWithinComplexTermsWithinBinaryExpr(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn inc(n) n + 1
+	2 * inc(3 + 4)
+	`, IntValue(16))
+}
+
 func TestEmptyIfExpr(t *testing.T) {
 	expectProgramToReturn(t, `if 100 {}`, null)
 }

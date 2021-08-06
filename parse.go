@@ -692,6 +692,9 @@ func infixOpPrecedence(op tokKind) int {
 // syntax, like terms in unary and binary expressions and in pipelines. It is
 // in between parseUnit and parseNode.
 func (p *parser) parseSubNode() (astNode, error) {
+	p.pushMinPrec(0)
+	defer p.popMinPrec()
+
 	node, err := p.parseUnit()
 	if err != nil {
 		return nil, err
