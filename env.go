@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,6 +20,16 @@ type typeError struct {
 func (e typeError) Error() string {
 	// TODO: display stacktrace
 	return fmt.Sprintf("Type error: %s", e.reason)
+}
+
+type mathError struct {
+	reason     string
+	stackTrace stackEntry
+}
+
+func (e mathError) Error() string {
+	// TODO: display stacktrace
+	return fmt.Sprintf("Math error: %s", e.reason)
 }
 
 func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
@@ -61,21 +72,51 @@ func (c *Context) LoadFunc(name string, fn builtinFn) {
 }
 
 func (c *Context) LoadBuiltins() {
+	// core language and reflection
 	c.LoadFunc("import", c.mgnImport)
-	c.LoadFunc("type", c.mgnType)
 	c.LoadFunc("string", c.mgnString)
 	c.LoadFunc("int", c.mgnInt)
 	c.LoadFunc("float", c.mgnFloat)
+	c.LoadFunc("atom", c.mgnAtom)
 	c.LoadFunc("codepoint", c.mgnCodepoint)
 	c.LoadFunc("char", c.mgnChar)
+	c.LoadFunc("type", c.mgnType)
 	c.LoadFunc("len", c.mgnLen)
-	c.LoadFunc("print", c.mgnPrint)
 	c.LoadFunc("keys", c.mgnKeys)
+
+	// os interfaces
+	c.LoadFunc("args", c.mgnArgs)
+	c.LoadFunc("env", c.mgnEnv)
+	c.LoadFunc("time", c.mgnTime)
+	c.LoadFunc("nanotime", c.mgnNanotime)
+	c.LoadFunc("exit", c.mgnExit)
+	// TODO: rand(type, max)
 	c.LoadFunc("wait", c.callbackify(c.mgnWait))
+	// TODO: exec(path, args, stdin)
+
+	// i/o interfaces
+	// TODO: input()
+	c.LoadFunc("print", c.mgnPrint)
+	// TODO: ls
+	// TODO: mkdir
+	// TODO: rm
+	// TODO: stat
 	c.LoadFunc("open", c.callbackify(c.mgnOpen))
 	c.LoadFunc("close", c.callbackify(c.mgnClose))
 	c.LoadFunc("read", c.callbackify(c.mgnRead))
 	c.LoadFunc("write", c.callbackify(c.mgnWrite))
+	// TODO: close := listen(host, handler)
+	// TODO: req(data)
+
+	// math
+	c.LoadFunc("sin", c.mgnSin)
+	c.LoadFunc("cos", c.mgnCos)
+	c.LoadFunc("tan", c.mgnTan)
+	c.LoadFunc("asin", c.mgnAsin)
+	c.LoadFunc("acos", c.mgnAcos)
+	c.LoadFunc("atan", c.mgnAtan)
+	c.LoadFunc("pow", c.mgnPow)
+	c.LoadFunc("log", c.mgnLog)
 }
 
 func errObj(message string) ObjectValue {
@@ -145,7 +186,7 @@ func (c *Context) mgnInt(args []Value) (Value, error) {
 	case FloatValue:
 		return IntValue(math.Trunc(float64(arg))), nil
 	case *StringValue:
-		n, err := strconv.ParseInt(string(*arg), 10, 64)
+		n, err := strconv.ParseInt(arg.stringContent(), 10, 64)
 		if err != nil {
 			return null, nil
 		}
@@ -166,13 +207,28 @@ func (c *Context) mgnFloat(args []Value) (Value, error) {
 	case FloatValue:
 		return arg, nil
 	case *StringValue:
-		f, err := strconv.ParseFloat(string(*arg), 64)
+		f, err := strconv.ParseFloat(arg.stringContent(), 64)
 		if err != nil {
 			return null, nil
 		}
 		return FloatValue(f), nil
 	default:
 		return null, nil
+	}
+}
+
+func (c *Context) mgnAtom(args []Value) (Value, error) {
+	if err := c.requireArgLen("atom", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		return AtomValue(arg.stringContent()), nil
+	case AtomValue:
+		return arg, nil
+	default:
+		return AtomValue(arg.String()), nil
 	}
 }
 
@@ -255,7 +311,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
 		}
 	}
-	pathStr := string(*pathBytes)
+	pathStr := pathBytes.stringContent()
 
 	// if a stdlib, just import the library from binary
 	if isStdLib(pathStr) {
@@ -356,6 +412,50 @@ func (c *Context) mgnKeys(args []Value) (Value, error) {
 		return &keys, nil
 	default:
 		return MakeList(), nil
+	}
+}
+
+func (c *Context) mgnArgs(_ []Value) (Value, error) {
+	goArgs := os.Args
+	args := make(ListValue, len(goArgs))
+	for i, arg := range goArgs {
+		args[i] = MakeString(arg)
+	}
+	return &args, nil
+}
+
+func (c *Context) mgnEnv(_ []Value) (Value, error) {
+	envVars := ObjectValue{}
+	for _, e := range os.Environ() {
+		kv := strings.SplitN(e, "=", 2)
+		envVars[kv[0]] = MakeString(kv[1])
+	}
+	return envVars, nil
+}
+
+func (c *Context) mgnTime(_ []Value) (Value, error) {
+	unixSeconds := float64(time.Now().UnixNano()) / 1e9
+	return FloatValue(unixSeconds), nil
+}
+
+func (c *Context) mgnNanotime(_ []Value) (Value, error) {
+	return IntValue(time.Now().UnixNano()), nil
+}
+
+func (c *Context) mgnExit(args []Value) (Value, error) {
+	if err := c.requireArgLen("exit", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		os.Exit(int(arg))
+		// unreachable
+		return null, nil
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call exit(%s)", args[0]),
+		}
 	}
 }
 
@@ -554,4 +654,222 @@ func (c *Context) mgnWrite(args []Value) (Value, error) {
 	return ObjectValue{
 		"type": AtomValue("end"),
 	}, nil
+}
+
+func (c *Context) mgnSin(args []Value) (Value, error) {
+	if err := c.requireArgLen("sin", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call sin(%s)", args[0]),
+		}
+	}
+
+	return FloatValue(math.Sin(val)), nil
+}
+
+func (c *Context) mgnCos(args []Value) (Value, error) {
+	if err := c.requireArgLen("cos", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call cos(%s)", args[0]),
+		}
+	}
+
+	return FloatValue(math.Cos(val)), nil
+}
+
+func (c *Context) mgnTan(args []Value) (Value, error) {
+	if err := c.requireArgLen("tan", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call tan(%s)", args[0]),
+		}
+	}
+
+	return FloatValue(math.Tan(val)), nil
+}
+
+func (c *Context) mgnAsin(args []Value) (Value, error) {
+	if err := c.requireArgLen("asin", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call asin(%s)", args[0]),
+		}
+	}
+
+	if val > 1 || val < -1 {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("asin() takes a number in range [-1, 1], got %f", val),
+		}
+	}
+
+	return FloatValue(math.Asin(val)), nil
+}
+
+func (c *Context) mgnAcos(args []Value) (Value, error) {
+	if err := c.requireArgLen("acos", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call acos(%s)", args[0]),
+		}
+	}
+
+	if val > 1 || val < -1 {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("acos() takes a number in range [-1, 1], got %f", val),
+		}
+	}
+
+	return FloatValue(math.Acos(val)), nil
+}
+
+func (c *Context) mgnAtan(args []Value) (Value, error) {
+	if err := c.requireArgLen("atan", args, 1); err != nil {
+		return nil, err
+	}
+
+	var val float64
+	switch arg := args[0].(type) {
+	case IntValue:
+		val = float64(arg)
+	case FloatValue:
+		val = float64(arg)
+	default:
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call atan(%s)", args[0]),
+		}
+	}
+
+	return FloatValue(math.Atan(val)), nil
+}
+
+func (c *Context) mgnPow(args []Value) (Value, error) {
+	if err := c.requireArgLen("pow", args, 2); err != nil {
+		return nil, err
+	}
+
+	var base float64
+	var exp float64
+	err := typeError{
+		reason: fmt.Sprintf("Mismatched types in call pow(%s, %s)", args[0]),
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		base = float64(arg)
+	case FloatValue:
+		base = float64(arg)
+	default:
+		return nil, err
+	}
+
+	switch arg := args[1].(type) {
+	case IntValue:
+		exp = float64(arg)
+	case FloatValue:
+		exp = float64(arg)
+	default:
+		return nil, err
+	}
+
+	if base == 0 && exp == 0 {
+		return nil, mathError{
+			reason: fmt.Sprintf("pow(0, 0) is not defined"),
+		}
+	} else if base < 0 && float64(int64(exp)) != exp {
+		return nil, mathError{
+			reason: fmt.Sprintf("pow() of negative number to fractional exponent is not defined"),
+		}
+	}
+
+	return FloatValue(math.Pow(base, exp)), nil
+}
+
+func (c *Context) mgnLog(args []Value) (Value, error) {
+	if err := c.requireArgLen("log", args, 2); err != nil {
+		return nil, err
+	}
+
+	var base float64
+	var exp float64
+	err := typeError{
+		reason: fmt.Sprintf("Mismatched types in call log(%s, %s)", args[0]),
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		base = float64(arg)
+	case FloatValue:
+		base = float64(arg)
+	default:
+		return nil, err
+	}
+
+	switch arg := args[1].(type) {
+	case IntValue:
+		exp = float64(arg)
+	case FloatValue:
+		exp = float64(arg)
+	default:
+		return nil, err
+	}
+
+	if base == 0 {
+		return nil, mathError{
+			reason: fmt.Sprintf("log(0, _) is not defined"),
+		}
+	} else if exp == 0 {
+		return nil, mathError{
+			reason: fmt.Sprintf("log(_, 0) is not defined"),
+		}
+	}
+
+	// we use math.Log2 here because we want logs of base 2 to give exact
+	// answers, where we care less about other bases
+	return FloatValue(math.Log2(exp) / math.Log2(base)), nil
 }

@@ -95,28 +95,28 @@ keys(x)
 -- os
 args()
 env()
-time()
+time() // returns float
+nanotime() // returns int
 exit(code)
 rand(type, max)
 wait(duration)
 exec(path, args, stdin) // returns stdout, stderr, end events
----- sync APIs
+
+---- I/O interfaces
 input()
 print()
----- async IO APIs
 ls(path)
 mkdir(path)
 rm(path)
 stat(path)
 open(path, flags, perm)
+close(fd)
 read(fd, offset, length)
 write(fd, offset, data)
-close(fd)
--- networking APIs
 close := listen(host, handler)
 req(data)
 
--- math, all accept only floats except pow()
+-- math
 sin(n)
 cos(n)
 tan(n)
@@ -124,7 +124,7 @@ asin(n)
 acos(n)
 atan(n)
 pow(b, n)
-ln(base, n)
+log(b, n)
 ```
 
 ## Code samples
