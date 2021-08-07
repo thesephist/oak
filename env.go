@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
+	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -72,6 +77,9 @@ func (c *Context) LoadFunc(name string, fn builtinFn) {
 }
 
 func (c *Context) LoadBuiltins() {
+	// global initializations
+	rand.Seed(time.Now().UnixNano())
+
 	// core language and reflection
 	c.LoadFunc("import", c.mgnImport)
 	c.LoadFunc("string", c.mgnString)
@@ -90,22 +98,22 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("time", c.mgnTime)
 	c.LoadFunc("nanotime", c.mgnNanotime)
 	c.LoadFunc("exit", c.mgnExit)
-	// TODO: rand(type, max)
+	c.LoadFunc("rand", c.mgnRand)
 	c.LoadFunc("wait", c.callbackify(c.mgnWait))
 	// TODO: exec(path, args, stdin)
 
 	// i/o interfaces
-	// TODO: input()
+	c.LoadFunc("input", c.callbackify(c.mgnInput))
 	c.LoadFunc("print", c.mgnPrint)
-	// TODO: ls
-	// TODO: mkdir
-	// TODO: rm
-	// TODO: stat
+	c.LoadFunc("ls", c.callbackify(c.mgnLs))
+	c.LoadFunc("mkdir", c.callbackify(c.mgnMkdir))
+	c.LoadFunc("rm", c.callbackify(c.mgnRm))
+	c.LoadFunc("stat", c.callbackify(c.mgnStat))
 	c.LoadFunc("open", c.callbackify(c.mgnOpen))
 	c.LoadFunc("close", c.callbackify(c.mgnClose))
 	c.LoadFunc("read", c.callbackify(c.mgnRead))
 	c.LoadFunc("write", c.callbackify(c.mgnWrite))
-	// TODO: close := listen(host, handler)
+	c.LoadFunc("listen", c.mgnListen)
 	// TODO: req(data)
 
 	// math
@@ -326,7 +334,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, runtimeError{
-			reason: fmt.Sprintf("could not open %s, %s", filePath, err.Error()),
+			reason: fmt.Sprintf("Could not open %s, %s", filePath, err.Error()),
 		}
 	}
 	defer file.Close()
@@ -368,6 +376,23 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	}
 }
 
+func (c *Context) mgnInput(_ []Value) (Value, error) {
+	reader := bufio.NewReader(os.Stdin)
+	str, err := reader.ReadString('\n')
+	if err == io.EOF {
+		return errObj("EOF"), nil
+	} else if err != nil {
+		return errObj(fmt.Sprintf("Could not read input: %s", err.Error())), nil
+	}
+
+	inputStr := strings.TrimSuffix(str, "\n")
+
+	return ObjectValue{
+		"type": AtomValue("data"),
+		"data": MakeString(inputStr),
+	}, nil
+}
+
 func (c *Context) mgnPrint(args []Value) (Value, error) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
@@ -376,12 +401,67 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 	outputString, ok := args[0].(*StringValue)
 	if !ok {
 		return nil, runtimeError{
-			reason: fmt.Sprintf("unexpected argument to print: %s", args[0]),
+			reason: fmt.Sprintf("Unexpected argument to print: %s", args[0]),
 		}
 	}
 
 	n, _ := os.Stdout.Write(*outputString)
 	return IntValue(n), nil
+}
+
+func (c *Context) mgnLs(args []Value) (Value, error) {
+	if err := c.requireArgLen("ls", args, 1); err != nil {
+		return nil, err
+	}
+
+	dirPath, ok1 := args[0].(*StringValue)
+	if !ok1 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call ls(%s)", args[0]),
+		}
+	}
+
+	fileInfos, err := ioutil.ReadDir(dirPath.stringContent())
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not list directory %s: %s", dirPath.stringContent(), err.Error())), nil
+	}
+
+	fileList := make(ListValue, len(fileInfos))
+	for i, fi := range fileInfos {
+		fileList[i] = ObjectValue{
+			"name": MakeString(fi.Name()),
+			"len":  IntValue(fi.Size()),
+			"dir":  BoolValue(fi.IsDir()),
+			"mod":  IntValue(fi.ModTime().Unix()),
+		}
+	}
+
+	return ObjectValue{
+		"type": AtomValue("data"),
+		"data": &fileList,
+	}, nil
+}
+
+func (c *Context) mgnMkdir(args []Value) (Value, error) {
+	if err := c.requireArgLen("mkdir", args, 1); err != nil {
+		return nil, err
+	}
+
+	dirPath, ok1 := args[0].(*StringValue)
+	if !ok1 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call mkdir(%s)", args[0]),
+		}
+	}
+
+	err := os.MkdirAll(dirPath.stringContent(), 0755)
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not make a new directory %s: %s", dirPath.stringContent(), err.Error())), nil
+	}
+
+	return ObjectValue{
+		"type": AtomValue("end"),
+	}, nil
 }
 
 func makeIntListUpTo(max int) Value {
@@ -459,6 +539,10 @@ func (c *Context) mgnExit(args []Value) (Value, error) {
 	}
 }
 
+func (c *Context) mgnRand(args []Value) (Value, error) {
+	return FloatValue(rand.Float64()), nil
+}
+
 func (c *Context) mgnWait(args []Value) (Value, error) {
 	if err := c.requireArgLen("wait", args, 1); err != nil {
 		return nil, err
@@ -476,6 +560,62 @@ func (c *Context) mgnWait(args []Value) (Value, error) {
 	}
 
 	return null, nil
+}
+
+func (c *Context) mgnRm(args []Value) (Value, error) {
+	if err := c.requireArgLen("rm", args, 1); err != nil {
+		return nil, err
+	}
+
+	rmPath, ok1 := args[0].(*StringValue)
+	if !ok1 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call rm(%s)", args[0]),
+		}
+	}
+
+	err := os.RemoveAll(rmPath.stringContent())
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not remove %s: %s", rmPath.stringContent(), err.Error())), nil
+	}
+
+	return ObjectValue{
+		"type": AtomValue("end"),
+	}, nil
+}
+
+func (c *Context) mgnStat(args []Value) (Value, error) {
+	if err := c.requireArgLen("stat", args, 1); err != nil {
+		return nil, err
+	}
+
+	statPath, ok1 := args[0].(*StringValue)
+	if !ok1 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call stat(%s)", args[0]),
+		}
+	}
+
+	fileInfo, err := os.Stat(statPath.stringContent())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return ObjectValue{
+				"type": AtomValue("data"),
+				"data": null,
+			}, nil
+		}
+		return errObj(fmt.Sprintf("Could not stat file %s: %s", statPath.stringContent(), err.Error())), nil
+	}
+
+	return ObjectValue{
+		"type": AtomValue("data"),
+		"data": ObjectValue{
+			"name": MakeString(fileInfo.Name()),
+			"len":  IntValue(fileInfo.Size()),
+			"dir":  BoolValue(fileInfo.IsDir()),
+			"mod":  IntValue(fileInfo.ModTime().Unix()),
+		},
+	}, nil
 }
 
 func (c *Context) mgnOpen(args []Value) (Value, error) {
@@ -498,7 +638,7 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	permInt, ok3 := args[2].(IntValue)
 	if !ok1 || !ok2 || !ok3 {
 		return nil, typeError{
-			reason: fmt.Sprintf("Mismatched types in call open(%s, %s)", args[0], args[1]),
+			reason: fmt.Sprintf("Mismatched types in call open(%s, %s, %s)", args[0], args[1], args[2]),
 		}
 	}
 
@@ -653,6 +793,213 @@ func (c *Context) mgnWrite(args []Value) (Value, error) {
 
 	return ObjectValue{
 		"type": AtomValue("end"),
+	}, nil
+}
+
+type mgnHTTPHandler struct {
+	ctx         *Context
+	mgnCallback FnValue
+}
+
+func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := h.ctx
+	cb := h.mgnCallback
+
+	// unmarshal request
+	method := r.Method
+	url := r.URL.String()
+	headers := ObjectValue{}
+	for key, values := range r.Header {
+		headers[key] = MakeString(strings.Join(values, ","))
+	}
+	var body *StringValue
+	if r.ContentLength == 0 {
+		body = MakeString("")
+	} else {
+		bodyBuf, err := io.ReadAll(r.Body)
+		if err != nil {
+			ctx.Lock()
+			_, err = ctx.EvalFnValue(cb, false, errObj(
+				fmt.Sprintf("Could not read request in listen(), %s", err.Error()),
+			))
+			ctx.Unlock()
+
+			if err != nil {
+				ctx.eng.reportErr(err)
+			}
+		}
+		bodyStr := StringValue(bodyBuf)
+		body = &bodyStr
+	}
+
+	// construct request object to pass to Mgn, call handler
+	responseEnded := false
+	responses := make(chan Value, 1)
+	endHandler := func(args []Value) (Value, error) {
+		if err := ctx.requireArgLen("listen/end", args, 1); err != nil {
+			return nil, err
+		}
+
+		if responseEnded {
+			ctx.eng.reportErr(runtimeError{
+				reason: fmt.Sprintf("listen/end called more than once"),
+			})
+		}
+
+		responseEnded = true
+		responses <- args[0]
+
+		return null, nil
+	}
+
+	go func() {
+		ctx.Lock()
+		defer ctx.Unlock()
+
+		_, err := ctx.EvalFnValue(cb, false, ObjectValue{
+			"type": AtomValue("req"),
+			"req": ObjectValue{
+				"method":  MakeString(method),
+				"url":     MakeString(url),
+				"headers": headers,
+				"body":    body,
+			},
+			"end": BuiltinFnValue{
+				name: "end",
+				fn:   endHandler,
+			},
+		})
+		if err != nil {
+			ctx.eng.reportErr(err)
+		}
+	}()
+
+	// validate responses
+	resp := <-responses
+	rsp, isObject := resp.(ObjectValue)
+	if !isObject {
+		ctx.eng.reportErr(runtimeError{
+			reason: fmt.Sprintf("listen/end should return a response, got %s", resp),
+		})
+		return
+	}
+
+	// unmarshal response from the return value
+	// response = { status, headers, body }
+	statusVal, okStatus := rsp["status"]
+	headersVal, okHeaders := rsp["headers"]
+	bodyVal, okBody := rsp["body"]
+
+	resStatus, okStatus := statusVal.(IntValue)
+	resHeaders, okHeaders := headersVal.(ObjectValue)
+	resBody, okBody := bodyVal.(*StringValue)
+
+	if !okStatus || !okHeaders || !okBody {
+		ctx.eng.reportErr(runtimeError{
+			reason: fmt.Sprintf("listen/end returned malformed response, %s", rsp),
+		})
+		return
+	}
+
+	// write values to response
+	// Content-Length is automatically set for us by Go
+	for k, v := range resHeaders {
+		if str, isStr := v.(*StringValue); isStr {
+			w.Header().Set(k, str.stringContent())
+		} else {
+			ctx.eng.reportErr(runtimeError{
+				reason: fmt.Sprintf("Could not set response header, value %s was not a string", v),
+			})
+			return
+		}
+	}
+
+	code := int(resStatus)
+	// guard against invalid HTTP codes, which cause Go panics
+	// https://golang.org/src/net/http/server.go
+	if code < 100 || code > 599 {
+		ctx.eng.reportErr(runtimeError{
+			reason: fmt.Sprintf("Could not set response status code, code %s is not valid", code),
+		})
+		return
+	}
+
+	// status code write must follow all other header writes, since it sends
+	// the status
+	w.WriteHeader(int(resStatus))
+	_, err := w.Write(*resBody)
+	if err != nil {
+		ctx.Lock()
+		defer ctx.Unlock()
+
+		_, err = ctx.EvalFnValue(cb, false, errObj(
+			fmt.Sprintf("Error writing request body in listen/end: %s", err.Error()),
+		))
+		if err != nil {
+			ctx.eng.reportErr(err)
+		}
+	}
+}
+
+func (ctx *Context) mgnListen(args []Value) (Value, error) {
+	if err := ctx.requireArgLen("listen", args, 2); err != nil {
+		return nil, err
+	}
+
+	host, ok1 := args[0].(*StringValue)
+	cb, ok2 := args[1].(FnValue)
+	if !ok1 || !ok2 {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call listen(%s)", args[0]),
+		}
+	}
+
+	sendErr := func(msg string) {
+		ctx.Lock()
+		defer ctx.Unlock()
+
+		_, err2 := ctx.EvalFnValue(cb, false, errObj(msg))
+		if err2 != nil {
+			ctx.eng.reportErr(err2)
+		}
+	}
+
+	server := &http.Server{
+		Addr: host.stringContent(),
+		Handler: mgnHTTPHandler{
+			ctx:         ctx,
+			mgnCallback: cb,
+		},
+	}
+
+	ctx.eng.Add(1)
+	go func() {
+		defer ctx.eng.Done()
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			sendErr(fmt.Sprintf("Error starting http server in listen(): %s", err.Error()))
+		}
+	}()
+
+	closer := func(_ []Value) (Value, error) {
+		// attempt graceful shutdown, concurrently, without blocking Mgn
+		// evaluation thread
+		ctx.eng.Add(1)
+		go func() {
+			defer ctx.eng.Done()
+
+			err := server.Shutdown(context.Background())
+			if err != nil {
+				sendErr(fmt.Sprintf("Could not close server in listen/close: %s", err.Error()))
+			}
+		}()
+
+		return null, nil
+	}
+
+	return BuiltinFnValue{
+		name: "close",
+		fn:   closer,
 	}, nil
 }
 

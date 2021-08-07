@@ -98,7 +98,7 @@ env()
 time() // returns float
 nanotime() // returns int
 exit(code)
-rand(type, max)
+rand()
 wait(duration)
 exec(path, args, stdin) // returns stdout, stderr, end events
 
