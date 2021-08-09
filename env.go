@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,10 +11,12 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -100,7 +103,7 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("exit", c.mgnExit)
 	c.LoadFunc("rand", c.mgnRand)
 	c.LoadFunc("wait", c.callbackify(c.mgnWait))
-	// TODO: exec(path, args, stdin)
+	c.LoadFunc("exec", c.callbackify(c.mgnExec))
 
 	// i/o interfaces
 	c.LoadFunc("input", c.callbackify(c.mgnInput))
@@ -374,6 +377,75 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 			reason: fmt.Sprintf("%s does not support a len() call", arg),
 		}
 	}
+}
+
+func (c *Context) mgnExec(args []Value) (Value, error) {
+	if err := c.requireArgLen("exec", args, 3); err != nil {
+		return nil, err
+	}
+
+	path, ok1 := args[0].(*StringValue)
+	cliArgs, ok2 := args[1].(*ListValue)
+	stdin, ok3 := args[2].(*StringValue)
+	if !ok1 || !ok2 || !ok3 {
+		return nil, typeError{
+			reason: fmt.Sprintf("Mismatched types in call exec(%s, %s, %s)", args[0], args[1], args[2]),
+		}
+	}
+
+	argsList := make([]string, len(*cliArgs))
+	for i, arg := range *cliArgs {
+		if argStr, ok := arg.(*StringValue); ok {
+			argsList[i] = argStr.stringContent()
+		} else {
+			return nil, typeError{
+				reason: fmt.Sprintf("Mismatched types in call exec, arguments must be strings in %s", cliArgs),
+			}
+		}
+	}
+
+	cmd := exec.Command(path.stringContent(), argsList...)
+	stdoutBuf := bytes.Buffer{}
+	stderrBuf := bytes.Buffer{}
+	cmd.Stdin = strings.NewReader(stdin.stringContent())
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Start()
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not start command in exec(): %s", err.Error())), nil
+	}
+
+	err = cmd.Wait()
+	exitCode := 0
+	if err != nil {
+		// if there is an err but err is just ExitErr, this means the process
+		// ran successfully but exited with an error code. We consider this ok
+		// and keep going.
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+				exitCode = status.ExitStatus()
+			}
+		}
+	}
+
+	stdout, err := io.ReadAll(&stdoutBuf)
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not read stdout from exec(): %s", err.Error())), nil
+	}
+	stdoutVal := StringValue(stdout)
+	stderr, err := io.ReadAll(&stderrBuf)
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not read stderr from exec(): %s", err.Error())), nil
+	}
+	stderrVal := StringValue(stderr)
+
+	return ObjectValue{
+		"type":   AtomValue("end"),
+		"status": IntValue(exitCode),
+		"stdout": &stdoutVal,
+		"stderr": &stderrVal,
+	}, nil
 }
 
 func (c *Context) mgnInput(_ []Value) (Value, error) {
