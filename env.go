@@ -991,7 +991,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// https://golang.org/src/net/http/server.go
 	if code < 100 || code > 599 {
 		ctx.eng.reportErr(runtimeError{
-			reason: fmt.Sprintf("Could not set response status code, code %s is not valid", code),
+			reason: fmt.Sprintf("Could not set response status code, code %d is not valid", code),
 		})
 		return
 	}
@@ -1134,9 +1134,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 		strings.NewReader(body.stringContent()),
 	)
 	if err != nil {
-		return nil, runtimeError{
-			reason: fmt.Sprintf("Could not initialize request in req(): %s", err.Error()),
-		}
+		return errObj(fmt.Sprintf("Could not initialize request in req(): %s", err.Error())), nil
 	}
 
 	// construct headers
@@ -1173,9 +1171,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 	} else {
 		buf, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, runtimeError{
-				reason: fmt.Sprintf("Could not read response: %s", err.Error()),
-			}
+			return errObj(fmt.Sprintf("Could not read response: %s", err.Error())), nil
 		}
 		strBuf := StringValue(buf)
 		respBody = &strBuf
@@ -1331,7 +1327,7 @@ func (c *Context) mgnPow(args []Value) (Value, error) {
 	var base float64
 	var exp float64
 	err := typeError{
-		reason: fmt.Sprintf("Mismatched types in call pow(%s, %s)", args[0]),
+		reason: fmt.Sprintf("Mismatched types in call pow(%s, %s)", args[0], args[1]),
 	}
 
 	switch arg := args[0].(type) {
@@ -1373,7 +1369,7 @@ func (c *Context) mgnLog(args []Value) (Value, error) {
 	var base float64
 	var exp float64
 	err := typeError{
-		reason: fmt.Sprintf("Mismatched types in call log(%s, %s)", args[0]),
+		reason: fmt.Sprintf("Mismatched types in call log(%s, %s)", args[0], args[1]),
 	}
 
 	switch arg := args[0].(type) {
