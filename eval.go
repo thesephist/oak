@@ -74,8 +74,6 @@ func (v NullValue) Eq(u Value) bool {
 
 type StringValue []byte
 
-var emptyString = &StringValue{}
-
 func MakeString(s string) *StringValue {
 	v := StringValue(s)
 	return &v

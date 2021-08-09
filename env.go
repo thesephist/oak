@@ -114,7 +114,7 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("read", c.callbackify(c.mgnRead))
 	c.LoadFunc("write", c.callbackify(c.mgnWrite))
 	c.LoadFunc("listen", c.mgnListen)
-	// TODO: req(data)
+	c.LoadFunc("req", c.callbackify(c.mgnReq))
 
 	// math
 	c.LoadFunc("sin", c.mgnSin)
@@ -1000,6 +1000,122 @@ func (ctx *Context) mgnListen(args []Value) (Value, error) {
 	return BuiltinFnValue{
 		name: "close",
 		fn:   closer,
+	}, nil
+}
+
+func (c *Context) mgnReq(args []Value) (Value, error) {
+	if err := c.requireArgLen("req", args, 1); err != nil {
+		return nil, err
+	}
+
+	argErr := typeError{
+		reason: fmt.Sprintf("Mismatched types in call req(%s)", args[0]),
+	}
+
+	data, ok1 := args[0].(ObjectValue)
+	if !ok1 {
+		return nil, argErr
+	}
+
+	// unmarshal request data
+	methodVal, ok1 := data["method"]
+	urlVal, ok2 := data["url"]
+	headersVal, ok3 := data["headers"]
+	bodyVal, ok4 := data["body"]
+
+	// default args
+	if !ok1 {
+		methodVal = MakeString("GET")
+		ok1 = true
+	}
+	if !ok3 {
+		headersVal = ObjectValue{}
+		ok3 = true
+	}
+	if !ok4 {
+		bodyVal = MakeString("")
+		ok4 = true
+	}
+
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		return nil, argErr
+	}
+
+	method, ok1 := methodVal.(*StringValue)
+	url, ok2 := urlVal.(*StringValue)
+	headers, ok3 := headersVal.(ObjectValue)
+	body, ok4 := bodyVal.(*StringValue)
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		return nil, argErr
+	}
+
+	client := &http.Client{
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			// do not follow redirects
+			return http.ErrUseLastResponse
+		},
+	}
+
+	req, err := http.NewRequest(
+		method.stringContent(),
+		url.stringContent(),
+		strings.NewReader(body.stringContent()),
+	)
+	if err != nil {
+		return nil, runtimeError{
+			reason: fmt.Sprintf("Could not initialize request in req(): %s", err.Error()),
+		}
+	}
+
+	// construct headers
+	// Content-Length is automatically set for us by Go
+	req.Header.Set("User-Agent", "") // remove Go's default user agent header
+	for k, v := range headers {
+		if valStr, ok := v.(*StringValue); ok {
+			req.Header.Set(k, valStr.stringContent())
+		} else {
+			return nil, typeError{
+				reason: fmt.Sprintf("Could not set request header, value %s is not a string", v),
+			}
+		}
+	}
+
+	// send request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, typeError{
+			reason: fmt.Sprintf("Could not send request: %s", err.Error()),
+		}
+	}
+	defer resp.Body.Close()
+
+	respStatus := IntValue(resp.StatusCode)
+	respHeaders := ObjectValue{}
+	for key, values := range resp.Header {
+		respHeaders[key] = MakeString(strings.Join(values, ","))
+	}
+
+	var respBody *StringValue
+	if resp.ContentLength == 0 {
+		respBody = MakeString("")
+	} else {
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, runtimeError{
+				reason: fmt.Sprintf("Could not read response: %s", err.Error()),
+			}
+		}
+		strBuf := StringValue(buf)
+		respBody = &strBuf
+	}
+
+	return ObjectValue{
+		"type": AtomValue("resp"),
+		"resp": ObjectValue{
+			"status":  respStatus,
+			"headers": respHeaders,
+			"body":    respBody,
+		},
 	}, nil
 }
 
