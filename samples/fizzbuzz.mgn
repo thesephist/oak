@@ -1,0 +1,15 @@
+// fizzbuzz
+
+std := import('std')
+
+fn fizzbuzz(n) if [n % 3, n % 5] {
+	[0, 0] -> 'FizzBuzz'
+	[0, _] -> 'Fizz'
+	[_, 0] -> 'Buzz'
+	_ -> string(n)
+}
+
+std.range(1, 101) |> std.each(fn(n) {
+	std.println(fizzbuzz(n))
+})
+

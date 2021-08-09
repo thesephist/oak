@@ -17,7 +17,8 @@ runner.str.run(t)
 runner.sort.run(t)
 runner.fmt.run(t)
 
-t.report()
+// only report failed tests
+t.failed()
 
 // exit with right code
 t.exit()
