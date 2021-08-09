@@ -1,10 +1,10 @@
 // exercising string functions
 
 {
-    println: println
+	println: println
 } := import('std')
 {
-    join: join
+	join: join
 } := import('str')
 
 println(['one', 'two', 'three'] |> join(', '))

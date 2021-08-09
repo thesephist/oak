@@ -18,12 +18,12 @@ fn readFileSync(path) {
 					}
 					_ -> if len(evt.data) {
 						ReadBufSize -> sub(
-							file.(len(file)) := evt.data
+							file << evt.data
 							offset + ReadBufSize
 						)
 						_ -> {
 							close(fd)
-							file.(len(file)) := evt.data
+							file << evt.data
 						}
 					}
 				}
@@ -45,11 +45,11 @@ fn readFileAsync(path, withFile) with open(path) fn(evt) if evt.type {
 			}
 			_ -> if len(evt.data) {
 				ReadBufSize -> sub(
-					file.(len(file)) := evt.data
+					file << evt.data
 					offset + ReadBufSize
 				)
 				_ -> with close(fd) fn {
-					withFile(file.(len(file)) := evt.data)
+					withFile(file << evt.data)
 				}
 			}
 		}

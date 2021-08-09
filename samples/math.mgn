@@ -1,7 +1,7 @@
 // exercising math functions
 
 {
-    println: println
+	println: println
 } := import('std')
 
 {
@@ -9,13 +9,13 @@
 } := import('fmt')
 
 {
-    sum: sum
-    min: min
-    max: max
+	sum: sum
+	min: min
+	max: max
 } := import('math')
 
 {
-    sort: sort
+	sort: sort
 } := import('sort')
 
 nums := [1, 2, 6, 35, -24, 100, -2]

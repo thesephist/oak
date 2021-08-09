@@ -1,3 +1,4 @@
+#!/usr/bin/env mgn
 // standard library tests
 
 test := import('test')

@@ -10,6 +10,8 @@ fn run(t) {
 		{
 			upper?: upper?
 			lower?: lower?
+			upper: upper
+			lower: lower
 			digit?: digit?
 			space?: space?
 			letter?: letter?
@@ -35,6 +37,15 @@ fn run(t) {
 			std.range(codepoint('A'), codepoint('Z') + 1) |>
 				std.map(char) |> std.some(lower?)
 			false
+		)
+
+		'upper transforms only lowercase chars' |> t.eq(
+			upper('Sequenced Tasks 123')
+			'SEQUENCED TASKS 123'
+		)
+		'lower transforms only uppercase chars' |> t.eq(
+			lower('Sequenced Tasks 123')
+			'sequenced tasks 123'
 		)
 
 		'digit? = true for all digits' |> t.eq(
@@ -128,6 +139,140 @@ fn run(t) {
 		)
 	}
 
-	// TODO: indexOf, contains?, lower, upper
+	// indexOf, contains?
+	{
+		{
+			indexOf: indexOf
+			contains?: contains?
+		} := str
+
+		'indexOf empty string' |> t.eq(indexOf('', 'a'), -1)
+		'indexOf nonexistent part' |> t.eq(indexOf('abc', 'x'), -1)
+		'indexOf existent part' |> t.eq(indexOf('abc', 'b'), 1)
+		'indexOf duplicate part' |> t.eq(indexOf('abcdc', 'c'), 2)
+
+		'contains? empty string' |> t.eq(contains?('', 'a'), false)
+		'contains? nonexistent part' |> t.eq(contains?('abc', 'x'), false)
+		'contains? existent part' |> t.eq(contains?('abc', 'b'), true)
+		'contains? duplicate part' |> t.eq(contains?('abcdc', 'c'), true)
+	}
+
+	// replace, split
+	{
+		{
+			replace: replace
+			split: split
+		} := str
+
+		'replace is no-op if empty string' |> t.eq(
+			replace('he stared in amazement', '', '__')
+			'he stared in amazement'
+		)
+		'replace replaces all instances of given substring' |> t.eq(
+			replace('he stared in amazement', 'e', 'j')
+			'hj starjd in amazjmjnt'
+		)
+		'replace works for multi-character substring' |> t.eq(
+			replace('he is staring in amazement', 'in', 'xx')
+			'he is starxxg xx amazement'
+		)
+		'replace accounts for different old/new substring lengths' |> t.eq(
+			replace('he is staring in amazement', 'in', 'wonder')
+			'he is starwonderg wonder amazement'
+		)
+		'replace deals gracefully with overlapping matches' |> t.eq(
+			replace('wow what a sight, wow', 'ow', 'wow')
+			'wwow what a sight, wwow'
+		)
+		'replace works if new substring is empty' |> t.eq(
+			replace('wow what a sight, wow', 'wow', '')
+			' what a sight, '
+		)
+		'replace works even if new str contains recursive match' |> t.eq(
+			replace('a {} b {} c {}', '{}', '{}-{}')
+			'a {}-{} b {}-{} c {}-{}'
+		)
+
+		'split splits string into letters if ?' |> t.eq(
+			split('alphabet')
+			['a', 'l', 'p','h', 'a', 'b', 'e', 't']
+		)
+		'split splits string into letters if empty' |> t.eq(
+			split('alphabet', '')
+			['a', 'l', 'p','h', 'a', 'b', 'e', 't']
+		)
+		'split splits string by delimiter' |> t.eq(
+			split('shoots, eats, and leaves', ', ')
+			['shoots', 'eats', 'and leaves']
+		)
+		'split with empty strings if delimiter in start or end' |> t.eq(
+			split(', original taste, ', ', ')
+			['', 'original taste', '']
+		)
+		'returns one chunk if no match of delimiter found' |> t.eq(
+			split('no taste whatsoever!', 'grand')
+			['no taste whatsoever!']
+		)
+	}
+
+	// trimStart, trimEnd, trim
+	{
+		{
+			trimStart: trimStart
+			trimEnd: trimEnd
+			trim: trim
+		} := str
+
+		'trimStart is a no-op with empty string' |> t.eq(
+			trimStart('???????what???', '')
+			'???????what???'
+		)
+		'trimStart trims given prefix until it does not prefix' |> t.eq(
+			trimStart('???????what???', '?')
+			'what???'
+		)
+		'trimStart works with multi-char prefix' |> t.eq(
+			trimStart('abababacdef', 'ab')
+			'acdef'
+		)
+		'trimStart only trims whole multiples of prefix' |> t.eq(
+			trimStart('aaaaaaaadef', 'aaa')
+			'aadef'
+		)
+
+		'trimEnd is a no-op with empty string' |> t.eq(
+			trimEnd('???????what???', '')
+			'???????what???'
+		)
+		'trimEnd trims given suffix until it does not suffix' |> t.eq(
+			trimEnd('???????what???', '?')
+			'???????what'
+		)
+		'trimEnd works with multi-char suffix' |> t.eq(
+			trimEnd('abacdefabcabab', 'ab')
+			'abacdefabc'
+		)
+		'trimEnd only trims whole multiples of suffix' |> t.eq(
+			trimEnd('xxxyyyyyyyy', 'yyy')
+			'xxxyy'
+		)
+
+		'trim trims given string from both sides' |> t.eq(
+			trim('????what?????', '?')
+			'what'
+		)
+		'trim is a no-op with empty string' |> t.eq(
+			trim('????what?????', '')
+			'????what?????'
+		)
+		'trim trims whole multiples of substring from both sides' |> t.eq(
+			trim('????what?????', '???')
+			'?what??'
+		)
+		'trim trims whitespace on both sides if no delimiter' |> t.eq(
+			trim('   \t\nhello world!   \n\t   ')
+			'hello world!'
+		)
+	}
 }
 

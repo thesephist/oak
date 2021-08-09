@@ -2,26 +2,26 @@
 
 {
 	default: default
-    map: map
-    slice: slice
-    reduce: reduce
+	map: map
+	slice: slice
+	reduce: reduce
 } := import('std')
 
 fn checkRange(lo, hi) fn(c) {
-    p := codepoint(c)
-    lo < p & p < hi
+	p := codepoint(c)
+	lo < p & p < hi
 }
 
 upper? := checkRange(codepoint('A') - 1, codepoint('Z') + 1)
 lower? := checkRange(codepoint('a') - 1, codepoint('z') + 1)
 digit? := checkRange(codepoint('0') - 1, codepoint('9') + 1)
 space? := fn(c) if c {
-    ' ' -> true
-    '\t' -> true
-    '\n' -> true
-    '\r' -> true
-    '\f' -> true
-    _ -> false
+	' ' -> true
+	'\t' -> true
+	'\n' -> true
+	'\r' -> true
+	'\f' -> true
+	_ -> false
 }
 fn letter?(c) upper?(c) | lower?(c)
 fn word?(c) letter?(c) | digit?(c)
@@ -35,54 +35,157 @@ fn join(strings, joiner) {
 }
 
 fn startsWith?(s, prefix) prefix |> reduce(true, fn(acc, c, i) {
-    acc & (s.(i) = c)
+	acc & (s.(i) = c)
 })
 
 fn endsWith?(s, suffix) {
-    diff := len(s) - len(suffix)
-    suffix |> reduce(true, fn(acc, c, i) {
-        acc & (s.(i + diff) = c)
-    })
+	diff := len(s) - len(suffix)
+	suffix |> reduce(true, fn(acc, c, i) {
+		acc & (s.(i + diff) = c)
+	})
 }
 
 fn _matchesAt?(s, substr, idx) if len(substr) {
-    0 -> true
-    1 -> s.(idx) = substr
-    _ -> {
-        max := len(substr)
-        fn sub(i) if i {
-            max -> true
-            _ -> if s.(idx + i) {
-                substr.(i) -> sub(i + 1)
-                _ -> false
-            }
-        }
-        sub(0)
-    }
+	0 -> true
+	1 -> s.(idx) = substr
+	_ -> {
+		max := len(substr)
+		fn sub(i) if i {
+			max -> true
+			_ -> if s.(idx + i) {
+				substr.(i) -> sub(i + 1)
+				_ -> false
+			}
+		}
+		sub(0)
+	}
 }
 
 fn indexOf(s, substr) {
-    max := len(s) - len(substr)
-    fn sub(i) if _matchesAt?(s, substr, i) {
-        true -> i
-        _ -> if i < max {
-            true -> sub(i + 1)
-            _ -> -1
-        }
-    }
+	max := len(s) - len(substr)
+	fn sub(i) if _matchesAt?(s, substr, i) {
+		true -> i
+		_ -> if i < max {
+			true -> sub(i + 1)
+			_ -> -1
+		}
+	}
+	sub(0)
 }
 
 fn contains?(s, substr) indexOf(s, substr) >= 0
 
 fn lower(s) s |> reduce('', fn(acc, c, i) if upper?(c) {
-    true -> acc.(i) := char(codepoint(c) + 32)
-    _ -> acc.(i) := c
+	true -> acc.(i) := char(codepoint(c) + 32)
+	_ -> acc.(i) := c
 })
 
 fn upper(s) s |> reduce('', fn(acc, c, i) if lower?(c) {
-    true -> acc.(i) := char(codepoint(c) - 32)
-    _ -> acc.(i) := c
+	true -> acc.(i) := char(codepoint(c) - 32)
+	_ -> acc.(i) := c
 })
 
-// TODO: replace, split, trimStart/trimEnd/trim/trimSpace
+fn _replaceNonEmpty(s, old, new) {
+	lold := len(old)
+	lnew := len(new)
+	fn sub(acc, i) if _matchesAt?(acc, old, i) {
+		true -> sub(
+			slice(acc, 0, i) + new + slice(acc, i + lold)
+			i + lnew
+		)
+		_ -> if i < len(acc) {
+			true -> sub(acc, i + 1)
+			_ -> acc
+		}
+	}
+	sub(s, 0)
+}
+
+fn replace(s, old, new) if old {
+	'' -> s
+	_ -> _replaceNonEmpty(s, old, new)
+}
+
+fn _splitNonEmpty(s, delim) {
+	coll := []
+	ldelim := len(delim)
+	fn sub(acc, i, last) if _matchesAt?(acc, delim, i) {
+		true -> {
+			coll << slice(acc, last, i)
+			sub(acc, i + ldelim, i + ldelim)
+		}
+		_ -> if i < len(acc) {
+			true -> sub(acc, i + 1, last)
+			_ -> coll << slice(acc, last)
+		}
+	}
+	sub(s, 0, 0)
+}
+
+fn split(s, delim) if delim {
+	? -> s |> reduce([], fn(acc, c) acc << c)
+	'' -> s |> reduce([], fn(acc, c) acc << c)
+	_ -> _splitNonEmpty(s, delim)
+}
+
+fn _trimStartNonEmpty(s, prefix) {
+	max := len(s)
+	lpref := len(prefix)
+	fn sub(i) if i < max {
+		true -> if _matchesAt?(s, prefix, i) {
+			true -> sub(i + lpref)
+			_ -> i
+		}
+		_ -> i
+	}
+	idx := sub(0)
+	slice(s, idx)
+}
+
+fn trimStart(s, prefix) if prefix {
+	'' -> s
+	_ -> _trimStartNonEmpty(s, prefix)
+}
+
+fn _trimEndNonEmpty(s, suffix) {
+	lsuf := len(suffix)
+	fn sub(i) if i > -1 {
+		true -> if _matchesAt?(s, suffix, i - lsuf) {
+			true -> sub(i - lsuf)
+			_ -> i
+		}
+		_ -> i
+	}
+	idx := sub(len(s))
+	slice(s, 0, idx)
+}
+
+fn trimEnd(s, suffix) if suffix {
+	'' -> s
+	_ -> _trimEndNonEmpty(s, suffix)
+}
+
+fn _trimSpace(s) if s {
+	'' -> s
+	_ -> {
+		fn subStart(i) if space?(s.(i)) {
+			true -> subStart(i + 1)
+			_ -> i
+		}
+		firstNonSpace := subStart(0)
+
+		fn subEnd(i) if space?(s.(i)) {
+			true -> subEnd(i - 1)
+			_ -> i
+		}
+		lastNonSpace := subEnd(len(s) - 1)
+
+		slice(s, firstNonSpace, lastNonSpace + 1)
+	}
+}
+
+fn trim(s, part) if part {
+	? -> _trimSpace(s)
+	_ -> trimStart(trimEnd(s, part), part)
+}
 

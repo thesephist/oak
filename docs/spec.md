@@ -34,16 +34,15 @@ fnLiteral := 'fn' '(' ( identifier ',' )* (identifier '...')? ')' expr
 identifier := \w_ (\w\d_?!)* | _
 
 assignment := (
-    identifier '<-' expr | // nonlocal update
-    identifier ':=' expr |
-    listLiteral ':=' expr |
-    objectLiteral ':=' expr
+    identifier [':=' '<-'] expr |
+    listLiteral [':=' '<-'] expr |
+    objectLiteral [':=' '<-'] expr
 )
 
 propertyAccess := identifier ('.' identifier)+
 
 unaryExpr := ('!' | '-') expr
-binaryExpr := expr (+ - * / % ^ & | > < = >= <=) binaryExpr
+binaryExpr := expr (+ - * / % ^ & | > < = >= <= <<) binaryExpr
 
 prefixCall := expr '(' (expr ',')* ')'
 infixCall := expr '|>' prefixCall

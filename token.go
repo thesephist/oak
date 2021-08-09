@@ -46,6 +46,7 @@ const (
 	nonlocalAssign
 	pipeArrow
 	branchArrow
+	pushArrow
 	colon
 	ellipsis
 	qmark
@@ -115,6 +116,8 @@ func (t token) String() string {
 		return "|>"
 	case branchArrow:
 		return "->"
+	case pushArrow:
+		return "<<"
 	case colon:
 		return ":"
 	case ellipsis:
@@ -279,7 +282,7 @@ func (t *tokenizer) nextToken() token {
 	case ',':
 		return token{kind: comma, pos: t.currentPos()}
 	case '.':
-		if t.peek() == '.' && t.peekAhead(1) == '.' {
+		if !t.isEOF() && t.peek() == '.' && t.peekAhead(1) == '.' {
 			pos := t.currentPos()
 			t.next()
 			t.next()
@@ -299,26 +302,31 @@ func (t *tokenizer) nextToken() token {
 	case '}':
 		return token{kind: rightBrace, pos: t.currentPos()}
 	case ':':
-		if t.peek() == '=' {
+		if !t.isEOF() && t.peek() == '=' {
 			pos := t.currentPos()
 			t.next()
 			return token{kind: assign, pos: pos}
 		}
 		return token{kind: colon, pos: t.currentPos()}
 	case '<':
-		switch t.peek() {
-		case '-':
-			t.next()
-			return token{kind: nonlocalAssign, pos: t.currentPos()}
-		case '=':
-			t.next()
-			return token{kind: leq, pos: t.currentPos()}
+		if !t.isEOF() {
+			switch t.peek() {
+			case '<':
+				t.next()
+				return token{kind: pushArrow, pos: t.currentPos()}
+			case '-':
+				t.next()
+				return token{kind: nonlocalAssign, pos: t.currentPos()}
+			case '=':
+				t.next()
+				return token{kind: leq, pos: t.currentPos()}
+			}
 		}
 		return token{kind: less, pos: t.currentPos()}
 	case '?':
 		return token{kind: qmark, pos: t.currentPos()}
 	case '!':
-		if t.peek() == '=' {
+		if !t.isEOF() && t.peek() == '=' {
 			t.next()
 			return token{kind: neq, pos: t.currentPos()}
 		}
@@ -326,7 +334,7 @@ func (t *tokenizer) nextToken() token {
 	case '+':
 		return token{kind: plus, pos: t.currentPos()}
 	case '-':
-		if t.peek() == '>' {
+		if !t.isEOF() && t.peek() == '>' {
 			t.next()
 			return token{kind: branchArrow, pos: t.currentPos()}
 		}
@@ -334,7 +342,7 @@ func (t *tokenizer) nextToken() token {
 	case '*':
 		return token{kind: times, pos: t.currentPos()}
 	case '/':
-		if t.peek() == '/' {
+		if !t.isEOF() && t.peek() == '/' {
 			pos := t.currentPos()
 			t.next()
 			commentString := strings.TrimSpace(t.readUntilRune('\n'))
@@ -352,13 +360,13 @@ func (t *tokenizer) nextToken() token {
 	case '&':
 		return token{kind: and, pos: t.currentPos()}
 	case '|':
-		if t.peek() == '>' {
+		if !t.isEOF() && t.peek() == '>' {
 			t.next()
 			return token{kind: pipeArrow, pos: t.currentPos()}
 		}
 		return token{kind: or, pos: t.currentPos()}
 	case '>':
-		if t.peek() == '=' {
+		if !t.isEOF() && t.peek() == '=' {
 			pos := t.currentPos()
 			t.next()
 			return token{kind: geq, pos: pos}
@@ -371,7 +379,7 @@ func (t *tokenizer) nextToken() token {
 		// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 		pos := t.currentPos()
 		payloadBuilder := strings.Builder{}
-		for t.peek() != '\'' {
+		for !t.isEOF() && t.peek() != '\'' {
 			charInString := t.next()
 			if charInString == '\\' {
 				charInString = t.next()
@@ -388,6 +396,14 @@ func (t *tokenizer) nextToken() token {
 			}
 			payloadBuilder.WriteRune(charInString)
 		}
+		if t.isEOF() {
+			return token{
+				kind:    stringLiteral,
+				pos:     pos,
+				payload: payloadBuilder.String(),
+			}
+		}
+
 		t.next() // read ending quote
 		return token{
 			kind:    stringLiteral,
@@ -426,6 +442,14 @@ func (t *tokenizer) nextToken() token {
 
 func (t *tokenizer) tokenize() []token {
 	tokens := []token{}
+
+	if !t.isEOF() && t.peek() == '#' && t.peekAhead(1) == '!' {
+		// shebang-style ignored line, keep taking until EOL
+		t.readUntilRune('\n')
+		if !t.isEOF() {
+			t.next()
+		}
+	}
 
 	// snip whitespace before
 	for !t.isEOF() && unicode.IsSpace(t.peek()) {

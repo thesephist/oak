@@ -1008,6 +1008,9 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 				resStr := StringValue(res)
 				return &resStr, nil
+			case pushArrow:
+				*left = append(*left, *right...)
+				return left, nil
 			case greater:
 				return BoolValue(bytes.Compare(*left, *right) > 0), nil
 			case less:
@@ -1017,7 +1020,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case leq:
 				return BoolValue(bytes.Compare(*left, *right) <= 0), nil
 			}
-			panic(fmt.Sprintf("Invalid binary operator %s", token{kind: n.op}))
+			return nil, incompatibleError
 		case BoolValue:
 			right, ok := rightComputed.(BoolValue)
 			if !ok {
@@ -1032,6 +1035,13 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case xor:
 				return BoolValue(left != right), nil
 			}
+		case *ListValue:
+			switch n.op {
+			case pushArrow:
+				*left = append(*left, rightComputed)
+				return left, nil
+			}
+			return nil, incompatibleError
 		}
 		return nil, runtimeError{
 			reason: fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",

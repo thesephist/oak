@@ -99,6 +99,15 @@ func TestLocalAssignment(t *testing.T) {
 	expectProgramToReturn(t, `x := 100, y := 200, x`, IntValue(100))
 }
 
+func TestUnderscoreVarNames(t *testing.T) {
+	expectProgramToReturn(t, `
+	_a := 'A'
+	b_ := 'B'
+	c_d := 'CD'
+	_a + b_ + c_d
+	`, MakeString("ABCD"))
+}
+
 func TestNonlocalAssignment(t *testing.T) {
 	expectProgramToReturn(t, `
 	x := 100
@@ -110,6 +119,40 @@ func TestNonlocalAssignment(t *testing.T) {
 	do()
 	x + y
 	`, IntValue(400))
+}
+
+func TestPushToString(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := 'hi'
+	[s << 'world', s]
+	`, MakeList(
+		MakeString("hiworld"),
+		MakeString("hiworld"),
+	))
+}
+
+func TestPushToList(t *testing.T) {
+	expectProgramToReturn(t, `
+	arr := [:a]
+	[arr << :b, arr]
+	`, MakeList(
+		MakeList(AtomValue("a"), AtomValue("b")),
+		MakeList(AtomValue("a"), AtomValue("b")),
+	))
+}
+
+func TestPushArrowPrecedence(t *testing.T) {
+	expectProgramToReturn(t, `
+	arr := [2] << 1 + 3
+	arr << 10 << 20
+	arr << x := 100
+	`, MakeList(
+		IntValue(2),
+		IntValue(4),
+		IntValue(10),
+		IntValue(20),
+		IntValue(100),
+	))
 }
 
 func TestUnaryExpr(t *testing.T) {

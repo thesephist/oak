@@ -4,52 +4,6 @@ std := import('std')
 fmt := import('fmt')
 
 fn run(t) {
-	// push
-	{
-		push := std.push
-
-		'push empty list' |> t.eq(push([], 12), [12])
-		'push non-empty list' |> t.eq(push([10, 20], 30), [10, 20, 30])
-		'push mutates list' |> t.eq(
-			{
-				arr := [1, 2, 3]
-				arr |> push(100)
-				arr
-			}
-			[1, 2, 3, 100]
-		)
-		'push list to list' |> t.eq(
-			[[10, 20]] |> push([30, 40])
-			[[10, 20], [30, 40]]
-		)
-		'push returns original mutated list' |> t.eq(
-			{
-				arr := [1, 2, 3]
-				arr |> push(:item)
-			}
-			[1, 2, 3, :item]
-		)
-
-		'push empty string' |> t.eq(push('', 'xyz'), 'xyz')
-		'push non-empty string' |> t.eq(push('abc', 'def'), 'abcdef')
-		'push mutates string' |> t.eq(
-			{
-				s := 'hello'
-				s |> push(', world') |> push('!\n')
-				s
-			}
-			'hello, world!\n'
-		)
-
-		'push returns original mutated string' |> t.eq(
-			{
-				arr := '123'
-				arr |> push('four')
-			}
-			'123four'
-		)
-	}
-
 	// default
 	{
 		default := std.default
@@ -91,8 +45,7 @@ fn run(t) {
 		'slice() clones original list' |> t.eq(
 			{
 				original := [1, 2, 3]
-				new := slice(original)
-				new |> std.push(100)
+				new := slice(original) << 100
 				[original, new]
 			}
 			[
@@ -113,8 +66,7 @@ fn run(t) {
 		'slice() clones original string' |> t.eq(
 			{
 				original := '12345'
-				new := slice(original)
-				new |> std.push('100')
+				new := slice(original) << '100'
 				[original, new]
 			}
 			['12345', '12345100']
@@ -128,8 +80,7 @@ fn run(t) {
 		'clone() clones original string' |> t.eq(
 			{
 				original := '12345'
-				new := clone(original)
-				new |> std.push('100')
+				new := clone(original) << '100'
 				[original, new]
 			}
 			['12345', '12345100']
@@ -137,8 +88,7 @@ fn run(t) {
 		'clone() clones original list' |> t.eq(
 			{
 				original := [1, 2, 3]
-				new := clone(original)
-				new |> std.push(100)
+				new := clone(original) << 100
 				[original, new]
 			}
 			[
@@ -223,7 +173,6 @@ fn run(t) {
 	// array functions -- reverse, map, each, filter, reduce, flatten, some, every
 	{
 		{
-			push: push
 			clone: clone
 
 			reverse: reverse
@@ -243,7 +192,7 @@ fn run(t) {
 			fmt.format('{{ 0 }} does not mutate list arg', name) |> t.eq(
 				{
 					orig := clone(list)
-					new := f(orig) |> push(:invalid)
+					new := f(orig) << :invalid
 					orig
 				}
 				list
@@ -284,7 +233,7 @@ fn run(t) {
 		'each() list' |> t.eq(
 			{
 				nums := []
-				each(arr, fn(n) { nums |> std.push(n) })
+				each(arr, fn(n) nums << n)
 				nums
 			}
 			[1, 2, 3, 4, 10]
@@ -292,7 +241,7 @@ fn run(t) {
 		'each() callback gets index' |> t.eq(
 			{
 				nums := []
-				each(arr, fn(_, i) { nums |> std.push(i) })
+				each(arr, fn(_, i) { nums << i })
 				nums
 			}
 			[0, 1, 2, 3, 4]
@@ -304,7 +253,7 @@ fn run(t) {
 			{
 				nums := []
 				filter(arr, fn(_, i) {
-					nums |> std.push(i)
+					nums << i
 					true
 				})
 				nums
@@ -321,7 +270,7 @@ fn run(t) {
 			{
 				nums := []
 				reduce(arr, 0, fn(_, _, i) {
-					nums |> std.push(i)
+					nums << i
 					0
 				})
 				nums

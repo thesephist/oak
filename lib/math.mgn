@@ -1,18 +1,18 @@
 // math library
 
 {
-    reduce: reduce
+	reduce: reduce
 } := import('std')
 
 sum := fn(xs...) xs |> reduce(0, fn(a, b) a + b)
 
 min := fn(xs...) xs |> reduce(xs.0, fn(acc, n) if n < acc {
-    true -> n
-    _ -> acc
+	true -> n
+	_ -> acc
 })
 
 max := fn(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
-    true -> n
-    _ -> acc
+	true -> n
+	_ -> acc
 })
 

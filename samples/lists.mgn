@@ -1,15 +1,15 @@
 // exercising list iterator functions
 
 {
-    println: println
+	println: println
 
-    range: range
-    slice: slice
-    reverse: reverse
-    map: map
-    each: each
-    filter: filter
-    reduce: reduce
+	range: range
+	slice: slice
+	reverse: reverse
+	map: map
+	each: each
+	filter: filter
+	reduce: reduce
 } := import('std')
 
 {

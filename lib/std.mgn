@@ -2,68 +2,66 @@
 
 fn identity(x) x
 
-fn push(xs, x) xs.(len(xs)) := x
-
 fn baseIterator(v) if type(v) {
-    :string -> ''
-    :list -> []
-    :object -> {}
+	:string -> ''
+	:list -> []
+	:object -> {}
 }
 
 fn default(x, base) if x {
-    ? -> base
-    _ -> x
+	? -> base
+	_ -> x
 }
 
 fn clamp(min, max, n, m) {
-    // assumes that at least min < max & n < m
-    n := if n < min {
-        true -> min
-        _ -> n
-    }
-    m := if m < min {
-        true -> min
-        _ -> m
-    }
+	// assumes that at least min < max & n < m
+	n := if n < min {
+		true -> min
+		_ -> n
+	}
+	m := if m < min {
+		true -> min
+		_ -> m
+	}
 
-    m := if m > max {
-        true -> max
-        _ -> m
-    }
-    n := if n > m {
-        true -> m
-        _ -> n
-    }
+	m := if m > max {
+		true -> max
+		_ -> m
+	}
+	n := if n > m {
+		true -> m
+		_ -> n
+	}
 
-    [n, m]
+	[n, m]
 }
 
 fn slice(xs, min, max) {
-    min := default(min, 0)
-    max := default(max, len(xs))
-    [min, max] := clamp(0, len(xs), min, max)
+	min := default(min, 0)
+	max := default(max, len(xs))
+	[min, max] := clamp(0, len(xs), min, max)
 
-    fn sub(acc, i) if i {
-        max -> acc
-        _ -> sub(
-            push(acc, xs.(i))
-            i + 1
-        )
-    }
-    sub(baseIterator(xs), min)
+	fn sub(acc, i) if i {
+		max -> acc
+		_ -> sub(
+			acc << xs.(i)
+			i + 1
+		)
+	}
+	sub(baseIterator(xs), min)
 }
 
 fn clone(x) if type(x) {
-    :string -> '' + x
-    :list -> slice(x)
-    :object -> keys(x) |> reduce({}, fn(acc, key) acc.(key) := x.(key))
-    _ -> x
+	:string -> '' + x
+	:list -> slice(x)
+	:object -> keys(x) |> reduce({}, fn(acc, key) acc.(key) := x.(key))
+	_ -> x
 }
 
 fn append(xs, ys) {
-    xlen := len(xs)
-    ys |> each(fn(y, i) xs.(xlen + i) := y)
-    xs
+	xlen := len(xs)
+	ys |> each(fn(y, i) xs.(xlen + i) := y)
+	xs
 }
 
 fn join(xs, ys) clone(xs) |> append(ys)
@@ -71,12 +69,12 @@ fn join(xs, ys) clone(xs) |> append(ys)
 // functional iterators
 
 fn range(start, end, step) {
-    step := default(step, 1)
+	step := default(step, 1)
 	if end {
 		? -> [start, end] <- [0, start]
 	}
 
-    if step = 0 {
+	if step = 0 {
 		true -> []
 		_ -> {
 			list := []
@@ -84,91 +82,91 @@ fn range(start, end, step) {
 			sub := if step > 0 {
 				true -> fn(n) if n < end {
 					true -> {
-				   		push(list, n)
+						list << n
 				   		sub(n + step)
-				    }
-				    _ -> list
+					}
+					_ -> list
 				}
 				_ -> fn(n) if n > end {
 					true -> {
-				   		push(list, n)
+						list << n
 				   		sub(n + step)
-				    }
-				    _ -> list
+					}
+					_ -> list
 				}
 			}
 			sub(start)
 		}
-    }
+	}
 }
 
 fn reverse(xs) {
-    fn sub(acc, i) if i < 0 {
-        true -> acc
-        _ -> sub(
-            push(acc, xs.(i))
-            i - 1
-        )
-    }
-    sub([], len(xs) - 1)
+	fn sub(acc, i) if i < 0 {
+		true -> acc
+		_ -> sub(
+			acc << xs.(i)
+			i - 1
+		)
+	}
+	sub([], len(xs) - 1)
 }
 
 fn map(xs, f) {
-    fn sub(acc, i) if i {
-        len(xs) -> acc
-        _ -> sub(
-            push(acc, f(xs.(i), i))
-            i + 1
-        )
-    }
-    sub(baseIterator(xs), 0)
+	fn sub(acc, i) if i {
+		len(xs) -> acc
+		_ -> sub(
+			acc << f(xs.(i), i)
+			i + 1
+		)
+	}
+	sub(baseIterator(xs), 0)
 }
 
 fn each(xs, f) {
-    fn sub(i) if i {
-        len(xs) -> ?
-        _ -> {
-            f(xs.(i), i)
-            sub(i + 1)
-        }
-    }
-    sub(0)
+	fn sub(i) if i {
+		len(xs) -> ?
+		_ -> {
+			f(xs.(i), i)
+			sub(i + 1)
+		}
+	}
+	sub(0)
 }
 
 fn filter(xs, f) {
-    fn sub(acc, i) if i {
-        len(xs) -> acc
-        _ -> {
-            if f(x := xs.(i), i) {
-                true -> push(acc, x)
-            }
-            sub(acc, i + 1)
-        }
-    }
-    sub(baseIterator(xs), 0)
+	fn sub(acc, i) if i {
+		len(xs) -> acc
+		_ -> {
+			if f(x := xs.(i), i) {
+				true -> acc << x
+			}
+			sub(acc, i + 1)
+		}
+	}
+	sub(baseIterator(xs), 0)
 }
 
 fn reduce(xs, seed, f) {
-    fn sub(acc, i) if i {
-        len(xs) -> acc
-        _ -> sub(
-            f(acc, xs.(i), i)
-            i + 1
-        )
-    }
-    sub(seed, 0)
+	fn sub(acc, i) if i {
+		len(xs) -> acc
+		_ -> sub(
+			f(acc, xs.(i), i)
+			i + 1
+		)
+	}
+	sub(seed, 0)
 }
 
 fn flatten(xs) xs |> reduce([], append)
 
 fn some(xs, pred) {
-    pred := default(pred, identity)
-    xs |> reduce(false, fn(acc, x) acc | pred(x))
+	pred := default(pred, identity)
+	xs |> reduce(false, fn(acc, x) acc | pred(x))
 }
 
 fn every(xs, pred) {
-    pred := default(pred, identity)
-    xs |> reduce(true, fn(acc, x) acc & pred(x))
+	pred := default(pred, identity)
+	xs |> reduce(true, fn(acc, x) acc & pred(x))
 }
 
 fn indexOf(xs, x) {
@@ -187,10 +185,10 @@ fn contains?(xs, x) indexOf(xs, x) > -1
 // OS interfaces
 
 fn println(xs...) {
-    xs |> each(fn(x, i) if i {
-        0 -> print(string(x))
-        _ -> print(' ' + string(x))
-    })
-    print('\n')
+	xs |> each(fn(x, i) if i {
+		0 -> print(string(x))
+		_ -> print(' ' + string(x))
+	})
+	print('\n')
 }
 

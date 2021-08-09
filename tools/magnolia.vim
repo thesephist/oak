@@ -11,11 +11,6 @@ syntax sync fromstart
 " prefer hard tabs
 set noexpandtab
 
-" case
-syntax match mgnLabel "\v\:"
-syntax match mgnLabel "\v\-\>"
-highlight link mgnCase Label
-
 " operators
 syntax match mgnOp "\v\~"
 syntax match mgnOp "\v\+"
@@ -37,6 +32,7 @@ syntax match mgnOp "\v\!\="
 syntax match mgnOp "\v\."
 syntax match mgnOp "\v\:\="
 syntax match mgnOp "\v\<\-"
+syntax match mgnOp "\v\<\<"
 highlight link mgnOp Operator
 
 " match
@@ -133,6 +129,8 @@ syntax match mgnShebangComment "\v^#!.*"
 highlight link mgnShebangComment Comment
 " -- TODO in comments
 syntax match mgnTodo "\v(TODO\(.*\)|TODO)" contained
+syntax match mgnTodo "\v(NOTE\(.*\)|NOTE)" contained
+syntax match mgnTodo "\v(XXX\(.*\)|XXX)" contained
 syntax keyword mgnTodo XXX contained
 highlight link mgnTodo Todo
 

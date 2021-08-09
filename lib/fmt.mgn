@@ -1,7 +1,6 @@
 // string and data formatting library
 
 {
-	push: push
 	println: println
 } := import('std')
 
@@ -20,28 +19,26 @@ fn format(raw, values...) {
 	// result build-up buffer
 	buf := ''
 
-	fn append(c) buf |> push(c)
-
 	fn readNext {
 		c := raw.(idx)
 
-	    if which {
+		if which {
 			0 -> if c {
 				'{' -> which <- 1
-				_ -> append(c)
+				_ -> buf << c
 			}
 			1 -> if c {
 				'{' -> which <- 2
 				// if it turns out the earlier brce was not a part of a format
 				// expression, just backtrack
 				_ -> {
-					append('{' + c)
+					buf << '{' + c
 					which <- 0
 				}
 			}
 			2 -> if c {
 				'}' -> {
-					append(string(values.(int(key))))
+					buf << string(values.(int(key)))
 					key <- ''
 					which <- 3
 				}
@@ -54,7 +51,7 @@ fn format(raw, values...) {
 				// ignore invalid inputs -- treat them as nonexistent
 				_ -> ?
 			}
-	    }
+		}
 
 		idx <- idx + 1
 	}
