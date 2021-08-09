@@ -48,6 +48,11 @@ func runRepl() {
 	ctx := NewContext(cwd)
 	ctx.LoadBuiltins()
 
+	// pre-load standard libraries into global scope
+	for libname := range stdlibs {
+		ctx.Eval(strings.NewReader(fmt.Sprintf("%s := import('%s')", libname, libname)))
+	}
+
 	for {
 		line, err := rl.Readline()
 		if err != nil { // io.EOF
