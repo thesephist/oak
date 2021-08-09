@@ -1,4 +1,4 @@
-all: run
+all: ci
 
 # run the interpreter
 run:
@@ -18,3 +18,6 @@ tm: test-mgn
 install:
 	cp tools/magnolia.vim ~/.vim/syntax/magnolia.vim
 	go build -o ${GOPATH}/bin/mgn
+
+# ci in travis
+ci: tests test-mgn

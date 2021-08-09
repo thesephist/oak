@@ -20,21 +20,21 @@ fn new(title) {
 		tests |> each(fn(test) {
 			{
 				name: name
-				succeeded?: s?
+				passed?: p?
 				result: result
 				expect: expect
 			} := test
 
 			printf(
 				'  {{ 0 }} {{ 1 }}'
-				if s? {
+				if p? {
 					true -> green('✔')
 					_ -> red('✘')
 				}
 				name
 			)
 
-			if s? {
+			if p? {
 				false -> {
 					printf('	expected: {{ 0 }}', expect)
 					printf('	  result: {{ 0 }}', result)
@@ -44,7 +44,7 @@ fn new(title) {
 	}
 
 	fn reportAggregate {
-		failedTests := Tests |> filter(fn (t) !(t.succeeded?))
+		failedTests := Tests |> filter(fn(t) !t.passed?)
 		if len(failedTests) {
 			0 -> printf('All {{ 0 }} tests passed.', len(Tests))
 			_ -> printf('{{ 0 }} / {{ 1 }} tests passed.', len(Tests) - len(failedTests), len(Tests))
@@ -54,19 +54,25 @@ fn new(title) {
 	{
 		eq: fn(name, result, expect) Tests << {
 			name: name
-			succeeded?: result = expect
+			passed?: result = expect
 			result: result
 			expect: expect
 		}
 		failed: fn {
 			printf('Failed {{ 0 }} tests:', title)
-			Tests |> filter(fn (t) !t.succeeded?) |> reportTests()
+			Tests |> filter(fn(t) !t.passed?) |> reportTests()
 			reportAggregate()
 		}
 		report: fn {
 			printf('{{ 0 }} tests:', title)
 			Tests |> reportTests()
 			reportAggregate()
+		}
+		exit: fn {
+			exit(if Tests |> filter(fn(t) !t.passed?) {
+				[] -> 0
+				_ -> 1
+			})
 		}
 	}
 }

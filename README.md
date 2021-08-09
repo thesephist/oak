@@ -1,5 +1,7 @@
 # Magnolia
 
+[![Build Status](https://travis-ci.com/thesephist/magnolia.svg?branch=main)](https://travis-ci.com/thesephist/magnolia)
+
 A friendly, expressive programming language. For a detailed description of the language, see the [language spec](docs/spec.md).
 
 ## Development

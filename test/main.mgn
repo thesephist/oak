@@ -19,3 +19,6 @@ runner.fmt.run(t)
 
 t.report()
 
+// exit with right code
+t.exit()
+
