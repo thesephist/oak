@@ -1,0 +1,34 @@
+// basic file server using libhttp
+
+std := import('std')
+fmt := import('fmt')
+http := import('http')
+
+Port := 9990
+
+server := http.Server()
+
+with server.route('/hello/:name') fn(params) fn(req, end) if req.method {
+	'GET' -> end({
+		status: 200
+		body: fmt.format('Hello, {{ 0 }}!', std.default(params.name, 'World'))
+	})
+	_ -> end(http.MethodNotAllowed)
+}
+
+with server.route('/*staticPath') fn(params) {
+	http.handleStatic('./' + params.staticPath)
+}
+
+with server.route('/') fn(params) fn(req, end) if req.method {
+	'GET' -> end({
+		status: 200
+		body: 'Welcome to Magnolia!'
+	})
+	_ -> end(http.MethodNotAllowed)
+}
+
+// start server
+server.start(Port)
+fmt.printf('Static server running at port {{ 0 }}', Port)
+

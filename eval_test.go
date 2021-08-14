@@ -95,8 +95,69 @@ func TestFunctionDefWithEmpty(t *testing.T) {
 	expectProgramToReturn(t, `fn getThird(_, _, third) third, getThird(1, 2, 3)`, IntValue(3))
 }
 
+func TestEmptyFunctionBody(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn do {
+		a: :bee
+	}
+	do()
+	`, ObjectValue{
+		"a": AtomValue("bee"),
+	})
+}
+
+func TestObjectLiteralFunctionBody(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn do {}
+	do()
+	`, null)
+}
+
 func TestLocalAssignment(t *testing.T) {
 	expectProgramToReturn(t, `x := 100, y := 200, x`, IntValue(100))
+}
+
+func TestDestructureList(t *testing.T) {
+	expectProgramToReturn(t, `
+	list := [1, 2, 3]
+	[a] := list
+	[_, _, b, c] := list
+	[a, b, c]
+	`, MakeList(
+		IntValue(1),
+		IntValue(3),
+		null,
+	))
+}
+
+func TestDestructureObject(t *testing.T) {
+	expectProgramToReturn(t, `
+	list := [1, 2, 3]
+	obj := {a: 'ay', b: 'bee'}
+	{a: a} := obj
+	{b: b, c: see} := obj
+	[a, b, see]
+	`, MakeList(
+		MakeString("ay"),
+		MakeString("bee"),
+		null,
+	))
+}
+
+func TestDestrctureToReassignList(t *testing.T) {
+	expectProgramToReturn(t, `
+	v := [:aa, :bbb]
+	[v, w] := v
+	v
+	`, AtomValue("aa"))
+}
+
+func TestDestrctureToReassignObject(t *testing.T) {
+	expectProgramToReturn(t, `
+	a := {a: :aa, b: :bbb}
+	{a: a} := a
+	a
+	`, AtomValue("aa"))
 }
 
 func TestUnderscoreVarNames(t *testing.T) {
@@ -245,6 +306,22 @@ func TestIfExprInFunction(t *testing.T) {
 	`, mgnTrue)
 }
 
+func TestComplexIfExprTarget(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn double(n) 2 * n
+	fn xyz(n) if n {
+		1 + 2 -> :abc
+		2 * double(3) -> :xyz
+		_ -> false
+	}
+	[xyz(3), xyz(12), xyz(24)]
+	`, MakeList(
+		AtomValue("abc"),
+		AtomValue("xyz"),
+		mgnFalse,
+	))
+}
+
 func TestBasicWithExpr(t *testing.T) {
 	expectProgramToReturn(t, `fn add(a, b) { a + b }, with add(10) 40`, IntValue(50))
 }
@@ -333,13 +410,25 @@ func TestStringAssign(t *testing.T) {
 	))
 }
 
-func TestStringAppend(t *testing.T) {
+func TestStringAppendByPush(t *testing.T) {
+	expectProgramToReturn(t, `
+	s := {
+		payload: 'Magnolia'
+	}
+	[s.payload << ' language', s.payload]
+	`, MakeList(
+		MakeString("Magnolia language"),
+		MakeString("Magnolia language"),
+	))
+}
+
+func TestStringAppendByAssign(t *testing.T) {
 	expectProgramToReturn(t, `
 	s := {
 		payload: 'Magnolia'
 	}
 	t := s.payload
-	[s.payload.(len(t)) := ' language', t]
+	[s.payload.(len(s.payload)) := ' language', s.payload]
 	`, MakeList(
 		MakeString("Magnolia language"),
 		MakeString("Magnolia language"),
@@ -376,7 +465,7 @@ func TestListAssign(t *testing.T) {
 	`, MakeList(result, result))
 }
 
-func TestListAppend(t *testing.T) {
+func TestListAppendByPush(t *testing.T) {
 	result := MakeList(
 		IntValue(1),
 		IntValue(2),
@@ -390,7 +479,24 @@ func TestListAppend(t *testing.T) {
 		numbers: [1, 2, 3, 4]
 	}
 	t := s.numbers
-	[s.numbers.(len(t)) := 100, t]
+	[s.numbers << 100, t]
+	`, MakeList(result, result))
+}
+
+func TestListAppendByAssign(t *testing.T) {
+	result := MakeList(
+		IntValue(1),
+		IntValue(2),
+		IntValue(3),
+		IntValue(4),
+		IntValue(100),
+	)
+
+	expectProgramToReturn(t, `
+	s := {
+		numbers: [1, 2, 3, 4]
+	}
+	[s.numbers.(len(s.numbers)) := 100, s.numbers]
 	`, MakeList(result, result))
 }
 

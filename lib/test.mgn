@@ -59,8 +59,13 @@ fn new(title) {
 			expect: expect
 		}
 		failed: fn {
-			printf('Failed {{ 0 }} tests:', title)
-			Tests |> filter(fn(t) !t.passed?) |> reportTests()
+			if failedTests := Tests |> filter(fn(t) !t.passed?) {
+				[] -> ?
+				_ -> {
+					printf('Failed {{ 0 }} tests:', title)
+					failedTests |> reportTests()
+				}
+			}
 			reportAggregate()
 		}
 		report: fn {

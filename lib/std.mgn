@@ -13,6 +13,41 @@ fn default(x, base) if x {
 	_ -> x
 }
 
+_nToH := '0123456789abcdef'
+fn toHex(n) {
+	fn sub(p, acc) if p < 16 {
+		true -> _nToH.(p) + acc
+		_ -> int(p / 16) |> sub(_nToH.(p % 16) + acc)
+	}
+	sub(int(n), '')
+}
+
+_hToN := {
+	0: 0
+	1: 1
+	2: 2
+	3: 3
+	4: 4
+	5: 5
+	6: 6
+	7: 7
+	8: 8
+	9: 9
+	a: 10
+	b: 11
+	c: 12
+	d: 13
+	e: 14
+	f: 15
+}
+fn fromHex(s) {
+	fn sub(i, acc) if i {
+		len(s) -> acc
+		_ -> sub(i + 1, acc * 16 + _hToN.(s.(i)))
+	}
+	sub(0, 0)
+}
+
 fn clamp(min, max, n, m) {
 	// assumes that at least min < max & n < m
 	n := if n < min {

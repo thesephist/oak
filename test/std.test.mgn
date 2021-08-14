@@ -110,6 +110,52 @@ fn run(t) {
 		)
 	}
 
+	// {to, from}Hex conversions
+	{
+		{
+			toHex: toHex
+			fromHex: fromHex
+
+			each: each
+		} := std
+
+		'0 to hex' |> t.eq(toHex(0), '0')
+		'42 to hex' |> t.eq(toHex(66), '42')
+		'256 to hex' |> t.eq(toHex(256), '100')
+		'1998 to hex' |> t.eq(toHex(1998), '7ce')
+		'3141592 to hex' |> t.eq(toHex(3141592), '2fefd8')
+		'fff from hex' |> t.eq(fromHex('fff'), 4095)
+		'a2 from hex' |> t.eq(fromHex('a2'), 162)
+
+		// toHex should truncate non-integer inputs
+		'hex of fractional number, I' |> t.eq(
+			toHex(16.8)
+			'10'
+		)
+		'hex of fractional number, II' |> t.eq(
+			toHex(1998.123)
+			'7ce'
+		)
+
+		// round-trippability
+		[
+			0
+			390420
+			9230423903
+			201900123
+			'0'
+			'aabbef'
+			'fffab123'
+			'ab99ff33'
+		] |> each(fn(v) {
+			name := fmt.format('round-trip {{ 0 }}', v)
+			if type(v) {
+				:int -> name |> t.eq(fromHex(toHex(v)), v)
+				_ -> name |> t.eq(toHex(fromHex(v)), v)
+			}
+		})
+	}
+
 	// append and join
 	{
 		{

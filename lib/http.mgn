@@ -1,0 +1,276 @@
+// http server and routing library
+
+{
+	println: println
+	default: default
+	toHex: toHex
+	fromHex: fromHex
+	slice: slice
+	map: map
+	each: each
+	filter: filter
+	reduce: reduce
+} := import('std')
+
+{
+	checkRange: checkRange
+	join: join
+	contains?: contains?
+	digit?: digit?
+	upper?: upper?
+	lower?: lower?
+	word?: word?
+	upper: upper
+	lower: lower
+	split: split
+} := import('str')
+
+{
+	readFile: readFile
+} := import('fs')
+
+{
+	printf: printf
+} := import('fmt')
+
+// percent encoding, also known as URI encoding
+fn _encodeChar(encodeSlash?) fn(c) {
+	validPunct? := if encodeSlash? {
+		true -> '._-!' |> contains?(c)
+		_ -> '._-!/' |> contains?(c)
+	}
+	if word?(c) | validPunct? {
+		true -> c
+		_ -> '%' + upper(toHex(codepoint(c)))
+	}
+}
+fn percentEncodeKeepSlash(s) s |> map(_encodeChar(false)) |> join()
+fn percentEncode(s) s |> map(_encodeChar(true)) |> join()
+
+upperAF? := checkRange(codepoint('A') - 1, codepoint('F') + 1)
+lowerAF? := checkRange(codepoint('a') - 1, codepoint('f') + 1)
+fn hex?(c) digit?(c) | upperAF?(c) | lowerAF?(c)
+fn percentDecode(str) {
+	// possible values:
+	// :default
+	// :sawPercent
+	// :sawFirstHex
+	stage := :default
+	buf := ?
+
+	str |> reduce('', fn(decoded, curr) if stage {
+		:default -> if curr {
+			'+' -> decoded << ' '
+			'%' -> {
+				stage <- :sawPercent
+				decoded
+			}
+			_ -> decoded << curr
+		}
+		:sawPercent -> if hex?(curr) {
+			false -> {
+				stage <- :default
+				decoded << '%' << curr
+			}
+			_ -> {
+				stage <- :sawFirstHex
+				buf <- curr
+				decoded
+			}
+		}
+		_ -> {
+			last := buf
+			stage <- :default
+			buf := ?
+			if hex?(curr) {
+				false -> decoded << '%' << last << curr
+				_ -> decoded << char(fromHex(lower(last << curr)))
+			}
+		}
+	})
+}
+
+fn Router {
+	self := []
+
+	fn add(pattern, handler) self << [pattern, handler]
+	fn catch(handler) add('', handler)
+
+	fn splitPath(url) url |> split('/') |> filter(fn(s) s != '')
+
+	// if path matches pattern, return a hash of matched params. else, return ?
+	fn matchPath(pattern, path) {
+		params := {}
+
+		// process query params
+		[path, query]:= split(path, '?')
+		if query {
+			? -> ?
+			'' -> ?
+			_ -> query |>
+				split('&') |>
+				map(fn(pair) pair |> split('=')) |>
+				each(fn(pair) {
+					params.(pair.0) := percentDecode(default(pair.1, ''))
+				})
+		}
+
+		desired := splitPath(pattern)
+		actual := splitPath(path)
+
+		fn findMatchingParams(i) if i {
+			len(desired) -> params
+			_ -> {
+				desiredPart := default(desired.(i), '')
+				actualPart := default(actual.(i), '')
+
+				if desiredPart.0 {
+					':' -> {
+						params.(desiredPart |> slice(1)) := percentDecode(actualPart)
+						findMatchingParams(i + 1)
+					}
+					'*' -> {
+						params.(desiredPart |> slice(1)) := actual |> slice(i) |> map(percentDecode) |> join('/')
+					}
+					_ -> if desiredPart {
+						actualPart -> findMatchingParams(i + 1)
+						_ -> ?
+					}
+				}
+			}
+		}
+
+		if [len(desired) <= len(actual), pattern] {
+			// '' is used as a catch-all pattern
+			[_, ''] -> params
+			[true, _] -> findMatchingParams(0)
+			_ -> ?
+		}
+	}
+
+	fn match(path) {
+		fn sub(i) if i {
+			len(self) -> fn(req) req.end({
+				status: 200
+				headers: {}
+				body: 'dropped route. you should never see this in production'
+			})
+			_ -> {
+				[pattern, handler] := self.(i)
+				if result := matchPath(pattern, path) {
+					? -> sub(i + 1)
+					_ -> handler(result)
+				}
+			}
+		}
+		sub(0)
+	}
+
+	{
+		add: add
+		catch: catch
+		match: match
+	}
+}
+
+MimeTypes := {
+	html: 'text/html; charset=utf-8'
+	txt: 'text/plain; charset=utf-8'
+	md: 'text/plain; charset=utf-8'
+	css: 'text/css; charset=utf-8'
+	js: 'application/javascript; charset=utf-8'
+	json: 'application/json; charset=utf-8'
+	ink: 'text/plain; charset=utf-8'
+	mgn: 'text/plain; charset=utf-8'
+
+	jpg: 'image/jpeg'
+	jpeg: 'image/jpeg'
+	png: 'image/png'
+	gif: 'image/gif'
+	svg: 'image/svg+xml'
+	webp: 'image/webp'
+
+	pdf: 'application/pdf'
+	zip: 'application/zip'
+}
+
+fn mimeForPath(path) {
+	parts := path |> split('.')
+	ending := parts.(len(parts) - 1)
+	default(MimeTypes.(ending), 'application/octet-stream')
+}
+
+NotFound := {status: 404, body: 'file not found'}
+MethodNotAllowed := {status: 405, body: 'method not allowed'}
+
+fn _hdr(attrs) {
+	base := {
+		'X-Served-By': 'Magnolia/libhttp'
+		'Content-Type': 'text/plain'
+	}
+	keys(attrs) |> each(fn(k) base.(k) := attrs.(k))
+	base
+}
+
+fn Server {
+	router := Router()
+
+	fn start(port) with listen('0.0.0.0:' + string(port)) fn(evt) {
+		router.catch(fn(params) fn(req, end) end({
+			status: 404
+			body: 'service not found'
+		}))
+
+		if evt.type {
+			:error -> println('server start error:', evt.error)
+			_ -> {
+				{ method: method, url: url } := evt.req
+				printf('{{ 0 }}: {{ 1 }}', method, url)
+
+				fn handleWithHeaders(evt) {
+					router.match(url)(evt.req, fn(resp) {
+						resp.headers := _hdr(default(resp.headers, {}))
+						evt.end(resp)
+					})
+				}
+
+				if method {
+					'GET' -> handleWithHeaders(evt)
+					'POST' -> handleWithHeaders(evt)
+					'PUT' -> handleWithHeaders(evt)
+					'DELETE' -> handleWithHeaders(evt)
+					'OPTIONS' -> handleWithHeaders(evt)
+					_ -> evt.end({
+						status: 405
+						headers: _hdr({})
+						body: 'method not allowed'
+					})
+				}
+			}
+		}
+	}
+
+	{
+		route: router.add
+		start: start
+	}
+}
+
+// use like:
+//
+// with server.route('/static/*staticPath') fn(params) {
+//     serveStatic('./static/' + params.staticPath)
+// }
+// with server.route('/') fn serveStatic('./index.html')
+fn handleStatic(path) fn(req, end) if req.method {
+	'GET' -> with readFile('./' + path) fn(file) if file {
+		? -> end(NotFound)
+		_ -> end({
+			status: 200
+			headers: {'Content-Type': mimeForPath(path)}
+			body: file
+		})
+	}
+	_ -> end(MethodNotAllowed)
+}
+
