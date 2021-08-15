@@ -8,39 +8,48 @@ import (
 
 type astNode interface {
 	String() string
-	// pos() pos
+	pos() pos
 }
 
 type emptyNode struct {
-	tok token
+	tok *token
 }
 
 func (n emptyNode) String() string {
 	return "_"
 }
-
 func (n emptyNode) pos() pos {
-	return pos{}
+	return n.tok.pos
 }
 
-type nullNode struct{}
+type nullNode struct {
+	tok *token
+}
 
 func (n nullNode) String() string {
 	return "?"
 }
+func (n nullNode) pos() pos {
+	return n.tok.pos
+}
 
 type stringNode struct {
 	payload string
+	tok     *token
 }
 
 func (n stringNode) String() string {
 	return fmt.Sprintf("%s", strconv.Quote(n.payload))
+}
+func (n stringNode) pos() pos {
+	return n.tok.pos
 }
 
 type numberNode struct {
 	isInteger    bool
 	intPayload   int64
 	floatPayload float64
+	tok          *token
 }
 
 func (n numberNode) String() string {
@@ -49,9 +58,13 @@ func (n numberNode) String() string {
 	}
 	return strconv.FormatFloat(n.floatPayload, 'g', -1, 64)
 }
+func (n numberNode) pos() pos {
+	return n.tok.pos
+}
 
 type booleanNode struct {
 	payload bool
+	tok     *token
 }
 
 func (n booleanNode) String() string {
@@ -60,17 +73,25 @@ func (n booleanNode) String() string {
 	}
 	return "false"
 }
+func (n booleanNode) pos() pos {
+	return n.tok.pos
+}
 
 type atomNode struct {
 	payload string
+	tok     *token
 }
 
 func (n atomNode) String() string {
 	return ":" + n.payload
 }
+func (n atomNode) pos() pos {
+	return n.tok.pos
+}
 
 type listNode struct {
 	elems []astNode
+	tok   *token
 }
 
 func (n listNode) String() string {
@@ -80,18 +101,22 @@ func (n listNode) String() string {
 	}
 	return "[" + strings.Join(elemStrings, ", ") + "]"
 }
+func (n listNode) pos() pos {
+	return n.tok.pos
+}
 
-type objectEntryNode struct {
+type objectEntry struct {
 	key astNode
 	val astNode
 }
 
-func (n objectEntryNode) String() string {
+func (n objectEntry) String() string {
 	return n.key.String() + ": " + n.val.String()
 }
 
 type objectNode struct {
-	entries []objectEntryNode
+	entries []objectEntry
+	tok     *token
 }
 
 func (n objectNode) String() string {
@@ -101,12 +126,16 @@ func (n objectNode) String() string {
 	}
 	return "{ " + strings.Join(entryStrings, ", ") + " }"
 }
+func (n objectNode) pos() pos {
+	return n.tok.pos
+}
 
 type fnNode struct {
 	name    string // "" for anonymous fns
 	args    []string
 	restArg string
 	body    astNode
+	tok     *token
 }
 
 func (n fnNode) String() string {
@@ -125,19 +154,27 @@ func (n fnNode) String() string {
 
 	return head + " " + n.body.String()
 }
+func (n fnNode) pos() pos {
+	return n.tok.pos
+}
 
 type identifierNode struct {
 	payload string
+	tok     *token
 }
 
 func (n identifierNode) String() string {
 	return n.payload
+}
+func (n identifierNode) pos() pos {
+	return n.tok.pos
 }
 
 type assignmentNode struct {
 	isLocal bool
 	left    astNode
 	right   astNode
+	tok     *token
 }
 
 func (n assignmentNode) String() string {
@@ -146,41 +183,57 @@ func (n assignmentNode) String() string {
 	}
 	return n.left.String() + " <- " + n.right.String()
 }
+func (n assignmentNode) pos() pos {
+	return n.tok.pos
+}
 
 type propertyAccessNode struct {
 	left  astNode
 	right astNode
+	tok   *token
 }
 
 func (n propertyAccessNode) String() string {
 	return "(" + n.left.String() + "." + n.right.String() + ")"
 }
+func (n propertyAccessNode) pos() pos {
+	return n.tok.pos
+}
 
 type unaryNode struct {
 	op    tokKind
 	right astNode
+	tok   *token
 }
 
 func (n unaryNode) String() string {
 	opTok := token{kind: n.op}
 	return opTok.String() + n.right.String()
 }
+func (n unaryNode) pos() pos {
+	return n.tok.pos
+}
 
 type binaryNode struct {
 	op    tokKind
 	left  astNode
 	right astNode
+	tok   *token
 }
 
 func (n binaryNode) String() string {
 	opTok := token{kind: n.op}
 	return "(" + n.left.String() + " " + opTok.String() + " " + n.right.String() + ")"
 }
+func (n binaryNode) pos() pos {
+	return n.tok.pos
+}
 
 type fnCallNode struct {
 	fn      astNode
 	args    []astNode
 	restArg astNode
+	tok     *token
 }
 
 func (n fnCallNode) String() string {
@@ -191,19 +244,23 @@ func (n fnCallNode) String() string {
 	}
 	return fmt.Sprintf("call[%s](%s)", n.fn, strings.Join(argStrings, ", "))
 }
+func (n fnCallNode) pos() pos {
+	return n.tok.pos
+}
 
-type ifBranchNode struct {
+type ifBranch struct {
 	target astNode
 	body   astNode
 }
 
-func (n ifBranchNode) String() string {
+func (n ifBranch) String() string {
 	return n.target.String() + " -> " + n.body.String()
 }
 
 type ifExprNode struct {
 	cond     astNode
-	branches []ifBranchNode
+	branches []ifBranch
+	tok      *token
 }
 
 func (n ifExprNode) String() string {
@@ -213,9 +270,13 @@ func (n ifExprNode) String() string {
 	}
 	return "if " + n.cond.String() + " {" + strings.Join(branchStrings, ", ") + "}"
 }
+func (n ifExprNode) pos() pos {
+	return n.tok.pos
+}
 
 type blockNode struct {
 	exprs []astNode
+	tok   *token
 }
 
 func (n blockNode) String() string {
@@ -224,6 +285,10 @@ func (n blockNode) String() string {
 		exprStrings[i] = ex.String()
 	}
 	return "{ " + strings.Join(exprStrings, ", ") + " }"
+}
+
+func (n blockNode) pos() pos {
+	return n.tok.pos
 }
 
 type parser struct {
@@ -330,9 +395,11 @@ func (p *parser) parseAssignment(left astNode) (astNode, error) {
 		return left, nil
 	}
 
+	next := p.next()
 	node := assignmentNode{
-		isLocal: p.next().kind == assign,
+		isLocal: next.kind == assign,
 		left:    left,
+		tok:     &next,
 	}
 
 	right, err := p.parseNode()
@@ -351,9 +418,9 @@ func (p *parser) parseUnit() (astNode, error) {
 	tok := p.next()
 	switch tok.kind {
 	case qmark:
-		return nullNode{}, nil
+		return nullNode{tok: &tok}, nil
 	case stringLiteral:
-		return stringNode{payload: tok.payload}, nil
+		return stringNode{payload: tok.payload, tok: &tok}, nil
 	case numberLiteral:
 		if strings.ContainsRune(tok.payload, '.') {
 			f, err := strconv.ParseFloat(tok.payload, 64)
@@ -363,6 +430,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return numberNode{
 				isInteger:    false,
 				floatPayload: f,
+				tok:          &tok,
 			}, nil
 		}
 		n, err := strconv.ParseInt(tok.payload, 10, 64)
@@ -372,14 +440,15 @@ func (p *parser) parseUnit() (astNode, error) {
 		return numberNode{
 			isInteger:  true,
 			intPayload: n,
+			tok:        &tok,
 		}, nil
 	case trueLiteral:
-		return booleanNode{payload: true}, nil
+		return booleanNode{payload: true, tok: &tok}, nil
 	case falseLiteral:
-		return booleanNode{payload: false}, nil
+		return booleanNode{payload: false, tok: &tok}, nil
 	case colon:
 		if p.peek().kind == identifier {
-			return atomNode{payload: p.next().payload}, nil
+			return atomNode{payload: p.next().payload, tok: &tok}, nil
 		}
 		return nil, parseError{
 			reason: fmt.Sprintf("Expected identifier after ':', got %s", p.peek()),
@@ -405,7 +474,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return nil, err
 		}
 
-		return listNode{elems: itemNodes}, nil
+		return listNode{elems: itemNodes, tok: &tok}, nil
 	case leftBrace:
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
@@ -413,7 +482,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		// empty {} is always considered an object -- an empty block is illegal
 		if p.peek().kind == rightBrace {
 			p.next() // eat the rightBrace
-			return objectNode{entries: []objectEntryNode{}}, nil
+			return objectNode{entries: []objectEntry{}, tok: &tok}, nil
 		}
 
 		firstExpr, err := p.parseNode()
@@ -438,7 +507,7 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			entries := []objectEntryNode{
+			entries := []objectEntry{
 				{key: firstExpr, val: valExpr},
 			}
 
@@ -459,7 +528,7 @@ func (p *parser) parseUnit() (astNode, error) {
 					return nil, err
 				}
 
-				entries = append(entries, objectEntryNode{
+				entries = append(entries, objectEntry{
 					key: key,
 					val: val,
 				})
@@ -468,7 +537,7 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			return objectNode{entries: entries}, nil
+			return objectNode{entries: entries, tok: &tok}, nil
 		}
 
 		// it's a block
@@ -492,7 +561,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return nil, err
 		}
 
-		return blockNode{exprs: exprs}, nil
+		return blockNode{exprs: exprs, tok: &tok}, nil
 	case fnKeyword:
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
@@ -555,9 +624,9 @@ func (p *parser) parseUnit() (astNode, error) {
 		var body astNode
 		var err error
 		if p.peek().kind == leftBrace && p.peekAhead(1).kind == rightBrace {
+			blockStartTok := p.next()
 			p.next()
-			p.next()
-			body = blockNode{exprs: []astNode{}}
+			body = blockNode{exprs: []astNode{}, tok: &blockStartTok}
 		} else {
 			body, err = p.parseNode()
 			if err != nil {
@@ -570,11 +639,12 @@ func (p *parser) parseUnit() (astNode, error) {
 			args:    args,
 			restArg: restArg,
 			body:    body,
+			tok:     &tok,
 		}, nil
 	case underscore:
-		return emptyNode{}, nil
+		return emptyNode{tok: &tok}, nil
 	case identifier:
-		return identifierNode{payload: tok.payload}, nil
+		return identifierNode{payload: tok.payload, tok: &tok}, nil
 	case minus, exclam:
 		right, err := p.parseSubNode()
 		if err != nil {
@@ -584,6 +654,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		return unaryNode{
 			op:    tok.kind,
 			right: right,
+			tok:   &tok,
 		}, nil
 	case ifKeyword:
 		p.pushMinPrec(0)
@@ -598,7 +669,7 @@ func (p *parser) parseUnit() (astNode, error) {
 			return nil, err
 		}
 
-		branches := []ifBranchNode{}
+		branches := []ifBranch{}
 		for !p.isEOF() && p.peek().kind != rightBrace {
 			target, err := p.parseNode()
 			if err != nil {
@@ -616,7 +687,7 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			branches = append(branches, ifBranchNode{
+			branches = append(branches, ifBranch{
 				target: target,
 				body:   body,
 			})
@@ -628,6 +699,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		return ifExprNode{
 			cond:     condNode,
 			branches: branches,
+			tok:      &tok,
 		}, nil
 	case withKeyword:
 		p.pushMinPrec(0)
@@ -672,7 +744,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if _, err := p.expect(rightParen); err != nil {
 			return nil, err
 		}
-		return blockNode{exprs: exprs}, nil
+		return blockNode{exprs: exprs, tok: &tok}, nil
 	}
 	return nil, parseError{
 		reason: fmt.Sprintf("Unexpected token %s at start of unit", tok),

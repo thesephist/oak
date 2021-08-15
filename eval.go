@@ -409,7 +409,7 @@ func (e *runtimeError) Error() string {
 	for i, entry := range e.stackTrace {
 		trace[i] = entry.String()
 	}
-	return fmt.Sprintf("Runtime error: %s\n%s", e.reason, strings.Join(trace, "\n"))
+	return fmt.Sprintf("Runtime error %s: %s\n%s", e.pos, e.reason, strings.Join(trace, "\n"))
 }
 
 func (c *Context) Eval(programReader io.Reader) (Value, error) {
