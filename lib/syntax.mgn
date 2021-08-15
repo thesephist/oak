@@ -28,6 +28,10 @@ fn renderToken(token) if token.val {
 	_ -> format('{{ 0 }}({{ 1 }}) {{ 2 }}', string(token.type), token.val, renderPos(token.pos))
 }
 
+// Tokenizer is a full-fidelity, lossless tokenizer for Magnolia. It produces a
+// stream of valid Magnolia token types, plus any shebang, newlines, and
+// comments it finds. To produce an AST, those non-standard non-AST tokens
+// should be filtered out of the list first.
 fn Tokenizer(source) {
 	index := 0
 	line := 0
@@ -51,10 +55,24 @@ fn Tokenizer(source) {
 		if index < len(source) {
 			true -> index <- index + 1
 		}
+		if char {
+			'\n' -> {
+				line <- line + 1
+				col <- 0
+			}
+			_ -> col <- col + 1
+		}
 		char
 	}
-	fn back if index > 0 {
-		true -> index <- index - 1
+	fn back {
+		if index > 0 {
+			true -> index <- index - 1
+		}
+		if source.(index) {
+			// TODO: reset col correctly on backtrack
+			'\n' -> line <- line - 1
+			_ -> col <- col - 1
+		}
 	}
 
 	fn readUntilChar(c) {
@@ -68,7 +86,7 @@ fn Tokenizer(source) {
 			true -> acc
 			_ -> {
 				c := next()
-				if word?(c) | c = '.' {
+				if word?(c) | c = '_' | c = '?' | c = '!' {
 					true -> sub(acc << c)
 					_ -> {
 						back()
@@ -220,15 +238,23 @@ fn Tokenizer(source) {
 		tokens := []
 
 		if peek() = '#' & peekAhead(1) = '!' {
-			true -> readUntilChar('\n')
-			_ -> if !eof?() {
-				true -> next()
+			true -> {
+				readUntilChar('\n')
+				if !eof?() {
+					true -> next()
+				}
 			}
 		}
 
 		// snip whitespace before
-		fn eatSpace if space?(peek()){
-			true -> next()
+		fn eatSpace if space?(sp := peek()){
+			true -> {
+				if sp {
+					'\n' -> tokens << Token(:newline)
+				}
+				next()
+				eatSpace()
+			}
 		}
 		eatSpace()
 
@@ -248,21 +274,28 @@ fn Tokenizer(source) {
 
 			// snip whitespace after
 			fn eatSpaceAutoInsertComma if space?(peek()){
-				true -> if peek() {
-					'\n' -> if [
-						:comma, :leftParen, :leftBracket, :leftBrace, :plus,
-						:minus, :times, :divide, :modulus, :xor, :and, :or,
-						:exclam, :greater, :less, :eq, :geq, :leq, :assign,
-						:nonlocalAssign, :dot, :colon, :fnKeyword, :ifKeyword,
-						:withKeyword, :pipeArrow, :branchArrow,
-					] |> contains?(nextTok.type) {
-						true -> ? // do nothing
-						_ -> {
-							nextTok <- Token(:comma)
-							tokens << nextTok
+				true -> {
+					if peek() {
+						'\n' -> {
+							if [
+								:comma, :leftParen, :leftBracket, :leftBrace,
+								:plus, :minus, :times, :divide, :modulus, :xor,
+								:and, :or, :exclam, :greater, :less, :eq, :geq,
+								:leq, :assign, :nonlocalAssign, :dot, :colon,
+								:fnKeyword, :ifKeyword, :withKeyword,
+								:pipeArrow, :branchArrow,
+							] |> contains?(nextTok.type) {
+								true -> ? // do nothing
+								_ -> {
+									nextTok <- Token(:comma)
+									tokens << nextTok
+								}
+							}
+							tokens << Token(:newline)
 						}
 					}
-					_ -> next()
+					next()
+					eatSpaceAutoInsertComma()
 				}
 			}
 			eatSpaceAutoInsertComma()
@@ -294,8 +327,7 @@ fn Tokenizer(source) {
 
 // TODO: finish & test tokenizer, including in standard test suite, and then
 // build 'mgn fmt' on top of this
-// TODO: propagate token position information thru to end here
-// tokenizer := Tokenizer('fn(ay) bee + sea')
+// tokenizer := Tokenizer('   \nfn(ay) if x?() { :bee + sea -> 2 } \n2 + 34 = 14.5')
 // tokens := tokenizer.tokenize()
 // tokens |> map(renderToken) |> each(fn(t) println(t))
 

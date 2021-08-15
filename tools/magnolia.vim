@@ -67,7 +67,7 @@ highlight link mgnNumber Number
 syntax match mgnFnCall "\v[A-Za-z_!][A-Za-z0-9_!?]*\(" contains=mgnFunctionName,mgnBuiltin
 
 " identifiers
-syntax match mgnFunctionName "\v[A-Za-z_!][A-Za-z0-9_!?]*" contained
+syntax match mgnFunctionName "\v[A-Za-z_][A-Za-z0-9_!?]*" contained
 highlight link mgnFunctionName Identifier
 
 syntax keyword mgnBuiltin import contained
