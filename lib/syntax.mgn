@@ -17,6 +17,17 @@
 	trim: trim
 } := import('str')
 
+{
+	format: format
+} := import('fmt')
+
+fn renderPos(pos) '[' + string(pos.0) + ':' + string(pos.1) + ']'
+
+fn renderToken(token) if token.val {
+	? -> format('{{ 0 }} {{ 1 }}', string(token.type), renderPos(token.pos))
+	_ -> format('{{ 0 }}({{ 1 }}) {{ 2 }}', string(token.type), token.val, renderPos(token.pos))
+}
+
 fn Tokenizer(source) {
 	index := 0
 	line := 0
@@ -260,6 +271,11 @@ fn Tokenizer(source) {
 				:comment -> ?
 				_ -> lastTok <- nextTok
 			}
+
+			if eof?() {
+				true -> ?
+				_ -> sub()
+			}
 		}
 		sub()
 
@@ -278,7 +294,8 @@ fn Tokenizer(source) {
 
 // TODO: finish & test tokenizer, including in standard test suite, and then
 // build 'mgn fmt' on top of this
-// tokenizer := Tokenizer('hello + world')
+// TODO: propagate token position information thru to end here
+// tokenizer := Tokenizer('fn(ay) bee + sea')
 // tokens := tokenizer.tokenize()
-// println(tokens)
+// tokens |> map(renderToken) |> each(fn(t) println(t))
 
