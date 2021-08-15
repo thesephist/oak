@@ -494,9 +494,9 @@ func (t *tokenizer) tokenize() []token {
 			if t.peek() == '\n' {
 				switch next.kind {
 				case comma, leftParen, leftBracket, leftBrace, plus, minus,
-					times, divide, modulus, exclam, greater, less, eq, geq, leq,
-					assign, nonlocalAssign, dot, colon, fnKeyword, ifKeyword,
-					withKeyword, pipeArrow, branchArrow:
+					times, divide, modulus, xor, and, or, exclam, greater, less,
+					eq, geq, leq, assign, nonlocalAssign, dot, colon, fnKeyword,
+					ifKeyword, withKeyword, pipeArrow, branchArrow:
 					// do nothing
 				default:
 					next = token{

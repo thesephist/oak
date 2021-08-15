@@ -221,19 +221,18 @@ fn Tokenizer(source) {
 		}
 		eatSpace()
 
-		last := Token(:comma)
+		lastTok := Token(:comma)
 		fn sub {
-			next := nextToken()
+			nextTok := nextToken()
 
-			// TODO: fix
-			// if [:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(last.type) &
-			// 	[:rightParen, :rightBracket, :rightBrace] |> contains?(next.type) {
-			// 	true -> tokens << Token(:comma)
-			// }
+			if [:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type) &
+				[:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) {
+				true -> tokens << Token(:comma)
+			}
 
-			if next.type {
-				:comment -> next <- last
-				_ -> tokens << next
+			if nextTok.type {
+				:comment -> nextTok := lastTok
+				_ -> tokens << nextTok
 			}
 
 			// snip whitespace after
@@ -241,15 +240,15 @@ fn Tokenizer(source) {
 				true -> if peek() {
 					'\n' -> if [
 						:comma, :leftParen, :leftBracket, :leftBrace, :plus,
-						:minus, :times, :divide, :modulus, :exclam, :greater,
-						:less, :eq, :geq, :leq, :assign, :nonlocalAssign, :dot,
-						:colon, :fnKeyword, :ifKeyword, :withKeyword,
-						:pipeArrow, :branchArrow,
-					] |> contains?(next.type) {
+						:minus, :times, :divide, :modulus, :xor, :and, :or,
+						:exclam, :greater, :less, :eq, :geq, :leq, :assign,
+						:nonlocalAssign, :dot, :colon, :fnKeyword, :ifKeyword,
+						:withKeyword, :pipeArrow, :branchArrow,
+					] |> contains?(nextTok.type) {
 						true -> ? // do nothing
 						_ -> {
-							next <- Token(:comma)
-							tokens << next
+							nextTok <- Token(:comma)
+							tokens << nextTok
 						}
 					}
 					_ -> next()
@@ -257,14 +256,14 @@ fn Tokenizer(source) {
 			}
 			eatSpaceAutoInsertComma()
 
-			if next.type {
+			if nextTok.type {
 				:comment -> ?
-				_ -> last <- next
+				_ -> lastTok <- nextTok
 			}
 		}
 		sub()
 
-		if last.type {
+		if lastTok.type {
 			:comma -> ?
 			_ -> tokens << Token(:comma)
 		}
@@ -277,6 +276,9 @@ fn Tokenizer(source) {
 	}
 }
 
-// test
-println(Tokenizer('hello := world + program').tokenize())
+// TODO: finish & test tokenizer, including in standard test suite, and then
+// build 'mgn fmt' on top of this
+// tokenizer := Tokenizer('hello + world')
+// tokens := tokenizer.tokenize()
+// println(tokens)
 

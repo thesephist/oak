@@ -68,7 +68,6 @@ func (c *Context) LoadLib(name string) (Value, *runtimeError) {
 	ctx.Unlock()
 	_, err := ctx.Eval(strings.NewReader(program))
 	ctx.Lock()
-	fmt.Println(err)
 	if err != nil {
 		if runtimeErr, ok := err.(*runtimeError); ok {
 			return nil, runtimeErr

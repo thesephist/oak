@@ -262,23 +262,23 @@ func (v FnValue) Eq(u Value) bool {
 }
 
 type thunkValue struct {
-	name string
-	expr astNode
+	defn *fnNode
 	scope
 }
 
 func (v thunkValue) String() string {
-	return fmt.Sprintf("thunk of fn %s: %s", v.name, v.expr)
+	return fmt.Sprintf("thunk of fn %s: %s", v.defn.name, v.defn.body)
 }
 func (v thunkValue) Eq(u Value) bool {
 	panic("Illegal to compare thunk values!")
 }
 func (c *Context) unwrapThunk(thunk thunkValue) (v Value, err *runtimeError) {
 	for isThunk := true; isThunk; thunk, isThunk = v.(thunkValue) {
-		v, err = c.evalExprWithOpt(thunk.expr, thunk.scope, true)
+		v, err = c.evalExprWithOpt(thunk.defn.body, thunk.scope, true)
 		if err != nil {
 			err.stackTrace = append(err.stackTrace, stackEntry{
-				name: thunk.name,
+				name: thunk.defn.name,
+				pos:  thunk.defn.pos(),
 			})
 			return
 		}
@@ -429,9 +429,6 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	// for _, n := range nodes {
-	// 	fmt.Println(n.pos())
-	// }
 
 	val, runtimeErr := c.evalNodes(nodes)
 	if runtimeErr == nil {
@@ -475,8 +472,7 @@ func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Val
 		}
 
 		thunk := thunkValue{
-			name:  fn.defn.name,
-			expr:  fn.defn.body,
+			defn:  fn.defn,
 			scope: fnScope,
 		}
 		if thunkable {
@@ -629,8 +625,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				case FloatValue:
 					keyString = typedKey.String()
 				default:
-					return nil, &runtimeError{
-						reason: fmt.Sprintf("Expected a string or number as object key, got %s", key.String()),
+					return nil, &runtimeError{reason: fmt.Sprintf("Expected a string or number as object key, got %s", key.String()),
+						pos: entry.key.pos(),
 					}
 				}
 			}
@@ -653,7 +649,11 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		}
 		return fn, nil
 	case identifierNode:
-		return sc.get(n.payload)
+		val, err := sc.get(n.payload)
+		if err != nil {
+			err.pos = n.pos()
+		}
+		return val, err
 	case assignmentNode:
 		assignedValue, err := c.evalExpr(n.right, sc)
 		if err != nil {
@@ -667,6 +667,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			} else {
 				err := sc.update(left.payload, assignedValue)
 				if err != nil {
+					err.pos = n.pos()
 					return nil, err
 				}
 			}
@@ -676,6 +677,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("right side %s of list destructuring is not a list", n.right),
+					pos:    n.pos(),
 				}
 			}
 
@@ -688,6 +690,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("element %s in destructured list %s is not an identifier", mustBeIdent, left),
+						pos:    n.pos(),
 					}
 				}
 
@@ -713,6 +716,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("right side %s of object destructuring is not an object", n.right),
+					pos:    n.pos(),
 				}
 			}
 
@@ -731,6 +735,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("value %s in destructured object %s is not an identifier", mustBeIdent, left),
+						pos:    n.pos(),
 					}
 				}
 
@@ -777,6 +782,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				if !ok {
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot assign non-string value %s to string in %s", assignedValue, assign),
+						pos:    n.pos(),
 					}
 				}
 
@@ -784,6 +790,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				if !ok {
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot index into string with non-integer index %s", assignRight),
+						pos:    n.pos(),
 					}
 				}
 				byteIndex := int(byteIndexVal)
@@ -791,6 +798,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				if byteIndex < 0 || byteIndex > len(*target) {
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("String assignment index %d out of range in %s", byteIndex, n),
+						pos:    n.pos(),
 					}
 				}
 
@@ -811,6 +819,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				if !ok {
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot index into list with non-integer index %s", assignRight),
+						pos:    n.pos(),
 					}
 				}
 				listIndex := int(listIndexVal)
@@ -818,6 +827,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				if listIndex < 0 || listIndex > len(*target) {
 					return nil, &runtimeError{
 						reason: fmt.Sprintf("List assignment index %d out of range in %s", listIndex, n),
+						pos:    n.pos(),
 					}
 				}
 
@@ -842,6 +852,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			default:
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property assignment, got %s", left.String()),
+					pos:    n.pos(),
 				}
 			}
 
@@ -864,6 +875,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot index into string with non-integer index %s", right),
+					pos:    n.pos(),
 				}
 			}
 
@@ -878,6 +890,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot index into list with non-integer index %s", right),
+					pos:    n.pos(),
 				}
 			}
 
@@ -903,6 +916,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 		return nil, &runtimeError{
 			reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property access, got %s", left.String()),
+			pos:    n.pos(),
 		}
 	case unaryNode:
 		rightComputed, err := c.evalExpr(n.right, sc)
@@ -933,6 +947,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		}
 		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s is not a valid unary operator for %s", token{kind: n.op}, rightComputed),
+			pos:    n.pos(),
 		}
 	case binaryNode:
 		leftComputed, err := c.evalExpr(n.left, sc)
@@ -948,6 +963,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		incompatibleError := runtimeError{
 			reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
 				token{kind: n.op}, leftComputed, rightComputed),
+			pos: n.pos(),
 		}
 
 		if n.op == eq {
@@ -966,10 +982,18 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 
 				leftFloat := FloatValue(float64(int64(left)))
-				return floatBinaryOp(n.op, leftFloat, rightFloat)
+				val, err := floatBinaryOp(n.op, leftFloat, rightFloat)
+				if err != nil {
+					err.pos = n.pos()
+				}
+				return val, err
 			}
 
-			return intBinaryOp(n.op, left, right)
+			val, err := intBinaryOp(n.op, left, right)
+			if err != nil {
+				err.pos = n.pos()
+			}
+			return val, err
 		case FloatValue:
 			right, ok := rightComputed.(FloatValue)
 			if !ok {
@@ -979,10 +1003,18 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 
 				right = FloatValue(float64(int64(rightInt)))
-				return floatBinaryOp(n.op, left, right)
+				val, err := floatBinaryOp(n.op, left, right)
+				if err != nil {
+					err.pos = n.pos()
+				}
+				return val, err
 			}
 
-			return floatBinaryOp(n.op, left, right)
+			val, err := floatBinaryOp(n.op, left, right)
+			if err != nil {
+				err.pos = n.pos()
+			}
+			return val, err
 		case *StringValue:
 			right, ok := rightComputed.(*StringValue)
 			if !ok {
@@ -1064,6 +1096,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		return nil, &runtimeError{
 			reason: fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
 				token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed),
+			pos: n.pos(),
 		}
 	case fnCallNode:
 		maybeFn, err := c.evalExpr(n.fn, sc)
@@ -1088,13 +1121,21 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot spread a non-list value %s in a function call %s", rest, n),
+					pos:    n.pos(),
 				}
 			}
 
 			args = append(args, *restList...)
 		}
 
-		return c.EvalFnValue(maybeFn, thunkable, args...)
+		val, err := c.EvalFnValue(maybeFn, thunkable, args...)
+		// we only overwrite the error pos if it's nil (i.e. if it was a "nil
+		// is not a function" error, where EvalFnValue can't correclty position
+		// the error itelf)
+		if err != nil && err.pos.line == 0 {
+			err.pos = n.pos()
+		}
+		return val, err
 	case ifExprNode:
 		cond, err := c.evalExpr(n.cond, sc)
 		if err != nil {

@@ -791,7 +791,7 @@ func (p *parser) parseSubNode() (astNode, error) {
 	for !p.isEOF() {
 		switch p.peek().kind {
 		case dot:
-			p.next() // eat the dot
+			next := p.next() // eat the dot
 			right, err := p.parseUnit()
 			if err != nil {
 				return nil, err
@@ -800,9 +800,10 @@ func (p *parser) parseSubNode() (astNode, error) {
 			node = propertyAccessNode{
 				left:  node,
 				right: right,
+				tok:   &next,
 			}
 		case leftParen:
-			p.next() // eat the leftParen
+			next := p.next() // eat the leftParen
 
 			args := []astNode{}
 			var restArg astNode = nil
@@ -837,6 +838,7 @@ func (p *parser) parseSubNode() (astNode, error) {
 				fn:      node,
 				args:    args,
 				restArg: restArg,
+				tok:     &next,
 			}
 		default:
 			return node, nil
@@ -876,7 +878,8 @@ func (p *parser) parseNode() (astNode, error) {
 					}
 				}
 
-				op := p.peek().kind
+				peeked := p.peek()
+				op := peeked.kind
 				prec := infixOpPrecedence(op)
 				if prec <= minPrec {
 					break
@@ -901,6 +904,7 @@ func (p *parser) parseNode() (astNode, error) {
 					op:    op,
 					left:  node,
 					right: right,
+					tok:   &peeked,
 				}
 			}
 
