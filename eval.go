@@ -262,20 +262,24 @@ func (v FnValue) Eq(u Value) bool {
 }
 
 type thunkValue struct {
+	name string
 	expr astNode
 	scope
 }
 
 func (v thunkValue) String() string {
-	return fmt.Sprintf("thunk of %s", v.expr)
+	return fmt.Sprintf("thunk of fn %s: %s", v.name, v.expr)
 }
 func (v thunkValue) Eq(u Value) bool {
 	panic("Illegal to compare thunk values!")
 }
-func (c *Context) unwrapThunk(thunk thunkValue) (v Value, err error) {
+func (c *Context) unwrapThunk(thunk thunkValue) (v Value, err *runtimeError) {
 	for isThunk := true; isThunk; thunk, isThunk = v.(thunkValue) {
 		v, err = c.evalExprWithOpt(thunk.expr, thunk.scope, true)
 		if err != nil {
+			err.stackTrace = append(err.stackTrace, stackEntry{
+				name: thunk.name,
+			})
 			return
 		}
 	}
@@ -288,14 +292,14 @@ type scope struct {
 	vars   map[string]Value
 }
 
-func (sc *scope) get(name string) (Value, error) {
+func (sc *scope) get(name string) (Value, *runtimeError) {
 	if v, ok := sc.vars[name]; ok {
 		return v, nil
 	}
 	if sc.parent != nil {
 		return sc.parent.get(name)
 	}
-	return nil, runtimeError{
+	return nil, &runtimeError{
 		reason: fmt.Sprintf("%s is undefined", name),
 	}
 }
@@ -304,7 +308,7 @@ func (sc *scope) put(name string, v Value) {
 	sc.vars[name] = v
 }
 
-func (sc *scope) update(name string, v Value) error {
+func (sc *scope) update(name string, v Value) *runtimeError {
 	if _, ok := sc.vars[name]; ok {
 		sc.vars[name] = v
 		return nil
@@ -312,7 +316,7 @@ func (sc *scope) update(name string, v Value) error {
 	if sc.parent != nil {
 		return sc.parent.update(name, v)
 	}
-	return runtimeError{
+	return &runtimeError{
 		reason: fmt.Sprintf("%s is undefined", name),
 	}
 }
@@ -382,25 +386,30 @@ func (c *Context) Wait() {
 	c.eng.Wait()
 }
 
-func (c *Context) generateStackTrace() stackEntry {
-	// TODO: actually write
-	return stackEntry{}
-}
-
 type stackEntry struct {
-	fnName      string
-	parentStack *stackEntry
+	name string
 	pos
 }
 
-type runtimeError struct {
-	reason     string
-	stackTrace stackEntry
+func (e stackEntry) String() string {
+	if e.name != "" {
+		return fmt.Sprintf("  in fn %s %s", e.name, e.pos)
+	}
+	return fmt.Sprintf("  in anonymous fn %s", e.pos)
 }
 
-func (e runtimeError) Error() string {
-	// TODO: display stacktrace
-	return fmt.Sprintf("Runtime error: %s", e.reason)
+type runtimeError struct {
+	reason string
+	pos
+	stackTrace []stackEntry
+}
+
+func (e *runtimeError) Error() string {
+	trace := make([]string, len(e.stackTrace))
+	for i, entry := range e.stackTrace {
+		trace[i] = entry.String()
+	}
+	return fmt.Sprintf("Runtime error: %s\n%s", e.reason, strings.Join(trace, "\n"))
 }
 
 func (c *Context) Eval(programReader io.Reader) (Value, error) {
@@ -420,11 +429,19 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
+	// for _, n := range nodes {
+	// 	fmt.Println(n.pos())
+	// }
 
-	return c.evalNodes(nodes)
+	val, runtimeErr := c.evalNodes(nodes)
+	if runtimeErr == nil {
+		return val, nil
+	}
+	return val, runtimeErr
+
 }
 
-func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Value, error) {
+func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Value, *runtimeError) {
 	if fn, ok := maybeFn.(FnValue); ok {
 		if len(args) < len(fn.defn.args) {
 			// if not enough arguments, fill them with nulls
@@ -458,6 +475,7 @@ func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Val
 		}
 
 		thunk := thunkValue{
+			name:  fn.defn.name,
 			expr:  fn.defn.body,
 			scope: fnScope,
 		}
@@ -469,15 +487,15 @@ func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Val
 	} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
 		return fn.fn(args)
 	} else {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
 		}
 	}
 }
 
-func (c *Context) evalNodes(nodes []astNode) (Value, error) {
-	var err error
+func (c *Context) evalNodes(nodes []astNode) (Value, *runtimeError) {
 	var returnVal Value = null
+	var err *runtimeError
 	for _, expr := range nodes {
 		returnVal, err = c.evalExpr(expr, c.scope)
 		if err != nil {
@@ -487,7 +505,7 @@ func (c *Context) evalNodes(nodes []astNode) (Value, error) {
 	return returnVal, nil
 }
 
-func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
+func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 	switch op {
 	case plus:
 		return IntValue(int64(left) + int64(right)), nil
@@ -497,7 +515,7 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
 		return IntValue(int64(left) * int64(right)), nil
 	case divide:
 		if right == 0 {
-			return nil, runtimeError{
+			return nil, &runtimeError{
 				reason: fmt.Sprintf("Division by zero"),
 			}
 		}
@@ -522,7 +540,7 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, error) {
 	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
 }
 
-func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
+func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
 	switch op {
 	case plus:
 		return FloatValue(float64(left) + float64(right)), nil
@@ -532,7 +550,7 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 		return FloatValue(float64(left) * float64(right)), nil
 	case divide:
 		if right == 0 {
-			return nil, runtimeError{
+			return nil, &runtimeError{
 				reason: fmt.Sprintf("Division by zero"),
 			}
 		}
@@ -551,7 +569,7 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, error) {
 	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
 }
 
-func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
+func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, *runtimeError) {
 	if ident, ok := node.(identifierNode); ok {
 		return MakeString(ident.payload), nil
 	}
@@ -559,11 +577,11 @@ func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, error) {
 	return c.evalExpr(node, sc)
 }
 
-func (c *Context) evalExpr(node astNode, sc scope) (Value, error) {
+func (c *Context) evalExpr(node astNode, sc scope) (Value, *runtimeError) {
 	return c.evalExprWithOpt(node, sc, false)
 }
 
-func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value, error) {
+func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value, *runtimeError) {
 	switch n := node.(type) {
 	case emptyNode:
 		return empty, nil
@@ -581,7 +599,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 	case atomNode:
 		return AtomValue(n.payload), nil
 	case listNode:
-		var err error
+		var err *runtimeError
 		elems := make([]Value, len(n.elems))
 		for i, elNode := range n.elems {
 			elems[i], err = c.evalExpr(elNode, sc)
@@ -611,7 +629,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				case FloatValue:
 					keyString = typedKey.String()
 				default:
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("Expected a string or number as object key, got %s", key.String()),
 					}
 				}
@@ -656,7 +674,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case listNode:
 			assignedList, ok := assignedValue.(*ListValue)
 			if !ok {
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("right side %s of list destructuring is not a list", n.right),
 				}
 			}
@@ -668,7 +686,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 						continue
 					}
 
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("element %s in destructured list %s is not an identifier", mustBeIdent, left),
 					}
 				}
@@ -693,7 +711,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case objectNode:
 			assignedObj, ok := assignedValue.(ObjectValue)
 			if !ok {
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("right side %s of object destructuring is not an object", n.right),
 				}
 			}
@@ -711,7 +729,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 						continue
 					}
 
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("value %s in destructured object %s is not an identifier", mustBeIdent, left),
 					}
 				}
@@ -757,21 +775,21 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case *StringValue:
 				assignedString, ok := assignedValue.(*StringValue)
 				if !ok {
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot assign non-string value %s to string in %s", assignedValue, assign),
 					}
 				}
 
 				byteIndexVal, ok := assignRight.(IntValue)
 				if !ok {
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot index into string with non-integer index %s", assignRight),
 					}
 				}
 				byteIndex := int(byteIndexVal)
 
 				if byteIndex < 0 || byteIndex > len(*target) {
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("String assignment index %d out of range in %s", byteIndex, n),
 					}
 				}
@@ -791,14 +809,14 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case *ListValue:
 				listIndexVal, ok := assignRight.(IntValue)
 				if !ok {
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("Cannot index into list with non-integer index %s", assignRight),
 					}
 				}
 				listIndex := int(listIndexVal)
 
 				if listIndex < 0 || listIndex > len(*target) {
-					return nil, runtimeError{
+					return nil, &runtimeError{
 						reason: fmt.Sprintf("List assignment index %d out of range in %s", listIndex, n),
 					}
 				}
@@ -822,7 +840,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 					target[objKeyString] = assignedValue
 				}
 			default:
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property assignment, got %s", left.String()),
 				}
 			}
@@ -844,7 +862,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case *StringValue:
 			byteIndex, ok := right.(IntValue)
 			if !ok {
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot index into string with non-integer index %s", right),
 				}
 			}
@@ -858,7 +876,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case *ListValue:
 			listIndex, ok := right.(IntValue)
 			if !ok {
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot index into list with non-integer index %s", right),
 				}
 			}
@@ -883,7 +901,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return null, nil
 		}
 
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Expected string, list, or object in left-hand side of property access, got %s", left.String()),
 		}
 	case unaryNode:
@@ -913,7 +931,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				return !right, nil
 			}
 		}
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s is not a valid unary operator for %s", token{kind: n.op}, rightComputed),
 		}
 	case binaryNode:
@@ -944,7 +962,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				rightFloat, ok := rightComputed.(FloatValue)
 				if !ok {
-					return nil, incompatibleError
+					return nil, &incompatibleError
 				}
 
 				leftFloat := FloatValue(float64(int64(left)))
@@ -957,7 +975,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				rightInt, ok := rightComputed.(IntValue)
 				if !ok {
-					return nil, incompatibleError
+					return nil, &incompatibleError
 				}
 
 				right = FloatValue(float64(int64(rightInt)))
@@ -968,7 +986,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case *StringValue:
 			right, ok := rightComputed.(*StringValue)
 			if !ok {
-				return nil, incompatibleError
+				return nil, &incompatibleError
 			}
 
 			switch n.op {
@@ -1020,11 +1038,11 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case leq:
 				return BoolValue(bytes.Compare(*left, *right) <= 0), nil
 			}
-			return nil, incompatibleError
+			return nil, &incompatibleError
 		case BoolValue:
 			right, ok := rightComputed.(BoolValue)
 			if !ok {
-				return nil, incompatibleError
+				return nil, &incompatibleError
 			}
 
 			switch n.op {
@@ -1041,9 +1059,9 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				*left = append(*left, rightComputed)
 				return left, nil
 			}
-			return nil, incompatibleError
+			return nil, &incompatibleError
 		}
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
 				token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed),
 		}
@@ -1068,7 +1086,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 			restList, ok := rest.(*ListValue)
 			if !ok {
-				return nil, runtimeError{
+				return nil, &runtimeError{
 					reason: fmt.Sprintf("Cannot spread a non-list value %s in a function call %s", rest, n),
 				}
 			}

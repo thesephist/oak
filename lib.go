@@ -50,10 +50,10 @@ func isStdLib(name string) bool {
 	return ok
 }
 
-func (c *Context) LoadLib(name string) (Value, error) {
+func (c *Context) LoadLib(name string) (Value, *runtimeError) {
 	program, ok := stdlibs[name]
 	if !ok {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s is not a valid standard library; could not import", name),
 		}
 	}
@@ -68,8 +68,15 @@ func (c *Context) LoadLib(name string) (Value, error) {
 	ctx.Unlock()
 	_, err := ctx.Eval(strings.NewReader(program))
 	ctx.Lock()
+	fmt.Println(err)
 	if err != nil {
-		return nil, err
+		if runtimeErr, ok := err.(*runtimeError); ok {
+			return nil, runtimeErr
+		} else {
+			return nil, &runtimeError{
+				reason: fmt.Sprintf("Error loading %s: %s", name, err.Error()),
+			}
+		}
 	}
 
 	c.eng.importMap[name] = ctx.scope

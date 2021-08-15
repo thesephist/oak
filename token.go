@@ -183,12 +183,11 @@ func newTokenizer(sourceString string) tokenizer {
 		source:   []rune(sourceString),
 		index:    0,
 		fileName: "(input)",
-		line:     0,
+		line:     1,
 		col:      0,
 	}
 }
 
-// TODO: correctly update positions with every next() call
 func (t *tokenizer) currentPos() pos {
 	return pos{
 		fileName: t.fileName,
@@ -221,12 +220,26 @@ func (t *tokenizer) next() rune {
 		t.index++
 	}
 
+	if char == '\n' {
+		t.line++
+		t.col = 0
+	} else {
+		t.col++
+	}
+
 	return char
 }
 
 func (t *tokenizer) back() {
 	if t.index > 0 {
 		t.index--
+	}
+
+	if t.source[t.index] == '\n' {
+		t.line--
+		// TODO: reset col correctly
+	} else {
+		t.col--
 	}
 }
 

@@ -77,7 +77,7 @@ func runFile() {
 	filePath := os.Args[1]
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Printf("Could not open %s: %s\n", filePath, err.Error())
+		fmt.Printf("Could not open %s: %s\n", filePath, err)
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -87,7 +87,7 @@ func runFile() {
 
 	_, err = ctx.Eval(file)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		os.Exit(1)
 	}
 

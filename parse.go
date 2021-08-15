@@ -8,12 +8,19 @@ import (
 
 type astNode interface {
 	String() string
+	// pos() pos
 }
 
-type emptyNode struct{}
+type emptyNode struct {
+	tok token
+}
 
 func (n emptyNode) String() string {
 	return "_"
+}
+
+func (n emptyNode) pos() pos {
+	return pos{}
 }
 
 type nullNode struct{}
@@ -283,6 +290,7 @@ func (p *parser) expect(kind tokKind) (token, error) {
 	if p.isEOF() {
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected end of input, expected %s", tok),
+			pos:    tok.pos,
 		}
 	}
 
@@ -290,6 +298,7 @@ func (p *parser) expect(kind tokKind) (token, error) {
 	if next.kind != kind {
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected token %s, expected %s", next, tok),
+			pos:    tok.pos,
 		}
 	}
 
@@ -349,7 +358,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if strings.ContainsRune(tok.payload, '.') {
 			f, err := strconv.ParseFloat(tok.payload, 64)
 			if err != nil {
-				return nil, parseError{reason: err.Error()}
+				return nil, parseError{reason: err.Error(), pos: tok.pos}
 			}
 			return numberNode{
 				isInteger:    false,
@@ -358,7 +367,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		}
 		n, err := strconv.ParseInt(tok.payload, 10, 64)
 		if err != nil {
-			return nil, parseError{reason: err.Error()}
+			return nil, parseError{reason: err.Error(), pos: tok.pos}
 		}
 		return numberNode{
 			isInteger:  true,
@@ -374,6 +383,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		}
 		return nil, parseError{
 			reason: fmt.Sprintf("Expected identifier after ':', got %s", p.peek()),
+			pos:    tok.pos,
 		}
 	case leftBracket:
 		p.pushMinPrec(0)
@@ -413,6 +423,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if p.isEOF() {
 			return nil, parseError{
 				reason: fmt.Sprintf("Unexpected end of input inside block or object"),
+				pos:    tok.pos,
 			}
 		}
 
@@ -631,6 +642,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if !ok {
 			return nil, parseError{
 				reason: fmt.Sprintf("with keyword should be followed by a function call, found %s", withExprBase),
+				pos:    tok.pos,
 			}
 		}
 
@@ -663,7 +675,8 @@ func (p *parser) parseUnit() (astNode, error) {
 		return blockNode{exprs: exprs}, nil
 	}
 	return nil, parseError{
-		reason: fmt.Sprintf("Unexpected token %s", tok),
+		reason: fmt.Sprintf("Unexpected token %s at start of unit", tok),
+		pos:    tok.pos,
 	}
 }
 
@@ -787,6 +800,7 @@ func (p *parser) parseNode() (astNode, error) {
 				if p.isEOF() {
 					return nil, parseError{
 						reason: "Incomplete binary expression",
+						pos:    p.peek().pos,
 					}
 				}
 
@@ -800,6 +814,7 @@ func (p *parser) parseNode() (astNode, error) {
 				if p.isEOF() {
 					return nil, parseError{
 						reason: fmt.Sprintf("Incomplete binary expression with %s", token{kind: op}),
+						pos:    p.peek().pos,
 					}
 				}
 
@@ -821,7 +836,7 @@ func (p *parser) parseNode() (astNode, error) {
 			// expression by syntax rule, so we simply return
 			return node, nil
 		case pipeArrow:
-			p.next() // eat the pipe
+			pipe := p.next() // eat the pipe
 
 			pipeRight, err := p.parseSubNode()
 			if err != nil {
@@ -829,8 +844,9 @@ func (p *parser) parseNode() (astNode, error) {
 			}
 			pipedFnCall, ok := pipeRight.(fnCallNode)
 			if !ok {
-				return nil, runtimeError{
+				return nil, parseError{
 					reason: fmt.Sprintf("Expected function call after |>, got %s", pipeRight),
+					pos:    pipe.pos,
 				}
 			}
 

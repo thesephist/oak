@@ -20,38 +20,17 @@ import (
 	"time"
 )
 
-type typeError struct {
-	reason     string
-	stackTrace stackEntry
-}
-
-func (e typeError) Error() string {
-	// TODO: display stacktrace
-	return fmt.Sprintf("Type error: %s", e.reason)
-}
-
-type mathError struct {
-	reason     string
-	stackTrace stackEntry
-}
-
-func (e mathError) Error() string {
-	// TODO: display stacktrace
-	return fmt.Sprintf("Math error: %s", e.reason)
-}
-
-func (c *Context) requireArgLen(fnName string, args []Value, count int) error {
+func (c *Context) requireArgLen(fnName string, args []Value, count int) *runtimeError {
 	if len(args) < count {
-		return runtimeError{
-			reason:     fmt.Sprintf("%s requires %d arguments, got %d", fnName, count, len(args)),
-			stackTrace: c.generateStackTrace(),
+		return &runtimeError{
+			reason: fmt.Sprintf("%s requires %d arguments, got %d", fnName, count, len(args)),
 		}
 	}
 
 	return nil
 }
 
-type builtinFn func([]Value) (Value, error)
+type builtinFn func([]Value) (Value, *runtimeError)
 
 type BuiltinFnValue struct {
 	name string
@@ -138,7 +117,7 @@ func errObj(message string) ObjectValue {
 }
 
 func (c *Context) callbackify(syncFn builtinFn) builtinFn {
-	return func(args []Value) (Value, error) {
+	return func(args []Value) (Value, *runtimeError) {
 		if len(args) == 0 {
 			return syncFn(args)
 		}
@@ -173,7 +152,7 @@ func (c *Context) callbackify(syncFn builtinFn) builtinFn {
 	}
 }
 
-func (c *Context) mgnString(args []Value) (Value, error) {
+func (c *Context) mgnString(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("string", args, 1); err != nil {
 		return nil, err
 	}
@@ -186,7 +165,7 @@ func (c *Context) mgnString(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnInt(args []Value) (Value, error) {
+func (c *Context) mgnInt(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("int", args, 1); err != nil {
 		return nil, err
 	}
@@ -207,7 +186,7 @@ func (c *Context) mgnInt(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnFloat(args []Value) (Value, error) {
+func (c *Context) mgnFloat(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("float", args, 1); err != nil {
 		return nil, err
 	}
@@ -228,7 +207,7 @@ func (c *Context) mgnFloat(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnAtom(args []Value) (Value, error) {
+func (c *Context) mgnAtom(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("atom", args, 1); err != nil {
 		return nil, err
 	}
@@ -243,7 +222,7 @@ func (c *Context) mgnAtom(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnCodepoint(args []Value) (Value, error) {
+func (c *Context) mgnCodepoint(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("codepoint", args, 1); err != nil {
 		return nil, err
 	}
@@ -259,7 +238,7 @@ func (c *Context) mgnCodepoint(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnChar(args []Value) (Value, error) {
+func (c *Context) mgnChar(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("char", args, 1); err != nil {
 		return nil, err
 	}
@@ -280,7 +259,7 @@ func (c *Context) mgnChar(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnType(args []Value) (Value, error) {
+func (c *Context) mgnType(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("type", args, 1); err != nil {
 		return nil, err
 	}
@@ -311,14 +290,14 @@ func (c *Context) mgnType(args []Value) (Value, error) {
 	panic("Unreachable!")
 }
 
-func (c *Context) mgnImport(args []Value) (Value, error) {
+func (c *Context) mgnImport(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("import", args, 1); err != nil {
 		return nil, err
 	}
 
 	pathBytes, ok := args[0].(*StringValue)
 	if !ok {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
 		}
 	}
@@ -336,7 +315,7 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Could not open %s, %s", filePath, err.Error()),
 		}
 	}
@@ -353,14 +332,20 @@ func (c *Context) mgnImport(args []Value) (Value, error) {
 	_, err = ctx.Eval(file)
 	ctx.Lock()
 	if err != nil {
-		return nil, err
+		if runtimeErr, ok := err.(*runtimeError); ok {
+			return nil, runtimeErr
+		} else {
+			return nil, &runtimeError{
+				reason: fmt.Sprintf("Error importing %s: %s", pathStr, err.Error()),
+			}
+		}
 	}
 
 	c.eng.importMap[filePath] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
 }
 
-func (c *Context) mgnLen(args []Value) (Value, error) {
+func (c *Context) mgnLen(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("string", args, 1); err != nil {
 		return nil, err
 	}
@@ -373,13 +358,13 @@ func (c *Context) mgnLen(args []Value) (Value, error) {
 	case ObjectValue:
 		return IntValue(len(arg)), nil
 	default:
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s does not support a len() call", arg),
 		}
 	}
 }
 
-func (c *Context) mgnExec(args []Value) (Value, error) {
+func (c *Context) mgnExec(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("exec", args, 3); err != nil {
 		return nil, err
 	}
@@ -388,7 +373,7 @@ func (c *Context) mgnExec(args []Value) (Value, error) {
 	cliArgs, ok2 := args[1].(*ListValue)
 	stdin, ok3 := args[2].(*StringValue)
 	if !ok1 || !ok2 || !ok3 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call exec(%s, %s, %s)", args[0], args[1], args[2]),
 		}
 	}
@@ -398,7 +383,7 @@ func (c *Context) mgnExec(args []Value) (Value, error) {
 		if argStr, ok := arg.(*StringValue); ok {
 			argsList[i] = argStr.stringContent()
 		} else {
-			return nil, typeError{
+			return nil, &runtimeError{
 				reason: fmt.Sprintf("Mismatched types in call exec, arguments must be strings in %s", cliArgs),
 			}
 		}
@@ -448,7 +433,7 @@ func (c *Context) mgnExec(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnInput(_ []Value) (Value, error) {
+func (c *Context) mgnInput(_ []Value) (Value, *runtimeError) {
 	reader := bufio.NewReader(os.Stdin)
 	str, err := reader.ReadString('\n')
 	if err == io.EOF {
@@ -465,14 +450,14 @@ func (c *Context) mgnInput(_ []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnPrint(args []Value) (Value, error) {
+func (c *Context) mgnPrint(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
 	}
 
 	outputString, ok := args[0].(*StringValue)
 	if !ok {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Unexpected argument to print: %s", args[0]),
 		}
 	}
@@ -481,14 +466,14 @@ func (c *Context) mgnPrint(args []Value) (Value, error) {
 	return IntValue(n), nil
 }
 
-func (c *Context) mgnLs(args []Value) (Value, error) {
+func (c *Context) mgnLs(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("ls", args, 1); err != nil {
 		return nil, err
 	}
 
 	dirPath, ok1 := args[0].(*StringValue)
 	if !ok1 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call ls(%s)", args[0]),
 		}
 	}
@@ -514,14 +499,14 @@ func (c *Context) mgnLs(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnMkdir(args []Value) (Value, error) {
+func (c *Context) mgnMkdir(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("mkdir", args, 1); err != nil {
 		return nil, err
 	}
 
 	dirPath, ok1 := args[0].(*StringValue)
 	if !ok1 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call mkdir(%s)", args[0]),
 		}
 	}
@@ -544,7 +529,7 @@ func makeIntListUpTo(max int) Value {
 	return &list
 }
 
-func (c *Context) mgnKeys(args []Value) (Value, error) {
+func (c *Context) mgnKeys(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
 	}
@@ -567,7 +552,7 @@ func (c *Context) mgnKeys(args []Value) (Value, error) {
 	}
 }
 
-func (c *Context) mgnArgs(_ []Value) (Value, error) {
+func (c *Context) mgnArgs(_ []Value) (Value, *runtimeError) {
 	goArgs := os.Args
 	args := make(ListValue, len(goArgs))
 	for i, arg := range goArgs {
@@ -576,7 +561,7 @@ func (c *Context) mgnArgs(_ []Value) (Value, error) {
 	return &args, nil
 }
 
-func (c *Context) mgnEnv(_ []Value) (Value, error) {
+func (c *Context) mgnEnv(_ []Value) (Value, *runtimeError) {
 	envVars := ObjectValue{}
 	for _, e := range os.Environ() {
 		kv := strings.SplitN(e, "=", 2)
@@ -585,16 +570,16 @@ func (c *Context) mgnEnv(_ []Value) (Value, error) {
 	return envVars, nil
 }
 
-func (c *Context) mgnTime(_ []Value) (Value, error) {
+func (c *Context) mgnTime(_ []Value) (Value, *runtimeError) {
 	unixSeconds := float64(time.Now().UnixNano()) / 1e9
 	return FloatValue(unixSeconds), nil
 }
 
-func (c *Context) mgnNanotime(_ []Value) (Value, error) {
+func (c *Context) mgnNanotime(_ []Value) (Value, *runtimeError) {
 	return IntValue(time.Now().UnixNano()), nil
 }
 
-func (c *Context) mgnExit(args []Value) (Value, error) {
+func (c *Context) mgnExit(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("exit", args, 1); err != nil {
 		return nil, err
 	}
@@ -605,17 +590,17 @@ func (c *Context) mgnExit(args []Value) (Value, error) {
 		// unreachable
 		return null, nil
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call exit(%s)", args[0]),
 		}
 	}
 }
 
-func (c *Context) mgnRand(args []Value) (Value, error) {
+func (c *Context) mgnRand(args []Value) (Value, *runtimeError) {
 	return FloatValue(rand.Float64()), nil
 }
 
-func (c *Context) mgnWait(args []Value) (Value, error) {
+func (c *Context) mgnWait(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("wait", args, 1); err != nil {
 		return nil, err
 	}
@@ -626,7 +611,7 @@ func (c *Context) mgnWait(args []Value) (Value, error) {
 	case FloatValue:
 		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call wait(%s)", args[0]),
 		}
 	}
@@ -634,14 +619,14 @@ func (c *Context) mgnWait(args []Value) (Value, error) {
 	return null, nil
 }
 
-func (c *Context) mgnRm(args []Value) (Value, error) {
+func (c *Context) mgnRm(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("rm", args, 1); err != nil {
 		return nil, err
 	}
 
 	rmPath, ok1 := args[0].(*StringValue)
 	if !ok1 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call rm(%s)", args[0]),
 		}
 	}
@@ -656,14 +641,14 @@ func (c *Context) mgnRm(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnStat(args []Value) (Value, error) {
+func (c *Context) mgnStat(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("stat", args, 1); err != nil {
 		return nil, err
 	}
 
 	statPath, ok1 := args[0].(*StringValue)
 	if !ok1 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call stat(%s)", args[0]),
 		}
 	}
@@ -690,7 +675,7 @@ func (c *Context) mgnStat(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnOpen(args []Value) (Value, error) {
+func (c *Context) mgnOpen(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("open", args, 1); err != nil {
 		return nil, err
 	}
@@ -709,7 +694,7 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	flagsAtom, ok2 := args[1].(AtomValue)
 	permInt, ok3 := args[2].(IntValue)
 	if !ok1 || !ok2 || !ok3 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call open(%s, %s, %s)", args[0], args[1], args[2]),
 		}
 	}
@@ -727,7 +712,7 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	case "truncate":
 		flags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Invalid flag for open(): %s", flagsAtom),
 		}
 	}
@@ -749,14 +734,14 @@ func (c *Context) mgnOpen(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnClose(args []Value) (Value, error) {
+func (c *Context) mgnClose(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("close", args, 1); err != nil {
 		return nil, err
 	}
 
 	fdInt, ok1 := args[0].(IntValue)
 	if !ok1 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call close(%s)", args[0]),
 		}
 	}
@@ -781,7 +766,7 @@ func (c *Context) mgnClose(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnRead(args []Value) (Value, error) {
+func (c *Context) mgnRead(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("read", args, 3); err != nil {
 		return nil, err
 	}
@@ -790,7 +775,7 @@ func (c *Context) mgnRead(args []Value) (Value, error) {
 	offsetInt, ok2 := args[1].(IntValue)
 	lengthInt, ok3 := args[2].(IntValue)
 	if !ok1 || !ok2 || !ok3 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call read(%s, %s, %s)", args[0], args[1], args[2]),
 		}
 	}
@@ -824,7 +809,7 @@ func (c *Context) mgnRead(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnWrite(args []Value) (Value, error) {
+func (c *Context) mgnWrite(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("write", args, 3); err != nil {
 		return nil, err
 	}
@@ -833,7 +818,7 @@ func (c *Context) mgnWrite(args []Value) (Value, error) {
 	offsetInt, ok2 := args[1].(IntValue)
 	dataString, ok3 := args[2].(*StringValue)
 	if !ok1 || !ok2 || !ok3 {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call write(%s, %s, %s)", args[0], args[1], args[2]),
 		}
 	}
@@ -907,13 +892,13 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// construct request object to pass to Mgn, call handler
 	responseEnded := false
 	responses := make(chan Value, 1)
-	endHandler := func(args []Value) (Value, error) {
+	endHandler := func(args []Value) (Value, *runtimeError) {
 		if err := ctx.requireArgLen("listen/end", args, 1); err != nil {
 			return nil, err
 		}
 
 		if responseEnded {
-			ctx.eng.reportErr(runtimeError{
+			ctx.eng.reportErr(&runtimeError{
 				reason: fmt.Sprintf("listen/end called more than once"),
 			})
 		}
@@ -950,7 +935,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := <-responses
 	rsp, isObject := resp.(ObjectValue)
 	if !isObject {
-		ctx.eng.reportErr(runtimeError{
+		ctx.eng.reportErr(&runtimeError{
 			reason: fmt.Sprintf("listen/end should return a response, got %s", resp),
 		})
 		return
@@ -967,7 +952,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resBody, okBody := bodyVal.(*StringValue)
 
 	if !okStatus || !okHeaders || !okBody {
-		ctx.eng.reportErr(runtimeError{
+		ctx.eng.reportErr(&runtimeError{
 			reason: fmt.Sprintf("listen/end returned malformed response, %s", rsp),
 		})
 		return
@@ -979,7 +964,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if str, isStr := v.(*StringValue); isStr {
 			w.Header().Set(k, str.stringContent())
 		} else {
-			ctx.eng.reportErr(runtimeError{
+			ctx.eng.reportErr(&runtimeError{
 				reason: fmt.Sprintf("Could not set response header, value %s was not a string", v),
 			})
 			return
@@ -990,7 +975,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// guard against invalid HTTP codes, which cause Go panics
 	// https://golang.org/src/net/http/server.go
 	if code < 100 || code > 599 {
-		ctx.eng.reportErr(runtimeError{
+		ctx.eng.reportErr(&runtimeError{
 			reason: fmt.Sprintf("Could not set response status code, code %d is not valid", code),
 		})
 		return
@@ -1013,7 +998,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ctx *Context) mgnListen(args []Value) (Value, error) {
+func (ctx *Context) mgnListen(args []Value) (Value, *runtimeError) {
 	if err := ctx.requireArgLen("listen", args, 2); err != nil {
 		return nil, err
 	}
@@ -1021,7 +1006,7 @@ func (ctx *Context) mgnListen(args []Value) (Value, error) {
 	host, ok1 := args[0].(*StringValue)
 	cb, ok2 := args[1].(FnValue)
 	if !ok1 || !ok2 {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call listen(%s)", args[0]),
 		}
 	}
@@ -1053,7 +1038,7 @@ func (ctx *Context) mgnListen(args []Value) (Value, error) {
 		}
 	}()
 
-	closer := func(_ []Value) (Value, error) {
+	closer := func(_ []Value) (Value, *runtimeError) {
 		// attempt graceful shutdown, concurrently, without blocking Mgn
 		// evaluation thread
 		ctx.eng.Add(1)
@@ -1075,18 +1060,18 @@ func (ctx *Context) mgnListen(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnReq(args []Value) (Value, error) {
+func (c *Context) mgnReq(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("req", args, 1); err != nil {
 		return nil, err
 	}
 
-	argErr := typeError{
+	argErr := runtimeError{
 		reason: fmt.Sprintf("Mismatched types in call req(%s)", args[0]),
 	}
 
 	data, ok1 := args[0].(ObjectValue)
 	if !ok1 {
-		return nil, argErr
+		return nil, &argErr
 	}
 
 	// unmarshal request data
@@ -1110,7 +1095,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 	}
 
 	if !ok1 || !ok2 || !ok3 || !ok4 {
-		return nil, argErr
+		return nil, &argErr
 	}
 
 	method, ok1 := methodVal.(*StringValue)
@@ -1118,7 +1103,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 	headers, ok3 := headersVal.(ObjectValue)
 	body, ok4 := bodyVal.(*StringValue)
 	if !ok1 || !ok2 || !ok3 || !ok4 {
-		return nil, argErr
+		return nil, &argErr
 	}
 
 	client := &http.Client{
@@ -1144,7 +1129,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 		if valStr, ok := v.(*StringValue); ok {
 			req.Header.Set(k, valStr.stringContent())
 		} else {
-			return nil, typeError{
+			return nil, &runtimeError{
 				reason: fmt.Sprintf("Could not set request header, value %s is not a string", v),
 			}
 		}
@@ -1153,7 +1138,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 	// send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Could not send request: %s", err.Error()),
 		}
 	}
@@ -1187,7 +1172,7 @@ func (c *Context) mgnReq(args []Value) (Value, error) {
 	}, nil
 }
 
-func (c *Context) mgnSin(args []Value) (Value, error) {
+func (c *Context) mgnSin(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("sin", args, 1); err != nil {
 		return nil, err
 	}
@@ -1199,7 +1184,7 @@ func (c *Context) mgnSin(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call sin(%s)", args[0]),
 		}
 	}
@@ -1207,7 +1192,7 @@ func (c *Context) mgnSin(args []Value) (Value, error) {
 	return FloatValue(math.Sin(val)), nil
 }
 
-func (c *Context) mgnCos(args []Value) (Value, error) {
+func (c *Context) mgnCos(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("cos", args, 1); err != nil {
 		return nil, err
 	}
@@ -1219,7 +1204,7 @@ func (c *Context) mgnCos(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call cos(%s)", args[0]),
 		}
 	}
@@ -1227,7 +1212,7 @@ func (c *Context) mgnCos(args []Value) (Value, error) {
 	return FloatValue(math.Cos(val)), nil
 }
 
-func (c *Context) mgnTan(args []Value) (Value, error) {
+func (c *Context) mgnTan(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("tan", args, 1); err != nil {
 		return nil, err
 	}
@@ -1239,7 +1224,7 @@ func (c *Context) mgnTan(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call tan(%s)", args[0]),
 		}
 	}
@@ -1247,7 +1232,7 @@ func (c *Context) mgnTan(args []Value) (Value, error) {
 	return FloatValue(math.Tan(val)), nil
 }
 
-func (c *Context) mgnAsin(args []Value) (Value, error) {
+func (c *Context) mgnAsin(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("asin", args, 1); err != nil {
 		return nil, err
 	}
@@ -1259,13 +1244,13 @@ func (c *Context) mgnAsin(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call asin(%s)", args[0]),
 		}
 	}
 
 	if val > 1 || val < -1 {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("asin() takes a number in range [-1, 1], got %f", val),
 		}
 	}
@@ -1273,7 +1258,7 @@ func (c *Context) mgnAsin(args []Value) (Value, error) {
 	return FloatValue(math.Asin(val)), nil
 }
 
-func (c *Context) mgnAcos(args []Value) (Value, error) {
+func (c *Context) mgnAcos(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("acos", args, 1); err != nil {
 		return nil, err
 	}
@@ -1285,13 +1270,13 @@ func (c *Context) mgnAcos(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call acos(%s)", args[0]),
 		}
 	}
 
 	if val > 1 || val < -1 {
-		return nil, runtimeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("acos() takes a number in range [-1, 1], got %f", val),
 		}
 	}
@@ -1299,7 +1284,7 @@ func (c *Context) mgnAcos(args []Value) (Value, error) {
 	return FloatValue(math.Acos(val)), nil
 }
 
-func (c *Context) mgnAtan(args []Value) (Value, error) {
+func (c *Context) mgnAtan(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("atan", args, 1); err != nil {
 		return nil, err
 	}
@@ -1311,7 +1296,7 @@ func (c *Context) mgnAtan(args []Value) (Value, error) {
 	case FloatValue:
 		val = float64(arg)
 	default:
-		return nil, typeError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("Mismatched types in call atan(%s)", args[0]),
 		}
 	}
@@ -1319,14 +1304,14 @@ func (c *Context) mgnAtan(args []Value) (Value, error) {
 	return FloatValue(math.Atan(val)), nil
 }
 
-func (c *Context) mgnPow(args []Value) (Value, error) {
+func (c *Context) mgnPow(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("pow", args, 2); err != nil {
 		return nil, err
 	}
 
 	var base float64
 	var exp float64
-	err := typeError{
+	err := runtimeError{
 		reason: fmt.Sprintf("Mismatched types in call pow(%s, %s)", args[0], args[1]),
 	}
 
@@ -1336,7 +1321,7 @@ func (c *Context) mgnPow(args []Value) (Value, error) {
 	case FloatValue:
 		base = float64(arg)
 	default:
-		return nil, err
+		return nil, &err
 	}
 
 	switch arg := args[1].(type) {
@@ -1345,15 +1330,15 @@ func (c *Context) mgnPow(args []Value) (Value, error) {
 	case FloatValue:
 		exp = float64(arg)
 	default:
-		return nil, err
+		return nil, &err
 	}
 
 	if base == 0 && exp == 0 {
-		return nil, mathError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("pow(0, 0) is not defined"),
 		}
 	} else if base < 0 && float64(int64(exp)) != exp {
-		return nil, mathError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("pow() of negative number to fractional exponent is not defined"),
 		}
 	}
@@ -1361,14 +1346,14 @@ func (c *Context) mgnPow(args []Value) (Value, error) {
 	return FloatValue(math.Pow(base, exp)), nil
 }
 
-func (c *Context) mgnLog(args []Value) (Value, error) {
+func (c *Context) mgnLog(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("log", args, 2); err != nil {
 		return nil, err
 	}
 
 	var base float64
 	var exp float64
-	err := typeError{
+	err := runtimeError{
 		reason: fmt.Sprintf("Mismatched types in call log(%s, %s)", args[0], args[1]),
 	}
 
@@ -1378,7 +1363,7 @@ func (c *Context) mgnLog(args []Value) (Value, error) {
 	case FloatValue:
 		base = float64(arg)
 	default:
-		return nil, err
+		return nil, &err
 	}
 
 	switch arg := args[1].(type) {
@@ -1387,15 +1372,15 @@ func (c *Context) mgnLog(args []Value) (Value, error) {
 	case FloatValue:
 		exp = float64(arg)
 	default:
-		return nil, err
+		return nil, &err
 	}
 
 	if base == 0 {
-		return nil, mathError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("log(0, _) is not defined"),
 		}
 	} else if exp == 0 {
-		return nil, mathError{
+		return nil, &runtimeError{
 			reason: fmt.Sprintf("log(_, 0) is not defined"),
 		}
 	}
