@@ -1,4 +1,282 @@
 // library for working with Mangolia token streams and syntax trees
 
-// TODO: build.
+{
+	println: println
+	slice: slice
+	contains?: contains?
+	map: map
+	each: each
+	filter: filter
+	reduce: reduce
+} := import('std')
+
+{
+	digit?: digit?
+	word?: word?
+	space?: space?
+	trim: trim
+} := import('str')
+
+fn Tokenizer(source) {
+	index := 0
+	line := 0
+	col := 0
+
+	fn Token(type, val) {
+		type: type
+		val: val
+		pos: [line, col]
+	}
+
+	fn pos [line, col]
+	fn eof? index = len(source)
+	fn peek source.(index)
+	fn peekAhead(n) if index + n > len(source) {
+		true -> ' '
+		_ -> source.(index + n)
+	}
+	fn next {
+		char := source.(index)
+		if index < len(source) {
+			true -> index <- index + 1
+		}
+		char
+	}
+	fn back if index > 0 {
+		true -> index <- index - 1
+	}
+
+	fn readUntilChar(c) {
+		fn sub(acc) if !eof?() & peek() != c {
+			true -> sub(acc << next())
+		}
+		sub('')
+	}
+	fn readValidIdentifier {
+		fn sub(acc) if eof?() {
+			true -> acc
+			_ -> {
+				c := next()
+				if word?(c) | c = '.' {
+					true -> sub(acc << c)
+					_ -> {
+						back()
+						acc
+					}
+				}
+			}
+		}
+		sub('')
+	}
+	fn readValidNumeral {
+		fn sub(acc) if eof?() {
+			true -> acc
+			_ -> {
+				c := next()
+				if digit?(c) | c = '.' {
+					true -> sub(acc << c)
+					_ -> {
+						back()
+						acc
+					}
+				}
+			}
+		}
+		sub('')
+	}
+	fn nextToken if c := next() {
+		',' -> Token(:comma)
+		'.' -> if peek() = '.' & peekAhead(1) = '.' {
+			true -> {
+				next()
+				next()
+				Token(:ellipsis)
+			}
+			_ -> Token(:dot)
+		}
+		'(' -> Token(:leftParen)
+		')' -> Token(:rightParen)
+		'[' -> Token(:leftBracket)
+		']' -> Token(:rightBracket)
+		'{' -> Token(:leftBrace)
+		'}' -> Token(:rightBrace)
+		':' -> if peek() {
+			'=' -> {
+				next()
+				Token(:assign)
+			}
+			_ -> Token(:colon)
+		}
+		'<' -> if peek() {
+			'<' -> {
+				next()
+				Token(:pushArrow)
+			}
+			'-' -> {
+				next()
+				Token(:nonlocalAssign)
+			}
+			'=' -> {
+				next()
+				Token(:leq)
+			}
+			_ -> Token(:less)
+		}
+		'?' -> Token(:qmark)
+		'!' -> if peek() {
+			'=' -> {
+				next()
+				Token(:neq)
+			}
+			_ -> Token(:exclam)
+		}
+		'+' -> Token(:plus)
+		'-' -> if peek() {
+			'>' -> {
+				next()
+				Token(:branchArrow)
+			}
+			_ -> Token(:minus)
+		}
+		'*' -> Token(:times)
+		'/' -> if peek() {
+			'/' -> {
+				// line comment
+				next()
+				commentString := readUntilChar('\n') |> trim()
+				Token(:comment, commentString)
+			}
+			_ -> Token(:divide)
+		}
+		'%' -> Token(:modulus)
+		'^' -> Token(:xor)
+		'&' -> Token(:and)
+		'|' -> if peek() {
+			'>' -> {
+				next()
+				Token(:pipeArrow)
+			}
+			_ -> Token(:or)
+		}
+		'>' -> if peek() {
+			'=' -> {
+				next()
+				Token(:geq)
+			}
+			_ -> Token(:greater)
+		}
+		'=' -> Token(:eq)
+		'\'' -> {
+			// TODO: support literal newlines, nextra tabs collapsed to newlines
+			// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
+			fn sub(payload) if charInString := peek() {
+				? -> payload
+				'\'' -> {
+					next() // eat the quote
+					payload
+				}
+				'\\' -> {
+					if charInString := next() {
+						'n' -> charInString := '\n'
+						'r' -> charInString := '\r'
+						'f' -> charInString := '\f'
+						't' -> charInString := '\t'
+					}
+					sub(payload << charInString)
+				}
+				_ -> sub(payload << charInString)
+			}
+			stringContent := sub('')
+			Token(:stringLiteral, stringContent)
+		}
+		_ -> if digit?(c) {
+			true -> {
+				numberContent := c << readValidNumeral()
+				Token(:numberLiteral, numberContent)
+			}
+			_ -> if payload := c << readValidIdentifier() {
+				'_' -> Token(:underscore)
+				'if' -> Token(:ifKeyword)
+				'fn' -> Token(:fnKeyword)
+				'with' -> Token(:withKeyword)
+				'true' -> Token(:trueLiteral)
+				'false' -> Token(:falseLiteral)
+				_ -> Token(:identifier, payload)
+			}
+		}
+	}
+	fn tokenize {
+		tokens := []
+
+		if peek() = '#' & peekAhead(1) = '!' {
+			true -> readUntilChar('\n')
+			_ -> if !eof?() {
+				true -> next()
+			}
+		}
+
+		// snip whitespace before
+		fn eatSpace if space?(peek()){
+			true -> next()
+		}
+		eatSpace()
+
+		last := Token(:comma)
+		fn sub {
+			next := nextToken()
+
+			// TODO: fix
+			// if [:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(last.type) &
+			// 	[:rightParen, :rightBracket, :rightBrace] |> contains?(next.type) {
+			// 	true -> tokens << Token(:comma)
+			// }
+
+			if next.type {
+				:comment -> next <- last
+				_ -> tokens << next
+			}
+
+			// snip whitespace after
+			fn eatSpaceAutoInsertComma if space?(peek()){
+				true -> if peek() {
+					'\n' -> if [
+						:comma, :leftParen, :leftBracket, :leftBrace, :plus,
+						:minus, :times, :divide, :modulus, :exclam, :greater,
+						:less, :eq, :geq, :leq, :assign, :nonlocalAssign, :dot,
+						:colon, :fnKeyword, :ifKeyword, :withKeyword,
+						:pipeArrow, :branchArrow,
+					] |> contains?(next.type) {
+						true -> ? // do nothing
+						_ -> {
+							next <- Token(:comma)
+							tokens << next
+						}
+					}
+					_ -> next()
+				}
+			}
+			eatSpaceAutoInsertComma()
+
+			if next.type {
+				:comment -> ?
+				_ -> last <- next
+			}
+		}
+		sub()
+
+		if last.type {
+			:comma -> ?
+			_ -> tokens << Token(:comma)
+		}
+
+		tokens
+	}
+
+	{
+		tokenize: tokenize
+	}
+}
+
+// test
+println(Tokenizer('hello := world + program').tokenize())
 
