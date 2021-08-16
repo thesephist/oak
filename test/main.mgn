@@ -1,21 +1,31 @@
 #!/usr/bin/env mgn
 // standard library tests
 
+std := import('std')
 test := import('test')
 
-runner := {
-	std: import('std.test')
-	str: import('str.test')
-	sort: import('sort.test')
-	fmt: import('fmt.test')
+TestRunners := [
+	'std'
+	'str'
+	'sort'
+	'fmt'
+	'syntax'
+]
+
+// allow selection of tests to run with CLI arguments
+TestsToRun := if len(args()) > 2 {
+	true -> std.slice(args(), 2)
+	_ -> TestRunners
 }
 
 t := test.new('Magnolia stdlib')
 
-runner.std.run(t)
-runner.str.run(t)
-runner.sort.run(t)
-runner.fmt.run(t)
+TestRunners |> std.each(fn(name) if TestsToRun |> std.contains?(name) {
+	true -> {
+		runner := import(name + '.test')
+		runner.run(t)
+	}
+})
 
 // only report failed tests
 t.failed()
