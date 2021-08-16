@@ -34,7 +34,7 @@ fn renderToken(token) if token.val {
 // should be filtered out of the list first.
 fn Tokenizer(source) {
 	index := 0
-	line := 0
+	line := 1
 	col := 0
 
 	fn Token(type, val) {
@@ -324,10 +324,4 @@ fn Tokenizer(source) {
 		tokenize: tokenize
 	}
 }
-
-// TODO: finish & test tokenizer, including in standard test suite, and then
-// build 'mgn fmt' on top of this
-// tokenizer := Tokenizer('   \nfn(ay) if x?() { :bee + sea -> 2 } \n2 + 34 = 14.5')
-// tokens := tokenizer.tokenize()
-// tokens |> map(renderToken) |> each(fn(t) println(t))
 

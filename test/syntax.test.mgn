@@ -1,0 +1,28 @@
+// libsyntax tests
+
+std := import('std')
+{
+	Tokenizer: Tokenizer
+} := import('syntax')
+
+fn run(t) {
+	// tokenizer tests
+	{
+		fn tokenize(s) Tokenizer(s).tokenize()
+
+		// TODO: fix this case
+		// 'empty program' |> t.eq(
+		// 	tokenize('')
+		// 	[]
+		// )
+
+		'single identifier' |> t.eq(
+			tokenize('hi')
+			[
+				{type: :identifier, val: 'hi', pos: [1, 2]}
+				{type: :comma, val: ?, pos: [1, 2]}
+			]
+		)
+	}
+}
+
