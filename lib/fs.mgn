@@ -98,3 +98,39 @@ fn writeFile(path, file, withEnd) if withEnd {
 	_ -> writeFileAsync(path, file, withEnd)
 }
 
+fn statFileSync(path) {
+	evt := stat(path)
+	if evt.type {
+		:error -> ?
+		_ -> evt.data
+	}
+}
+
+fn statFileAsync(path, withStat) with stat(path) fn(evt) if evt.type {
+	:error -> withStat(?)
+	_ -> withStat(evt.data)
+}
+
+fn statFile(path, withStat) if withStat {
+	? -> statFileSync(path)
+	_ -> statFileAsync(path, withStat)
+}
+
+fn listFilesSync(path) {
+	evt := ls(path)
+	if evt.type {
+		:error -> ?
+		_ -> evt.data
+	}
+}
+
+fn listFilesAsync(path, withFiles) with ls(path) fn(evt) if evt.type {
+	:error -> withFiles(?)
+	_ -> withFiles(evt.data)
+}
+
+fn listFiles(path, withFiles) if withFiles {
+	? -> listFilesSync(path)
+	_ -> listFilesAsync(path, withFiles)
+}
+
