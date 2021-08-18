@@ -365,5 +365,44 @@ fn run(t) {
 		'contains? existent item' |> t.eq(contains?([:a, :b, :c], :b), true)
 		'contains? duplicate item' |> t.eq(contains?([:a, :b, :c, :d, :c], :c), true)
 	}
+
+	// control flow constructs
+	{
+		{
+			loop: loop
+		} := std
+
+		'loop with 0 count' |> t.eq(
+			{
+				iterations := 0
+				with loop(0) fn {
+					iterations <- iterations + 1
+				}
+				iterations
+			}
+			0
+		)
+		'loop with finite count' |> t.eq(
+			{
+				iterations := 0
+				with loop(12) fn {
+					iterations <- iterations + 1
+				}
+				iterations
+			}
+			12
+		)
+		'loop with negative (infinite) count and breaker' |> t.eq(
+			{
+				iterations := 0
+				with loop(-1) fn(count, break) if count {
+					200 -> break()
+					_ -> iterations <- iterations + 1
+				}
+				iterations
+			}
+			200
+		)
+	}
 }
 
