@@ -388,7 +388,7 @@ func (t *tokenizer) nextToken() token {
 	case '=':
 		return token{kind: eq, pos: t.currentPos()}
 	case '\'':
-		// TODO: support literal newlines, extra tabs collapsed to newlines
+		// TODO: support literal newlines, with extra tabs collapsed to newlines
 		// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 		pos := t.currentPos()
 		payloadBuilder := strings.Builder{}

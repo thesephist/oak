@@ -3,24 +3,58 @@
 std := import('std')
 {
 	Tokenizer: Tokenizer
-} := import('syntax')
+} := import('../lib/syntax')
 
 fn run(t) {
 	// tokenizer tests
 	{
 		fn tokenize(s) Tokenizer(s).tokenize()
 
-		// TODO: fix this case
-		// 'empty program' |> t.eq(
-		// 	tokenize('')
-		// 	[]
+		'empty program' |> t.eq(
+			tokenize('')
+			[]
+		)
+
+		'whitespace-only program' |> t.eq(
+			tokenize('   \n')
+			[{
+				type: :newline
+				val: ?
+				pos: [1, 3]
+			}]
+		)
+
+		'number literals' |> t.eq(
+			tokenize(' 0 1 2.34 -0.567')
+			[
+				{type: :numberLiteral, val: '0', pos: [1, 2]}
+				{type: :numberLiteral, val: '1', pos: [1, 4]}
+				{type: :numberLiteral, val: '2.34', pos: [1, 6]}
+				{type: :minus, val: ?, pos: [1, 11]}
+				{type: :numberLiteral, val: '0.567', pos: [1, 12]}
+				{type: :comma, val: ?, pos: [1, 16]}
+			]
+		)
+
+		// TODO: this case sends tokenizer into infinite loop
+		// 'string literals' |> t.eq(
+		// 	tokenize('\'hello\' \'hi\' \'what\\\'s up\\n\\t\' ')
+		// 	[
+		// 		{type: :stringLiteral, val: 'hello', pos: [1, 1]}
+		// 		{type: :stringLiteral, val: 'hi', pos: [1, 1]}
+		// 		{type: :stringLiteral, val: 'what\'s up\n\t', pos: [1, 1]}
+		// 		{type: :comma, val: ?, pos: [1, 31]}
+		// 	]
 		// )
 
-		'single identifier' |> t.eq(
-			tokenize('hi')
+		'identifiers' |> t.eq(
+			tokenize('hi _hello? whats_up__ nothing! ')
 			[
-				{type: :identifier, val: 'hi', pos: [1, 2]}
-				{type: :comma, val: ?, pos: [1, 2]}
+				{type: :identifier, val: 'hi', pos: [1, 1]}
+				{type: :identifier, val: '_hello?', pos: [1, 4]}
+				{type: :identifier, val: 'whats_up__', pos: [1, 12]}
+				{type: :identifier, val: 'nothing!', pos: [1, 23]}
+				{type: :comma, val: ?, pos: [1, 31]}
 			]
 		)
 	}

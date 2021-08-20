@@ -22,6 +22,7 @@ func expectProgramToReturn(t *testing.T, program string, expected Value) {
 
 func TestEvalEmptyProgram(t *testing.T) {
 	expectProgramToReturn(t, "", null)
+	expectProgramToReturn(t, "   \n", null)
 }
 
 func TestCommentProgram(t *testing.T) {

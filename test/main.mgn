@@ -27,9 +27,6 @@ TestRunners |> std.each(fn(name) if TestsToRun |> std.contains?(name) {
 	}
 })
 
-// only report failed tests
-t.failed()
-
-// exit with right code
+t.reportFailed()
 t.exit()
 

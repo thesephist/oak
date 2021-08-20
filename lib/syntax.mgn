@@ -37,11 +37,13 @@ fn Tokenizer(source) {
 	line := 1
 	col := 0
 
-	fn Token(type, val) {
+	fn TokenAt(type, pos, val) {
 		type: type
 		val: val
-		pos: [line, col]
+		pos: pos
 	}
+
+	fn Token(type, val) TokenAt(type, [line, col], val)
 
 	fn pos [line, col]
 	fn eof? index = len(source)
@@ -117,9 +119,10 @@ fn Tokenizer(source) {
 		',' -> Token(:comma)
 		'.' -> if peek() = '.' & peekAhead(1) = '.' {
 			true -> {
+				pos := [line, col]
 				next()
 				next()
-				Token(:ellipsis)
+				TokenAt(:ellipsis, pos)
 			}
 			_ -> Token(:dot)
 		}
@@ -131,39 +134,45 @@ fn Tokenizer(source) {
 		'}' -> Token(:rightBrace)
 		':' -> if peek() {
 			'=' -> {
+				pos := [line, col]
 				next()
-				Token(:assign)
+				TokenAt(:assign, pos)
 			}
 			_ -> Token(:colon)
 		}
 		'<' -> if peek() {
 			'<' -> {
+				pos := [line, col]
 				next()
-				Token(:pushArrow)
+				TokenAt(:pushArrow, pos)
 			}
 			'-' -> {
+				pos := [line, col]
 				next()
-				Token(:nonlocalAssign)
+				TokenAt(:nonlocalAssign, pos)
 			}
 			'=' -> {
+				pos := [line, col]
 				next()
-				Token(:leq)
+				TokenAt(:leq, pos)
 			}
 			_ -> Token(:less)
 		}
 		'?' -> Token(:qmark)
 		'!' -> if peek() {
 			'=' -> {
+				pos := [line, col]
 				next()
-				Token(:neq)
+				TokenAt(:neq, col)
 			}
 			_ -> Token(:exclam)
 		}
 		'+' -> Token(:plus)
 		'-' -> if peek() {
 			'>' -> {
+				pos := [line, col]
 				next()
-				Token(:branchArrow)
+				TokenAt(:branchArrow, col)
 			}
 			_ -> Token(:minus)
 		}
@@ -171,9 +180,10 @@ fn Tokenizer(source) {
 		'/' -> if peek() {
 			'/' -> {
 				// line comment
+				pos := [line, col]
 				next()
 				commentString := readUntilChar('\n') |> trim()
-				Token(:comment, commentString)
+				TokenAt(:comment, pos, commentString)
 			}
 			_ -> Token(:divide)
 		}
@@ -182,21 +192,23 @@ fn Tokenizer(source) {
 		'&' -> Token(:and)
 		'|' -> if peek() {
 			'>' -> {
+				pos := [line, col]
 				next()
-				Token(:pipeArrow)
+				TokenAt(:pipeArrow, col)
 			}
 			_ -> Token(:or)
 		}
 		'>' -> if peek() {
 			'=' -> {
+				pos := [line, col]
 				next()
-				Token(:geq)
+				TokenAt(:geq, col)
 			}
 			_ -> Token(:greater)
 		}
 		'=' -> Token(:eq)
 		'\'' -> {
-			// TODO: support literal newlines, nextra tabs collapsed to newlines
+			// TODO: support literal newlines, with extra tabs collapsed to newlines
 			// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 			fn sub(payload) if charInString := peek() {
 				? -> payload
@@ -215,22 +227,26 @@ fn Tokenizer(source) {
 				}
 				_ -> sub(payload << charInString)
 			}
+			pos := [line, col]
 			stringContent := sub('')
-			Token(:stringLiteral, stringContent)
+			TokenAt(:stringLiteral, pos, stringContent)
 		}
-		_ -> if digit?(c) {
-			true -> {
-				numberContent := c << readValidNumeral()
-				Token(:numberLiteral, numberContent)
-			}
-			_ -> if payload := c << readValidIdentifier() {
-				'_' -> Token(:underscore)
-				'if' -> Token(:ifKeyword)
-				'fn' -> Token(:fnKeyword)
-				'with' -> Token(:withKeyword)
-				'true' -> Token(:trueLiteral)
-				'false' -> Token(:falseLiteral)
-				_ -> Token(:identifier, payload)
+		_ -> {
+			pos := [line, col]
+			if digit?(c) {
+				true -> {
+					numberContent := c << readValidNumeral()
+					TokenAt(:numberLiteral, pos, numberContent)
+				}
+				_ -> if payload := c << readValidIdentifier() {
+					'_' -> TokenAt(:underscore, pos)
+					'if' -> TokenAt(:ifKeyword, pos)
+					'fn' -> TokenAt(:fnKeyword, pos)
+					'with' -> TokenAt(:withKeyword, pos)
+					'true' -> TokenAt(:trueLiteral, pos)
+					'false' -> TokenAt(:falseLiteral, pos)
+					_ -> TokenAt(:identifier, pos, payload)
+				}
 			}
 		}
 	}
@@ -306,11 +322,14 @@ fn Tokenizer(source) {
 			}
 
 			if eof?() {
-				true -> ?
-				_ -> sub()
+				false -> sub()
 			}
 		}
-		sub()
+
+		// do not start tokenizing into empty file
+		if eof?() {
+			false -> sub()
+		}
 
 		if lastTok.type {
 			:comma -> ?

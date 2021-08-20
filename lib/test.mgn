@@ -12,6 +12,7 @@
 
 fn new(title) {
 	Tests := []
+	Skipped := []
 
 	fn red(s) '[0;31m' + s + '[0;0m'
 	fn green(s) '[0;32m' + s + '[0;0m'
@@ -49,6 +50,10 @@ fn new(title) {
 			0 -> printf('All {{ 0 }} tests passed.', len(Tests))
 			_ -> printf('{{ 0 }} / {{ 1 }} tests passed.', len(Tests) - len(failedTests), len(Tests))
 		}
+		if skipped := len(Skipped) {
+			0 -> ?
+			_ -> printf('{{ 0 }} tests skipped.', skipped)
+		}
 	}
 
 	{
@@ -58,7 +63,10 @@ fn new(title) {
 			result: result
 			expect: expect
 		}
-		failed: fn {
+		skip: fn(name, result, expect) Skipped << {
+			name: name
+		}
+		reportFailed: fn {
 			if failedTests := Tests |> filter(fn(t) !t.passed?) {
 				[] -> ?
 				_ -> {
