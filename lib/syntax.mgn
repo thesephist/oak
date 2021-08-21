@@ -80,6 +80,7 @@ fn Tokenizer(source) {
 	fn readUntilChar(c) {
 		fn sub(acc) if !eof?() & peek() != c {
 			true -> sub(acc << next())
+			_ -> acc
 		}
 		sub('')
 	}
@@ -163,7 +164,7 @@ fn Tokenizer(source) {
 			'=' -> {
 				pos := [line, col]
 				next()
-				TokenAt(:neq, col)
+				TokenAt(:neq, pos)
 			}
 			_ -> Token(:exclam)
 		}
@@ -172,7 +173,7 @@ fn Tokenizer(source) {
 			'>' -> {
 				pos := [line, col]
 				next()
-				TokenAt(:branchArrow, col)
+				TokenAt(:branchArrow, pos)
 			}
 			_ -> Token(:minus)
 		}
@@ -194,7 +195,7 @@ fn Tokenizer(source) {
 			'>' -> {
 				pos := [line, col]
 				next()
-				TokenAt(:pipeArrow, col)
+				TokenAt(:pipeArrow, pos)
 			}
 			_ -> Token(:or)
 		}
@@ -202,7 +203,7 @@ fn Tokenizer(source) {
 			'=' -> {
 				pos := [line, col]
 				next()
-				TokenAt(:geq, col)
+				TokenAt(:geq, pos)
 			}
 			_ -> Token(:greater)
 		}
@@ -210,12 +211,9 @@ fn Tokenizer(source) {
 		'\'' -> {
 			// TODO: support literal newlines, with extra tabs collapsed to newlines
 			// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
-			fn sub(payload) if charInString := peek() {
+			fn sub(payload) if charInString := next() {
 				? -> payload
-				'\'' -> {
-					next() // eat the quote
-					payload
-				}
+				'\'' -> payload
 				'\\' -> {
 					if charInString := next() {
 						'n' -> charInString := '\n'
@@ -278,14 +276,14 @@ fn Tokenizer(source) {
 		fn sub {
 			nextTok := nextToken()
 
-			if [:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type) &
+			if !([:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type)) &
 				[:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) {
 				true -> tokens << Token(:comma)
 			}
 
+			tokens << nextTok
 			if nextTok.type {
 				:comment -> nextTok := lastTok
-				_ -> tokens << nextTok
 			}
 
 			// snip whitespace after

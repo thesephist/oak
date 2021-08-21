@@ -3,58 +3,206 @@
 std := import('std')
 {
 	Tokenizer: Tokenizer
-} := import('../lib/syntax')
+} := import('syntax')
 
 fn run(t) {
 	// tokenizer tests
 	{
 		fn tokenize(s) Tokenizer(s).tokenize()
 
+		fn Token(type, pos, val) {
+			type: type
+			val: val
+			pos: pos
+		}
+
 		'empty program' |> t.eq(
 			tokenize('')
 			[]
 		)
 
+		'comment program' |> t.eq(
+			tokenize('// this is a comment\n//second comment')
+			[
+				Token(:comment, [1, 1], 'this is a comment')
+				Token(:newline, [1, 20])
+				Token(:comment, [2, 1], 'second comment')
+			]
+		)
+
 		'whitespace-only program' |> t.eq(
 			tokenize('   \n')
-			[{
-				type: :newline
-				val: ?
-				pos: [1, 3]
-			}]
+			[
+				Token(:newline, [1, 3])
+			]
 		)
 
 		'number literals' |> t.eq(
 			tokenize(' 0 1 2.34 -0.567')
 			[
-				{type: :numberLiteral, val: '0', pos: [1, 2]}
-				{type: :numberLiteral, val: '1', pos: [1, 4]}
-				{type: :numberLiteral, val: '2.34', pos: [1, 6]}
-				{type: :minus, val: ?, pos: [1, 11]}
-				{type: :numberLiteral, val: '0.567', pos: [1, 12]}
-				{type: :comma, val: ?, pos: [1, 16]}
+				Token(:numberLiteral, [1, 2], '0')
+				Token(:numberLiteral, [1, 4], '1')
+				Token(:numberLiteral, [1, 6], '2.34')
+				Token(:minus, [1, 11])
+				Token(:numberLiteral, [1, 12], '0.567')
+				Token(:comma, [1, 16])
 			]
 		)
 
-		// TODO: this case sends tokenizer into infinite loop
-		// 'string literals' |> t.eq(
-		// 	tokenize('\'hello\' \'hi\' \'what\\\'s up\\n\\t\' ')
-		// 	[
-		// 		{type: :stringLiteral, val: 'hello', pos: [1, 1]}
-		// 		{type: :stringLiteral, val: 'hi', pos: [1, 1]}
-		// 		{type: :stringLiteral, val: 'what\'s up\n\t', pos: [1, 1]}
-		// 		{type: :comma, val: ?, pos: [1, 31]}
-		// 	]
-		// )
+		'string literals' |> t.eq(
+			tokenize('\'hello\' \'hi\' \'what\\\'s up\\n\\t\' ')
+			[
+				Token(:stringLiteral, [1, 1], 'hello')
+				Token(:stringLiteral, [1, 9], 'hi')
+				Token(:stringLiteral, [1, 14], 'what\'s up\n\t')
+				Token(:comma, [1, 30])
+			]
+		)
 
 		'identifiers' |> t.eq(
 			tokenize('hi _hello? whats_up__ nothing! ')
 			[
-				{type: :identifier, val: 'hi', pos: [1, 1]}
-				{type: :identifier, val: '_hello?', pos: [1, 4]}
-				{type: :identifier, val: 'whats_up__', pos: [1, 12]}
-				{type: :identifier, val: 'nothing!', pos: [1, 23]}
-				{type: :comma, val: ?, pos: [1, 31]}
+				Token(:identifier, [1, 1], 'hi')
+				Token(:identifier, [1, 4], '_hello?')
+				Token(:identifier, [1, 12], 'whats_up__')
+				Token(:identifier, [1, 23], 'nothing!')
+				Token(:comma, [1, 31])
+			]
+		)
+
+		'simple binary expression' |> t.eq(
+			tokenize('total := 1 + 2 * 4')
+			[
+				Token(:identifier, [1, 1], 'total')
+				Token(:assign, [1, 7])
+				Token(:numberLiteral, [1, 10], '1')
+				Token(:plus, [1, 12])
+				Token(:numberLiteral, [1, 14], '2')
+				Token(:times, [1, 16])
+				Token(:numberLiteral, [1, 18], '4')
+				Token(:comma, [1, 18])
+			]
+		)
+
+		'delimiters' |> t.eq(
+			tokenize('( [{ hi: :hello }] ) + (2)')
+			[
+				Token(:leftParen, [1, 1])
+				Token(:leftBracket, [1, 3])
+				Token(:leftBrace, [1, 4])
+				Token(:identifier, [1, 6], 'hi')
+				Token(:colon, [1, 8])
+				Token(:colon, [1, 10])
+				Token(:identifier, [1, 11], 'hello')
+				Token(:comma, [1, 17])
+				Token(:rightBrace, [1, 17])
+				Token(:comma, [1, 18])
+				Token(:rightBracket, [1, 18])
+				Token(:comma, [1, 20])
+				Token(:rightParen, [1, 20])
+				Token(:plus, [1, 22])
+				Token(:leftParen, [1, 24])
+				Token(:numberLiteral, [1, 25], '2')
+				Token(:comma, [1, 26])
+				Token(:rightParen, [1, 26])
+				Token(:comma, [1, 26])
+			]
+		)
+
+		'list literal' |> t.eq(
+			tokenize('[1, a, :first]')
+			[
+				Token(:leftBracket, [1, 1])
+				Token(:numberLiteral, [1, 2], '1')
+				Token(:comma, [1, 3])
+				Token(:identifier, [1, 5], 'a')
+				Token(:comma, [1, 6])
+				Token(:colon, [1, 8])
+				Token(:identifier, [1, 9], 'first')
+				Token(:comma, [1, 14])
+				Token(:rightBracket, [1, 14])
+				Token(:comma, [1, 14])
+			]
+		)
+
+		'list literal with newlines' |> t.eq(
+			tokenize('[\n\t1,\n\ta,\n\t:first\n]')
+			[
+				Token(:leftBracket, [1, 1])
+				Token(:newline, [1, 1])
+				Token(:numberLiteral, [2, 2], '1')
+				Token(:comma, [2, 3])
+				Token(:newline, [2, 3])
+				Token(:identifier, [3, 2], 'a')
+				Token(:comma, [3, 3])
+				Token(:newline, [3, 3])
+				Token(:colon, [4, 2])
+				Token(:identifier, [4, 3], 'first')
+				Token(:comma, [4, 0])
+				Token(:newline, [4, 0])
+				Token(:rightBracket, [5, 1])
+				Token(:comma, [5, 1])
+			]
+		)
+
+		'object literal' |> t.eq(
+			tokenize('{a: :bee}')
+			[
+				Token(:leftBrace, [1, 1])
+				Token(:identifier, [1, 2], 'a')
+				Token(:colon, [1, 3])
+				Token(:colon, [1, 5])
+				Token(:identifier, [1, 6], 'bee')
+				Token(:comma, [1, 9])
+				Token(:rightBrace, [1, 9])
+				Token(:comma, [1, 9])
+			]
+		)
+
+		'object literal with newlines' |> t.eq(
+			tokenize('{\n1: 2\n3: ?\n}')
+			[
+				Token(:leftBrace, [1, 1])
+				Token(:newline, [1, 1])
+				Token(:numberLiteral, [2, 1], '1')
+				Token(:colon, [2, 2])
+				Token(:numberLiteral, [2, 4], '2')
+				Token(:comma, [2, 0])
+				Token(:newline, [2, 0])
+				Token(:numberLiteral, [3, 1], '3')
+				Token(:colon, [3, 2])
+				Token(:qmark, [3, 4])
+				Token(:comma, [3, 4])
+				Token(:newline, [3, 4])
+				Token(:rightBrace, [4, 1])
+				Token(:comma, [4, 1])
+			]
+		)
+
+		'basic function' |> t.eq(
+			tokenize('fn a(b, c) if a |> c {\nd -> e\n}')
+			[
+				Token(:fnKeyword, [1, 1])
+				Token(:identifier, [1, 4], 'a')
+				Token(:leftParen, [1, 5])
+				Token(:identifier, [1, 6], 'b')
+				Token(:comma, [1, 7])
+				Token(:identifier, [1, 9], 'c')
+				Token(:comma, [1, 10])
+				Token(:rightParen, [1, 10])
+				Token(:ifKeyword, [1, 12])
+				Token(:identifier, [1, 15], 'a')
+				Token(:pipeArrow, [1, 17])
+				Token(:identifier, [1, 20], 'c')
+				Token(:leftBrace, [1, 22])
+				Token(:newline, [1, 22])
+				Token(:identifier, [2, 1], 'd')
+				Token(:branchArrow, [2, 3])
+				Token(:identifier, [2, 6], 'e')
+				Token(:comma, [2, 0])
+				Token(:newline, [2, 0])
+				Token(:rightBrace, [3, 1])
+				Token(:comma, [3, 1])
 			]
 		)
 	}
