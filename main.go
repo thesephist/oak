@@ -25,7 +25,14 @@ Run mgn with no arguments to start an interactive repl.
 
 func main() {
 	if len(os.Args) > 1 {
-		runFile()
+		arg := os.Args[1]
+
+		// first, attempt to run argv[1] as a CLI command, and
+		// fallback to reading a file
+		isCommand := performCommandIfExists(arg)
+		if !isCommand {
+			runFile(arg)
+		}
 		return
 	}
 
@@ -73,8 +80,7 @@ func runRepl() {
 	}
 }
 
-func runFile() {
-	filePath := os.Args[1]
+func runFile(filePath string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("Could not open %s: %s\n", filePath, err)
@@ -84,12 +90,11 @@ func runFile() {
 
 	ctx := NewContext(path.Dir(filePath))
 	ctx.LoadBuiltins()
+	defer ctx.Wait()
 
 	_, err = ctx.Eval(file)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	ctx.Wait()
 }
