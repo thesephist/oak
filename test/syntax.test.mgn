@@ -3,6 +3,7 @@
 std := import('std')
 {
 	Tokenizer: Tokenizer
+	Parser: Parser
 } := import('syntax')
 
 fn run(t) {
@@ -205,6 +206,19 @@ fn run(t) {
 				Token(:comma, [3, 1])
 			]
 		)
+	}
+
+	// parser tests
+	{
+		fn parse(s) {
+			tokens := Tokenizer(s).tokenize()
+			Parser(tokens).parse()
+		}
+
+		// 'empty program' |> t.eq(
+		// 	parse('')
+		// 	[]
+		// )
 	}
 }
 

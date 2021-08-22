@@ -14,6 +14,7 @@
 	digit?: digit?
 	word?: word?
 	space?: space?
+	contains?: strContains?
 	trim: trim
 } := import('str')
 
@@ -339,6 +340,378 @@ fn Tokenizer(source) {
 
 	{
 		tokenize: tokenize
+	}
+}
+
+// Parser takes a raw token stream, potentially including newlines and
+// comments, and generates a list of clean Magnolia AST nodes.
+fn Parser(tokens) {
+	index := 0
+	minBinaryPrec := [0]
+
+	fn error(msg, pos) {
+		type: :error
+		error: msg
+		pos: pos
+	}
+
+	fn lastMinPrec minBinaryPrec.(len(minBinaryPrec) - 1)
+	fn pushMinPrec(prec) minBinaryPrec << prec
+	fn popMinPrec minBinaryPrec <- slice(minBinaryPrec, 1, len(minBinaryPrec) - 1)
+	fn eof? index = len(tokens)
+	fn peek tokens.(index)
+	fn peekAhead(n) if index + n > len(tokens) {
+		true -> {type: :comma}
+		_ -> tokens.(index + n)
+	}
+	fn next {
+		tok := tokens.(index)
+		if index < len(tokens) {
+			true -> index <- index + 1
+		}
+		tok
+	}
+	fn back if index > 0 {
+		true -> index <- index - 1
+	}
+	fn expect(type) if eof?() {
+		true -> error(format('Unexpected end of input, expected {{0}}', type))
+		_ -> {
+			next := next()
+			if next.type {
+				type -> next
+				_ -> error(format('Unexpected token {{0}}, expected {{1}}', next, type), next.pos)
+			}
+		}
+	}
+	fn readUntilTokenType(type) {
+		tokens := []
+		fn sub if !eof() & peek().type != type {
+			true -> {
+				tokens << next()
+				sub()
+			}
+			_ -> tokens
+		}
+		sub()
+	}
+
+	fn notError(x, withNotErr) if x.type {
+		:error -> x
+		_ -> withNotErr(x)
+	}
+
+	// parseUnit is responsible for parsing the smallest complete syntactic "units"
+	// of Magnolia's syntax, like literals including function literals, grouped
+	// expressions in blocks, and if/with expressions.
+	fn parseUnit {
+		tok := next()
+		if tok.type {
+			:qmark -> { type: :null, tok: tok }
+			:stringLiteral -> {
+				type: :string
+				tok: tok
+				payload: tok.payload
+			}
+			:numberLiteral -> if tok.payload |> strContains?('.') {
+				true -> if parsed := float(tok.payload) {
+					? -> error(format('Could not parse floating point number {{0}}', tok.payload), tok.pos)
+					_ -> {
+						type: :number
+						tok: tok
+						int?: false
+						payload: parsed
+					}
+				}
+				_ -> if parsed := int(tok.payload) {
+					? -> error(format('Could not parse integer number {{0}}', tok.payload), tok.pos)
+					_ -> {
+						type: :number
+						tok: tok
+						int?: true
+						payload: parsed
+					}
+				}
+			}
+			:trueLiteral -> {
+				type: :boolean
+				tok: tok
+				payload: true
+			}
+			:falseLiteral -> {
+				type: :boolean
+				tok: tok
+				payload: false
+			}
+			:colon -> if peek().type {
+				:identifier -> {
+					type: :atom
+					tok: tok
+					payload: next().payload
+				}
+				_ -> error(format('Expected identifier after ":", got {{0}}', peek()), peek().pos)
+			}
+			:leftBracket -> {
+				pushMinPrec(0)
+
+				itemNodes := []
+				fn sub if !eof?() & peek().kind != :rightBracket {
+					true -> with notError(node := parseNode) fn {
+						with notError(err := expect(:comma)) fn {
+							itemNodes << node
+							sub()
+						}
+					}
+				}
+				with notError(sub()) {
+					with notError(err := expect(:rightBracket)) fn {
+						popMinPrec()
+
+						{
+							type: :list
+							tok: tok
+							elems: itemNodes
+						}
+					}
+				}
+			}
+			:leftBrace -> {
+				pushMinPrec(0)
+
+				// empty {} is always considered an object -- an empty block is illegal
+				if peek().type {
+					:rightBrace -> {
+						next() // eat the rightBrace
+						popMinPrec()
+
+						{
+							type: :object
+							tok: tok
+							entries: []
+						}
+					}
+					_ -> with notError(firstExpr := parseNode()) fn if eof?() {
+						true -> error('Unexpected end of input inside block or object', tok.pos)
+						_ -> if peek().type {
+							:colon -> {
+								// it's an object
+								next() // eat the colon
+								with notError(valExpr := parseNode()) fn {
+									with notError(expect(:comma)) fn {
+										entries := [{ key: firstExpr, val: valExpr }]
+
+										fn sub if !eof?() & peek().type != :rightBrace {
+											true -> with notError(key := parseNode()) fn {
+												with notError(expect(:colon)) fn {
+													with notError(val := parseNode()) fn {
+														with notError(expect(:comma)) fn {
+															entries << { key: key, val: val }
+															sub()
+														}
+													}
+												}
+											}
+										}
+										with notError(sub()) fn {
+											with notError(expect(:rightBrace)) fn {
+												popMinPrec()
+
+												{
+													type: :object
+													tok: tok
+													entries: entries
+												}
+											}
+										}
+									}
+								}
+							}
+							_ -> with notError(expect(:comma)) fn {
+								// it's a block
+								exprs := []
+
+								fn sub if !eof?() & peek().type != :rightBrace {
+									true -> with notError(expr := parseNode()) fn {
+										with notError(expect(:comma)) fn {
+											exprs << expr
+											sub()
+										}
+									}
+								}
+								with notError(sub()) fn {
+									with notError(expect(:rightBrace)) fn {
+										popMinPrec()
+
+										{
+											type: :block
+											tok: tok
+											exprs: exprs
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			:fnKeyword -> {
+				pushMinPrec(0)
+
+				name := if peek().type {
+					// optional named fn
+					:identifier -> next().payload
+					_ -> ''
+				}
+
+				args := []
+				restArg := ''
+
+				fn parseBody {
+					body := ?
+					// Exception to the "{} is empty object" rule is that `fn {}` parses as
+					// a function with an empty block as a body.
+					if peek().type = :leftBrace & peekAhead(1) = :rightBrace {
+						true -> {
+							blockStartTok := next()
+							next()
+							body <- {
+								type: :block
+								tok: blockStartTok
+								exprs: []
+							}
+						}
+						false -> with notError(body <- parseNode()) fn {
+							// pass
+						}
+					}
+
+					{
+						type: :function
+						tok: tok
+						args: args
+						restArg: restArg
+						body: body
+					}
+				}
+
+				if peek().type {
+					:leftParen -> {
+						// optional argument list
+						next() // eat the leftParen
+
+						fn sub if !eof?() & peek().type != :rightParen {
+							true -> {
+								arg := expect(:identifier)
+								if arg.type {
+									:error -> {
+										back() // try again
+
+										with notError(expect(:underscore)) fn {
+											args << ''
+											with notError(:comma) fn {
+												sub()
+											}
+										}
+									}
+									:ellipsis -> {
+										restArg <- arg.payload
+										next() // eat the ellipsis
+										with notError(expect(:comma)) fn {
+											sub()
+										}
+									}
+									_ -> {
+										args << arg.payload
+										with notError(expect(:comma)) fn {
+											sub()
+										}
+									}
+								}
+							}
+						}
+						with notError(expect(:rightParen)) fn {
+							parseBody()
+						}
+					}
+					_ -> parseBody()
+				}
+			}
+			:underscore -> {
+				type: :empty
+				tok: tok
+			}
+			:identifier -> {
+				type: :identifier
+				tok: tok
+				payload: tok.payload
+			}
+			:minus -> with notError(right := parseSubNode()) fn {
+				type: :unary
+				tok: :tok
+				op: tok.type
+				right: right
+			}
+			:exclam -> with notError(right := parseSubNode()) fn {
+				type: :unary
+				tok: :tok
+				op: tok.type
+				right: right
+			}
+			:ifKeyword -> {
+				pushMinPrec(0)
+				// TODO: if keyword
+			}
+			:withKeyword -> {
+				pushMinPrec(0)
+				// TODO: with keyword
+			}
+			:leftParen -> {
+				pushMinPrec(0)
+				// TODO: left paren
+			}
+			_ -> error(format('Unexpected token {{0}} at start of unit', tok), tok.pos)
+		}
+	}
+
+	fn infixOpPrecedence(op) if op {
+		:plus -> 40
+		:minus -> 40
+		:times -> 50
+		:divide -> 50
+		// TODO: more precedences
+		_ -> -1
+	}
+
+	// parseSubNode is responsible for parsing independent "terms" in the Magnolia
+	// syntax, like terms in unary and binary expressions and in pipelines. It is
+	// in between parseUnit and parseNode.
+	fn parseSubNode {
+		// TODO: parseSubNode
+	}
+
+	// parseNode returns the next top-level astNode from the parser
+	fn parseNode {
+		// TODO: parseNode
+	}
+
+	// for parsing purposes, we must ignore non-semantic tokens
+	tokens := tokens |> filter(fn(tok) if tok.type {
+		:newline -> false
+		:comment -> false
+		_ -> true
+	})
+
+	// parse
+	nodes := []
+	fn sub if !eof?() {
+		true -> with notError(node := parseNode()) fn {
+			with notError(expect(:comma)) fn {
+				nodes << node
+			}
+		}
+	}
+	with notError(sub()) fn {
+		nodes
 	}
 }
 
