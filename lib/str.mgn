@@ -16,11 +16,7 @@ upper? := checkRange(codepoint('A') - 1, codepoint('Z') + 1)
 lower? := checkRange(codepoint('a') - 1, codepoint('z') + 1)
 digit? := checkRange(codepoint('0') - 1, codepoint('9') + 1)
 space? := fn(c) if c {
-	' ' -> true
-	'\t' -> true
-	'\n' -> true
-	'\r' -> true
-	'\f' -> true
+	' ', '\t', '\n', '\r', '\f' -> true
 	_ -> false
 }
 fn letter?(c) upper?(c) | lower?(c)

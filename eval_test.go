@@ -283,6 +283,16 @@ func TestBasicIfExpr(t *testing.T) {
 	}`, MakeString("four"))
 }
 
+func TestIfExprWithMultiTarget(t *testing.T) {
+	for _, i := range []int{11, 12, 13} {
+		expectProgramToReturn(t, fmt.Sprintf(`if %d {
+			10 -> :wrong
+			11, 12, 13 -> :right
+			_ -> :wrong2
+		}`, i), AtomValue("right"))
+	}
+}
+
 func TestIfExprWithEmpty(t *testing.T) {
 	expectProgramToReturn(t, `if 10 + 2 {
 		12 -> 'twelve'

@@ -645,13 +645,7 @@ fn Parser(tokens) {
 				tok: tok
 				payload: tok.payload
 			}
-			:minus -> with notError(right := parseSubNode()) fn {
-				type: :unary
-				tok: :tok
-				op: tok.type
-				right: right
-			}
-			:exclam -> with notError(right := parseSubNode()) fn {
+			:minus, :exclam -> with notError(right := parseSubNode()) fn {
 				type: :unary
 				tok: :tok
 				op: tok.type
@@ -674,11 +668,15 @@ fn Parser(tokens) {
 	}
 
 	fn infixOpPrecedence(op) if op {
-		:plus -> 40
-		:minus -> 40
-		:times -> 50
-		:divide -> 50
-		// TODO: more precedences
+		:plus, :minus -> 40
+		:times, :divide -> 50
+		:modulus -> 80
+		:eq, :greater, :less, :geq, :leq, :neq -> 30
+		:and -> 20
+		:xor -> 15
+		:or -> 10
+		// assignment-like semantics
+		:pushArrow -> 1
 		_ -> -1
 	}
 

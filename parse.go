@@ -450,6 +450,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		if p.peek().kind == identifier {
 			return atomNode{payload: p.next().payload, tok: &tok}, nil
 		}
+		// TODO: let keywords be valid atoms
 		return nil, parseError{
 			reason: fmt.Sprintf("Expected identifier after ':', got %s", p.peek()),
 			pos:    tok.pos,
@@ -671,9 +672,19 @@ func (p *parser) parseUnit() (astNode, error) {
 
 		branches := []ifBranch{}
 		for !p.isEOF() && p.peek().kind != rightBrace {
-			target, err := p.parseNode()
-			if err != nil {
-				return nil, err
+			targets := []astNode{}
+			for !p.isEOF() && p.peek().kind != branchArrow {
+				target, err := p.parseNode()
+				if err != nil {
+					return nil, err
+				}
+				if p.peek().kind != branchArrow {
+					if _, err := p.expect(comma); err != nil {
+						return nil, err
+					}
+				}
+
+				targets = append(targets, target)
 			}
 			if _, err := p.expect(branchArrow); err != nil {
 				return nil, err
@@ -687,10 +698,21 @@ func (p *parser) parseUnit() (astNode, error) {
 				return nil, err
 			}
 
-			branches = append(branches, ifBranch{
-				target: target,
-				body:   body,
-			})
+			// We want to support multi-target branches, but don't want to
+			// incur the performance overhead in the interpreter/evaluator of
+			// keeping every single target as a Go slice, when the vast
+			// majority of targets will be single-value, which requires just a
+			// pointer to an astNode.
+			//
+			// So instead of doing that, we penalize the multi-value case by
+			// essentially considering it syntax sugar and splitting such
+			// branches into multiple AST branches, each with one target value.
+			for _, target := range targets {
+				branches = append(branches, ifBranch{
+					target: target,
+					body:   body,
+				})
+			}
 		}
 		if _, err := p.expect(rightBrace); err != nil {
 			return nil, err
