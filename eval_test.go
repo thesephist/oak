@@ -287,10 +287,20 @@ func TestIfExprWithMultiTarget(t *testing.T) {
 	for _, i := range []int{11, 12, 13} {
 		expectProgramToReturn(t, fmt.Sprintf(`if %d {
 			10 -> :wrong
-			11, 12, 13 -> :right
+			11, 5 + 7, { 10 + 3 } -> :right
 			_ -> :wrong2
 		}`, i), AtomValue("right"))
 	}
+}
+
+func TestNestedIfExpr(t *testing.T) {
+	expectProgramToReturn(t, `if 3 {
+		10, if true {
+			true -> 10
+			_ -> 3
+		} -> 'hi'
+		100, 3 -> 'hello'
+	}`, MakeString("hello"))
 }
 
 func TestIfExprWithEmpty(t *testing.T) {
