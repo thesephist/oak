@@ -566,22 +566,14 @@ fn Parser(tokens) {
 				args := []
 				restArg := ''
 
-				fn parseBody {
-					body := ?
+				fn parseBody with notError(body := parseNode()) fn {
 					// Exception to the "{} is empty object" rule is that `fn
 					// {}` parses as a function with an empty block as a body.
-					if peek().type = :leftBrace & peekAhead(1) = :rightBrace {
-						true -> {
-							blockStartTok := next()
-							next()
-							body <- {
-								type: :block
-								tok: blockStartTok
-								exprs: []
-							}
-						}
-						false -> with notError(body <- parseNode()) fn {
-							// pass
+					if body.type = :object & len(body.entries) = 0 {
+						true -> body <- {
+							type: :block
+							tok: body.tok
+							exprs: []
 						}
 					}
 

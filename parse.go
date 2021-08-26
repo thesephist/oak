@@ -620,19 +620,15 @@ func (p *parser) parseUnit() (astNode, error) {
 			}
 		}
 
+		body, err := p.parseNode()
+		if err != nil {
+			return nil, err
+		}
+
 		// Exception to the "{} is empty object" rule is that `fn {}` parses as
 		// a function with an empty block as a body
-		var body astNode
-		var err error
-		if p.peek().kind == leftBrace && p.peekAhead(1).kind == rightBrace {
-			blockStartTok := p.next()
-			p.next()
-			body = blockNode{exprs: []astNode{}, tok: &blockStartTok}
-		} else {
-			body, err = p.parseNode()
-			if err != nil {
-				return nil, err
-			}
+		if objBody, ok := body.(objectNode); ok && len(objBody.entries) == 0 {
+			body = blockNode{exprs: []astNode{}, tok: objBody.tok}
 		}
 
 		return fnNode{
