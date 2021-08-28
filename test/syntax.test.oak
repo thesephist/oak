@@ -4,7 +4,7 @@ std := import('std')
 {
 	Tokenizer: Tokenizer
 	Parser: Parser
-} := import('../lib/syntax')
+} := import('syntax')
 
 fn run(t) {
 	// tokenizer tests
