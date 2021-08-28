@@ -218,21 +218,21 @@ func TestPushArrowPrecedence(t *testing.T) {
 }
 
 func TestUnaryExpr(t *testing.T) {
-	expectProgramToReturn(t, `!true`, mgnFalse)
-	expectProgramToReturn(t, `!(false | true)`, mgnFalse)
+	expectProgramToReturn(t, `!true`, oakFalse)
+	expectProgramToReturn(t, `!(false | true)`, oakFalse)
 
 	expectProgramToReturn(t, `-546`, IntValue(-546))
 	expectProgramToReturn(t, `-3.250`, FloatValue(-3.25))
 }
 
 func TestUnaryBindToProperty(t *testing.T) {
-	expectProgramToReturn(t, `!!false`, mgnFalse)
+	expectProgramToReturn(t, `!!false`, oakFalse)
 	expectProgramToReturn(t, `--3`, IntValue(3))
 	expectProgramToReturn(t, `
 	obj := {k: false, n: 10}
 	[!obj.k, -obj.n]
 	`, MakeList(
-		mgnTrue,
+		oakTrue,
 		IntValue(-10),
 	))
 }
@@ -324,7 +324,7 @@ func TestIfExprInFunction(t *testing.T) {
 		_ -> false
 	}
 	even?(100)
-	`, mgnTrue)
+	`, oakTrue)
 }
 
 func TestComplexIfExprTarget(t *testing.T) {
@@ -339,7 +339,7 @@ func TestComplexIfExprTarget(t *testing.T) {
 	`, MakeList(
 		AtomValue("abc"),
 		AtomValue("xyz"),
-		mgnFalse,
+		oakFalse,
 	))
 }
 
@@ -434,25 +434,25 @@ func TestStringAssign(t *testing.T) {
 func TestStringAppendByPush(t *testing.T) {
 	expectProgramToReturn(t, `
 	s := {
-		payload: 'Magnolia'
+		payload: 'Oak'
 	}
 	[s.payload << ' language', s.payload]
 	`, MakeList(
-		MakeString("Magnolia language"),
-		MakeString("Magnolia language"),
+		MakeString("Oak language"),
+		MakeString("Oak language"),
 	))
 }
 
 func TestStringAppendByAssign(t *testing.T) {
 	expectProgramToReturn(t, `
 	s := {
-		payload: 'Magnolia'
+		payload: 'Oak'
 	}
 	t := s.payload
 	[s.payload.(len(s.payload)) := ' language', s.payload]
 	`, MakeList(
-		MakeString("Magnolia language"),
-		MakeString("Magnolia language"),
+		MakeString("Oak language"),
+		MakeString("Oak language"),
 	))
 }
 

@@ -1,10 +1,10 @@
-# Magnolia programming language
+# Oak programming language
 
 This is a work-in-progress rough draft of things that will end up in a rough informal language specification.
 
 ## Syntax
 
-Mgn, like [Ink](https://dotink.co), has automatic comma insertion at end of lines. This means if a comma can be inserted at the end of a line, it will automatically be inserted.
+Oak, like [Ink](https://dotink.co), has automatic comma insertion at end of lines. This means if a comma can be inserted at the end of a line, it will automatically be inserted.
 
 ```
 program := expr*
@@ -154,7 +154,7 @@ fn factorial(n) if n <= 1 {
 n |> times(fn(i) std.println(i))
 names |> join(', ')
 scores |> sum()
-mgnFiles := fileNames |> filter(fn(name) name |> endsWith?('.mgn')) 
+oakFiles := fileNames |> filter(fn(name) name |> endsWith?('.oak')) 
 fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
 ```
 

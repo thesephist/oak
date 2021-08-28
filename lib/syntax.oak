@@ -29,10 +29,10 @@ fn renderToken(token) if token.val {
 	_ -> format('{{ 0 }}({{ 1 }}) {{ 2 }}', string(token.type), token.val, renderPos(token.pos))
 }
 
-// Tokenizer is a full-fidelity, lossless tokenizer for Magnolia. It produces a
-// stream of valid Magnolia token types, plus any shebang, newlines, and
-// comments it finds. To produce an AST, those non-standard non-AST tokens
-// should be filtered out of the list first.
+// Tokenizer is a full-fidelity, lossless tokenizer for Oak. It produces a
+// stream of valid Oak token types, plus any shebang, newlines, and comments it
+// finds. To produce an AST, those non-standard non-AST tokens should be
+// filtered out of the list first.
 fn Tokenizer(source) {
 	index := 0
 	line := 1
@@ -344,7 +344,7 @@ fn Tokenizer(source) {
 }
 
 // Parser takes a raw token stream, potentially including newlines and
-// comments, and generates a list of clean Magnolia AST nodes.
+// comments, and generates a list of clean Oak AST nodes.
 fn Parser(tokens) {
 	index := 0
 	minBinaryPrec := [0]
@@ -401,9 +401,9 @@ fn Parser(tokens) {
 		_ -> withNotErr(x)
 	}
 
-	// parseUnit is responsible for parsing the smallest complete syntactic "units"
-	// of Magnolia's syntax, like literals including function literals, grouped
-	// expressions in blocks, and if/with expressions.
+	// parseUnit is responsible for parsing the smallest complete syntactic
+	// "units" of Oak's syntax, like literals including function literals,
+	// grouped expressions in blocks, and if/with expressions.
 	fn parseUnit {
 		tok := next()
 		if tok.type {
@@ -568,8 +568,8 @@ fn Parser(tokens) {
 
 				fn parseBody {
 					body := ?
-					// Exception to the "{} is empty object" rule is that `fn {}` parses as
-					// a function with an empty block as a body.
+					// Exception to the "{} is empty object" rule is that `fn
+					// {}` parses as a function with an empty block as a body.
 					if peek().type = :leftBrace & peekAhead(1) = :rightBrace {
 						true -> {
 							blockStartTok := next()
@@ -680,9 +680,9 @@ fn Parser(tokens) {
 		_ -> -1
 	}
 
-	// parseSubNode is responsible for parsing independent "terms" in the Magnolia
-	// syntax, like terms in unary and binary expressions and in pipelines. It is
-	// in between parseUnit and parseNode.
+	// parseSubNode is responsible for parsing independent "terms" in the Oak
+	// syntax, like terms in unary and binary expressions and in pipelines. It
+	// is in between parseUnit and parseNode.
 	fn parseSubNode {
 		// TODO: parseSubNode
 	}

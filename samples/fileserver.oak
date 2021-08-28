@@ -23,7 +23,7 @@ with server.route('/*staticPath') fn(params) {
 with server.route('/') fn(params) fn(req, end) if req.method {
 	'GET' -> end({
 		status: 200
-		body: 'Welcome to Magnolia!'
+		body: 'Welcome to Oak!'
 	})
 	_ -> end(http.MethodNotAllowed)
 }

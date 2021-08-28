@@ -9,15 +9,15 @@ tests:
 	go test .
 t: tests
 
-# run Magnolia tests
-test-mgn:
-	go run -race . test/main.mgn
-tm: test-mgn
+# run Oak tests
+test-oak:
+	go run -race . test/main.oak
+tk: test-oak
 
-# install as "mgn" binary
+# install as "oak" binary
 install:
-	cp tools/magnolia.vim ~/.vim/syntax/magnolia.vim
-	go build -o ${GOPATH}/bin/mgn
+	cp tools/oak.vim ~/.vim/syntax/oak.vim
+	go build -o ${GOPATH}/bin/oak
 
 # ci in travis
-ci: tests test-mgn
+ci: tests test-oak

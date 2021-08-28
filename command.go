@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-//go:embed cmd/version.mgn
+//go:embed cmd/version.oak
 var cmdversion string
 
-//go:embed cmd/help.mgn
+//go:embed cmd/help.oak
 var cmdhelp string
 
 var cliCommands = map[string]string{

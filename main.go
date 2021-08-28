@@ -12,14 +12,14 @@ import (
 const version = "0.1"
 
 const helpMsg = `
-Magnolia is a small, dynamic, functional programming language.
+Oak is a small, dynamic, functional programming language.
 
-By default, mgn interprets from standard input.
-	mgn < main.mgn
-Run Magnolia programs from a source file by passing it to mgn.
-	mgn main.mgn
-Run mgn with no arguments to start an interactive repl.
-	mgn
+By default, oak interprets from standard input.
+	oak < main.oak
+Run Oak programs from a source file by passing it to oak.
+	oak main.oak
+Run oak with no arguments to start an interactive repl.
+	oak
 	>
 `
 

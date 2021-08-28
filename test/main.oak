@@ -1,4 +1,4 @@
-#!/usr/bin/env mgn
+#!/usr/bin/env oak
 // standard library tests
 
 std := import('std')
@@ -18,7 +18,7 @@ TestsToRun := if len(args()) > 2 {
 	_ -> TestRunners
 }
 
-t := test.new('Magnolia stdlib')
+t := test.new('Oak stdlib')
 
 TestRunners |> std.each(fn(name) if TestsToRun |> std.contains?(name) {
 	true -> {

@@ -1,4 +1,4 @@
-// The first Magnolia program
+// The first Oak program
 
 std := {
 	println: fn(x) print(string(x) + '\n')

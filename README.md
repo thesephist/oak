@@ -1,10 +1,10 @@
-# Magnolia 🌺
+# Oak 🌳
 
-[![Build Status](https://travis-ci.com/thesephist/magnolia.svg?branch=main)](https://travis-ci.com/thesephist/magnolia)
+[![Build Status](https://travis-ci.com/thesephist/oak.svg?branch=main)](https://travis-ci.com/thesephist/oak)
 
-**Magnolia** is an expressive, dynamically typed programming language. It takes the best parts of my experience with [Ink](https://dotink.co/), and adds what I missed and removes what didn't work to get a language that feels just as small and simple, but much more ergonomic and capable.
+**Oak** is an expressive, dynamically typed programming language. It takes the best parts of my experience with [Ink](https://dotink.co/), and adds what I missed and removes what didn't work to get a language that feels just as small and simple, but much more ergonomic and capable.
 
-Here's an example Magnolia program.
+Here's an example Oak program.
 
 ```js
 std := import('std')
@@ -23,7 +23,7 @@ std.range(1, 101) |> std.each(fn(n) {
 
 ## Overview
 
-Magnolia has 7 primitive and 3 complex types.
+Oak has 7 primitive and 3 complex types.
 
 ```js
 ?        // null, also "()"
@@ -45,9 +45,9 @@ These types mostly behave as you'd expect. Some notable details:
 - Both ints and floats are full 64-bit.
 - Strings are mutable byte arrays, also used for arbitrary data storage in memory, like in Lua. For immutable strings, use atoms.
 - Lists are backed by a vector data structure -- appending and indexing is cheap, but cloning is not
-- For lists and objects, equality is defined as deep equality. There is no identity equality in Magnolia.
+- For lists and objects, equality is defined as deep equality. There is no identity equality in Oak.
 
-We define a function in Magnolia with the `fn` keyword. A name is optional, and if given, will define that function in that scope. If there are no arguments, the `()` may be omitted.
+We define a function in Oak with the `fn` keyword. A name is optional, and if given, will define that function in that scope. If there are no arguments, the `()` may be omitted.
 
 ```js
 fn double(n) 2 * n
@@ -56,7 +56,7 @@ fn speak {
 }
 ```
 
-Besides the normal set of arithmetic operators, Magnolia has a few strange operators.
+Besides the normal set of arithmetic operators, Oak has a few strange operators.
 
 - The **assignment operator** `:=` binds values on the right side to names on the left, potentially by destructuring an object or list. For example:
 
@@ -99,7 +99,7 @@ Besides the normal set of arithmetic operators, Magnolia has a few strange opera
     10 |> add(20) |> add(3) // 33
     ```
 
-Magnolia uses one main construct for control flow -- the `if` match expression. Unlike a traditional `if` expression, which can only test for truthy and falsy values, Magnolia's `if` acts like a sophisticated switch-case, comparing values until the right match is reached.
+Oak uses one main construct for control flow -- the `if` match expression. Unlike a traditional `if` expression, which can only test for truthy and falsy values, Oak's `if` acts like a sophisticated switch-case, comparing values until the right match is reached.
 
 ```js
 fn pluralize(word, count) if count {
@@ -109,9 +109,9 @@ fn pluralize(word, count) if count {
 }
 ```
 
-This match expression, combined with safe tail recursion, makes Magnolia Turing-complete.
+This match expression, combined with safe tail recursion, makes Oak Turing-complete.
 
-Lastly, because callback-based asynchronous concurrency is common in Magnolia, there's special syntax sugar, the `with` expression, to help. The `with` syntax sugar de-sugars like this.
+Lastly, because callback-based asynchronous concurrency is common in Oak, there's special syntax sugar, the `with` expression, to help. The `with` syntax sugar de-sugars like this.
 
 ```js
 with readFile('./path') fn(file) {
@@ -128,10 +128,10 @@ For a more detailed description of the language, see the [work-in-progress langu
 
 ## Development
 
-Magnolia (ab)uses GNU Make to run development workflows and tasks.
+Oak (ab)uses GNU Make to run development workflows and tasks.
 
-- `make run` compiles and runs the Magnolia binary, which opens an interactive REPL
-- `make tests` or `make t` runs the Go tes suite for the Magnolia language and interpreter
-- `make test-mgn` or `make tm` runs the Magnolia test suite, which tests the standard libraries
-- `make install` installs the Mangolia interpreter on your `$GOPATH` as `mgn`, and re-installs Mgn's vim syntax file
+- `make run` compiles and runs the Oak binary, which opens an interactive REPL
+- `make tests` or `make t` runs the Go tes suite for the Oak language and interpreter
+- `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
+- `make install` installs the Mangolia interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
 

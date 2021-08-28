@@ -206,8 +206,8 @@ func (t *tokenizer) peek() rune {
 
 func (t *tokenizer) peekAhead(n int) rune {
 	if t.index+n > len(t.source) {
-		// In Magnolia, whitespace is insingificant, so we return it as the
-		// "nothing is here" value.
+		// In Oak, whitespace is insingificant, so we return it as the "nothing
+		// is here" value.
 		return ' '
 	}
 	return t.source[t.index+n]

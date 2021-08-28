@@ -412,7 +412,7 @@ func (p *parser) parseAssignment(left astNode) (astNode, error) {
 }
 
 // parseUnit is responsible for parsing the smallest complete syntactic "units"
-// of Magnolia's syntax, like literals including function literals, grouped
+// of Oak's syntax, like literals including function literals, grouped
 // expressions in blocks, and if/with expressions.
 func (p *parser) parseUnit() (astNode, error) {
 	tok := p.next()
@@ -798,7 +798,7 @@ func infixOpPrecedence(op tokKind) int {
 	}
 }
 
-// parseSubNode is responsible for parsing independent "terms" in the Magnolia
+// parseSubNode is responsible for parsing independent "terms" in the Oak
 // syntax, like terms in unary and binary expressions and in pipelines. It is
 // in between parseUnit and parseNode.
 func (p *parser) parseSubNode() (astNode, error) {
@@ -887,9 +887,9 @@ func (p *parser) parseNode() (astNode, error) {
 			xor, and, or, pushArrow,
 			greater, less, eq, geq, leq, neq:
 			// this case implements a mini Pratt parser threaded through the
-			// larger Magnolia syntax parser, using the parser struct itself to
-			// keep track of the power / precedence stack since other forms may
-			// be parsed in between, as in 1 + f(g(x := y)) + 2
+			// larger Oak syntax parser, using the parser struct itself to keep
+			// track of the power / precedence stack since other forms may be
+			// parsed in between, as in 1 + f(g(x := y)) + 2
 			minPrec := p.lastMinPrec()
 
 			for {

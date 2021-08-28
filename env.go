@@ -63,50 +63,50 @@ func (c *Context) LoadBuiltins() {
 	rand.Seed(time.Now().UnixNano())
 
 	// core language and reflection
-	c.LoadFunc("import", c.mgnImport)
-	c.LoadFunc("string", c.mgnString)
-	c.LoadFunc("int", c.mgnInt)
-	c.LoadFunc("float", c.mgnFloat)
-	c.LoadFunc("atom", c.mgnAtom)
-	c.LoadFunc("codepoint", c.mgnCodepoint)
-	c.LoadFunc("char", c.mgnChar)
-	c.LoadFunc("type", c.mgnType)
-	c.LoadFunc("len", c.mgnLen)
-	c.LoadFunc("keys", c.mgnKeys)
+	c.LoadFunc("import", c.oakImport)
+	c.LoadFunc("string", c.oakString)
+	c.LoadFunc("int", c.oakInt)
+	c.LoadFunc("float", c.oakFloat)
+	c.LoadFunc("atom", c.oakAtom)
+	c.LoadFunc("codepoint", c.oakCodepoint)
+	c.LoadFunc("char", c.oakChar)
+	c.LoadFunc("type", c.oakType)
+	c.LoadFunc("len", c.oakLen)
+	c.LoadFunc("keys", c.oakKeys)
 
 	// os interfaces
-	c.LoadFunc("args", c.mgnArgs)
-	c.LoadFunc("env", c.mgnEnv)
-	c.LoadFunc("time", c.mgnTime)
-	c.LoadFunc("nanotime", c.mgnNanotime)
-	c.LoadFunc("exit", c.mgnExit)
-	c.LoadFunc("rand", c.mgnRand)
-	c.LoadFunc("wait", c.callbackify(c.mgnWait))
-	c.LoadFunc("exec", c.callbackify(c.mgnExec))
+	c.LoadFunc("args", c.oakArgs)
+	c.LoadFunc("env", c.oakEnv)
+	c.LoadFunc("time", c.oakTime)
+	c.LoadFunc("nanotime", c.oakNanotime)
+	c.LoadFunc("exit", c.oakExit)
+	c.LoadFunc("rand", c.oakRand)
+	c.LoadFunc("wait", c.callbackify(c.oakWait))
+	c.LoadFunc("exec", c.callbackify(c.oakExec))
 
 	// i/o interfaces
-	c.LoadFunc("input", c.callbackify(c.mgnInput))
-	c.LoadFunc("print", c.mgnPrint)
-	c.LoadFunc("ls", c.callbackify(c.mgnLs))
-	c.LoadFunc("mkdir", c.callbackify(c.mgnMkdir))
-	c.LoadFunc("rm", c.callbackify(c.mgnRm))
-	c.LoadFunc("stat", c.callbackify(c.mgnStat))
-	c.LoadFunc("open", c.callbackify(c.mgnOpen))
-	c.LoadFunc("close", c.callbackify(c.mgnClose))
-	c.LoadFunc("read", c.callbackify(c.mgnRead))
-	c.LoadFunc("write", c.callbackify(c.mgnWrite))
-	c.LoadFunc("listen", c.mgnListen)
-	c.LoadFunc("req", c.callbackify(c.mgnReq))
+	c.LoadFunc("input", c.callbackify(c.oakInput))
+	c.LoadFunc("print", c.oakPrint)
+	c.LoadFunc("ls", c.callbackify(c.oakLs))
+	c.LoadFunc("mkdir", c.callbackify(c.oakMkdir))
+	c.LoadFunc("rm", c.callbackify(c.oakRm))
+	c.LoadFunc("stat", c.callbackify(c.oakStat))
+	c.LoadFunc("open", c.callbackify(c.oakOpen))
+	c.LoadFunc("close", c.callbackify(c.oakClose))
+	c.LoadFunc("read", c.callbackify(c.oakRead))
+	c.LoadFunc("write", c.callbackify(c.oakWrite))
+	c.LoadFunc("listen", c.oakListen)
+	c.LoadFunc("req", c.callbackify(c.oakReq))
 
 	// math
-	c.LoadFunc("sin", c.mgnSin)
-	c.LoadFunc("cos", c.mgnCos)
-	c.LoadFunc("tan", c.mgnTan)
-	c.LoadFunc("asin", c.mgnAsin)
-	c.LoadFunc("acos", c.mgnAcos)
-	c.LoadFunc("atan", c.mgnAtan)
-	c.LoadFunc("pow", c.mgnPow)
-	c.LoadFunc("log", c.mgnLog)
+	c.LoadFunc("sin", c.oakSin)
+	c.LoadFunc("cos", c.oakCos)
+	c.LoadFunc("tan", c.oakTan)
+	c.LoadFunc("asin", c.oakAsin)
+	c.LoadFunc("acos", c.oakAcos)
+	c.LoadFunc("atan", c.oakAtan)
+	c.LoadFunc("pow", c.oakPow)
+	c.LoadFunc("log", c.oakLog)
 }
 
 func errObj(message string) ObjectValue {
@@ -152,7 +152,7 @@ func (c *Context) callbackify(syncFn builtinFn) builtinFn {
 	}
 }
 
-func (c *Context) mgnString(args []Value) (Value, *runtimeError) {
+func (c *Context) oakString(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("string", args, 1); err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (c *Context) mgnString(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnInt(args []Value) (Value, *runtimeError) {
+func (c *Context) oakInt(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("int", args, 1); err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (c *Context) mgnInt(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnFloat(args []Value) (Value, *runtimeError) {
+func (c *Context) oakFloat(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("float", args, 1); err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (c *Context) mgnFloat(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnAtom(args []Value) (Value, *runtimeError) {
+func (c *Context) oakAtom(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("atom", args, 1); err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (c *Context) mgnAtom(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnCodepoint(args []Value) (Value, *runtimeError) {
+func (c *Context) oakCodepoint(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("codepoint", args, 1); err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (c *Context) mgnCodepoint(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnChar(args []Value) (Value, *runtimeError) {
+func (c *Context) oakChar(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("char", args, 1); err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func (c *Context) mgnChar(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnType(args []Value) (Value, *runtimeError) {
+func (c *Context) oakType(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("type", args, 1); err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func (c *Context) mgnType(args []Value) (Value, *runtimeError) {
 	panic("Unreachable!")
 }
 
-func (c *Context) mgnImport(args []Value) (Value, *runtimeError) {
+func (c *Context) oakImport(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("import", args, 1); err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (c *Context) mgnImport(args []Value) (Value, *runtimeError) {
 		return c.LoadLib(pathStr)
 	}
 
-	filePath := pathStr + ".mgn"
+	filePath := pathStr + ".oak"
 	if !filepath.IsAbs(filePath) {
 		filePath = filepath.Join(c.rootPath, filePath)
 	}
@@ -345,7 +345,7 @@ func (c *Context) mgnImport(args []Value) (Value, *runtimeError) {
 	return ObjectValue(ctx.scope.vars), nil
 }
 
-func (c *Context) mgnLen(args []Value) (Value, *runtimeError) {
+func (c *Context) oakLen(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("string", args, 1); err != nil {
 		return nil, err
 	}
@@ -364,7 +364,7 @@ func (c *Context) mgnLen(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnExec(args []Value) (Value, *runtimeError) {
+func (c *Context) oakExec(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("exec", args, 3); err != nil {
 		return nil, err
 	}
@@ -433,7 +433,7 @@ func (c *Context) mgnExec(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnInput(_ []Value) (Value, *runtimeError) {
+func (c *Context) oakInput(_ []Value) (Value, *runtimeError) {
 	reader := bufio.NewReader(os.Stdin)
 	str, err := reader.ReadString('\n')
 	if err == io.EOF {
@@ -450,7 +450,7 @@ func (c *Context) mgnInput(_ []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnPrint(args []Value) (Value, *runtimeError) {
+func (c *Context) oakPrint(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
 	}
@@ -466,7 +466,7 @@ func (c *Context) mgnPrint(args []Value) (Value, *runtimeError) {
 	return IntValue(n), nil
 }
 
-func (c *Context) mgnLs(args []Value) (Value, *runtimeError) {
+func (c *Context) oakLs(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("ls", args, 1); err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ func (c *Context) mgnLs(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnMkdir(args []Value) (Value, *runtimeError) {
+func (c *Context) oakMkdir(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("mkdir", args, 1); err != nil {
 		return nil, err
 	}
@@ -529,7 +529,7 @@ func makeIntListUpTo(max int) Value {
 	return &list
 }
 
-func (c *Context) mgnKeys(args []Value) (Value, *runtimeError) {
+func (c *Context) oakKeys(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("print", args, 1); err != nil {
 		return nil, err
 	}
@@ -552,7 +552,7 @@ func (c *Context) mgnKeys(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnArgs(_ []Value) (Value, *runtimeError) {
+func (c *Context) oakArgs(_ []Value) (Value, *runtimeError) {
 	goArgs := os.Args
 	args := make(ListValue, len(goArgs))
 	for i, arg := range goArgs {
@@ -561,7 +561,7 @@ func (c *Context) mgnArgs(_ []Value) (Value, *runtimeError) {
 	return &args, nil
 }
 
-func (c *Context) mgnEnv(_ []Value) (Value, *runtimeError) {
+func (c *Context) oakEnv(_ []Value) (Value, *runtimeError) {
 	envVars := ObjectValue{}
 	for _, e := range os.Environ() {
 		kv := strings.SplitN(e, "=", 2)
@@ -570,16 +570,16 @@ func (c *Context) mgnEnv(_ []Value) (Value, *runtimeError) {
 	return envVars, nil
 }
 
-func (c *Context) mgnTime(_ []Value) (Value, *runtimeError) {
+func (c *Context) oakTime(_ []Value) (Value, *runtimeError) {
 	unixSeconds := float64(time.Now().UnixNano()) / 1e9
 	return FloatValue(unixSeconds), nil
 }
 
-func (c *Context) mgnNanotime(_ []Value) (Value, *runtimeError) {
+func (c *Context) oakNanotime(_ []Value) (Value, *runtimeError) {
 	return IntValue(time.Now().UnixNano()), nil
 }
 
-func (c *Context) mgnExit(args []Value) (Value, *runtimeError) {
+func (c *Context) oakExit(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("exit", args, 1); err != nil {
 		return nil, err
 	}
@@ -596,11 +596,11 @@ func (c *Context) mgnExit(args []Value) (Value, *runtimeError) {
 	}
 }
 
-func (c *Context) mgnRand(args []Value) (Value, *runtimeError) {
+func (c *Context) oakRand(args []Value) (Value, *runtimeError) {
 	return FloatValue(rand.Float64()), nil
 }
 
-func (c *Context) mgnWait(args []Value) (Value, *runtimeError) {
+func (c *Context) oakWait(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("wait", args, 1); err != nil {
 		return nil, err
 	}
@@ -619,7 +619,7 @@ func (c *Context) mgnWait(args []Value) (Value, *runtimeError) {
 	return null, nil
 }
 
-func (c *Context) mgnRm(args []Value) (Value, *runtimeError) {
+func (c *Context) oakRm(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("rm", args, 1); err != nil {
 		return nil, err
 	}
@@ -641,7 +641,7 @@ func (c *Context) mgnRm(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnStat(args []Value) (Value, *runtimeError) {
+func (c *Context) oakStat(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("stat", args, 1); err != nil {
 		return nil, err
 	}
@@ -675,7 +675,7 @@ func (c *Context) mgnStat(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnOpen(args []Value) (Value, *runtimeError) {
+func (c *Context) oakOpen(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("open", args, 1); err != nil {
 		return nil, err
 	}
@@ -734,7 +734,7 @@ func (c *Context) mgnOpen(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnClose(args []Value) (Value, *runtimeError) {
+func (c *Context) oakClose(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("close", args, 1); err != nil {
 		return nil, err
 	}
@@ -766,7 +766,7 @@ func (c *Context) mgnClose(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnRead(args []Value) (Value, *runtimeError) {
+func (c *Context) oakRead(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("read", args, 3); err != nil {
 		return nil, err
 	}
@@ -809,7 +809,7 @@ func (c *Context) mgnRead(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnWrite(args []Value) (Value, *runtimeError) {
+func (c *Context) oakWrite(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("write", args, 3); err != nil {
 		return nil, err
 	}
@@ -853,14 +853,14 @@ func (c *Context) mgnWrite(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-type mgnHTTPHandler struct {
+type oakHTTPHandler struct {
 	ctx         *Context
-	mgnCallback FnValue
+	oakCallback FnValue
 }
 
-func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h oakHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := h.ctx
-	cb := h.mgnCallback
+	cb := h.oakCallback
 
 	// unmarshal request
 	method := r.Method
@@ -889,7 +889,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body = &bodyStr
 	}
 
-	// construct request object to pass to Mgn, call handler
+	// construct request object to pass to Oak, call handler
 	responseEnded := false
 	responses := make(chan Value, 1)
 	endHandler := func(args []Value) (Value, *runtimeError) {
@@ -998,7 +998,7 @@ func (h mgnHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ctx *Context) mgnListen(args []Value) (Value, *runtimeError) {
+func (ctx *Context) oakListen(args []Value) (Value, *runtimeError) {
 	if err := ctx.requireArgLen("listen", args, 2); err != nil {
 		return nil, err
 	}
@@ -1023,9 +1023,9 @@ func (ctx *Context) mgnListen(args []Value) (Value, *runtimeError) {
 
 	server := &http.Server{
 		Addr: host.stringContent(),
-		Handler: mgnHTTPHandler{
+		Handler: oakHTTPHandler{
 			ctx:         ctx,
-			mgnCallback: cb,
+			oakCallback: cb,
 		},
 	}
 
@@ -1039,7 +1039,7 @@ func (ctx *Context) mgnListen(args []Value) (Value, *runtimeError) {
 	}()
 
 	closer := func(_ []Value) (Value, *runtimeError) {
-		// attempt graceful shutdown, concurrently, without blocking Mgn
+		// attempt graceful shutdown, concurrently, without blocking Oak
 		// evaluation thread
 		ctx.eng.Add(1)
 		go func() {
@@ -1060,7 +1060,7 @@ func (ctx *Context) mgnListen(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnReq(args []Value) (Value, *runtimeError) {
+func (c *Context) oakReq(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("req", args, 1); err != nil {
 		return nil, err
 	}
@@ -1172,7 +1172,7 @@ func (c *Context) mgnReq(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) mgnSin(args []Value) (Value, *runtimeError) {
+func (c *Context) oakSin(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("sin", args, 1); err != nil {
 		return nil, err
 	}
@@ -1192,7 +1192,7 @@ func (c *Context) mgnSin(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Sin(val)), nil
 }
 
-func (c *Context) mgnCos(args []Value) (Value, *runtimeError) {
+func (c *Context) oakCos(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("cos", args, 1); err != nil {
 		return nil, err
 	}
@@ -1212,7 +1212,7 @@ func (c *Context) mgnCos(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Cos(val)), nil
 }
 
-func (c *Context) mgnTan(args []Value) (Value, *runtimeError) {
+func (c *Context) oakTan(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("tan", args, 1); err != nil {
 		return nil, err
 	}
@@ -1232,7 +1232,7 @@ func (c *Context) mgnTan(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Tan(val)), nil
 }
 
-func (c *Context) mgnAsin(args []Value) (Value, *runtimeError) {
+func (c *Context) oakAsin(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("asin", args, 1); err != nil {
 		return nil, err
 	}
@@ -1258,7 +1258,7 @@ func (c *Context) mgnAsin(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Asin(val)), nil
 }
 
-func (c *Context) mgnAcos(args []Value) (Value, *runtimeError) {
+func (c *Context) oakAcos(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("acos", args, 1); err != nil {
 		return nil, err
 	}
@@ -1284,7 +1284,7 @@ func (c *Context) mgnAcos(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Acos(val)), nil
 }
 
-func (c *Context) mgnAtan(args []Value) (Value, *runtimeError) {
+func (c *Context) oakAtan(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("atan", args, 1); err != nil {
 		return nil, err
 	}
@@ -1304,7 +1304,7 @@ func (c *Context) mgnAtan(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Atan(val)), nil
 }
 
-func (c *Context) mgnPow(args []Value) (Value, *runtimeError) {
+func (c *Context) oakPow(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("pow", args, 2); err != nil {
 		return nil, err
 	}
@@ -1346,7 +1346,7 @@ func (c *Context) mgnPow(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Pow(base, exp)), nil
 }
 
-func (c *Context) mgnLog(args []Value) (Value, *runtimeError) {
+func (c *Context) oakLog(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("log", args, 2); err != nil {
 		return nil, err
 	}

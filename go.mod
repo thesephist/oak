@@ -1,4 +1,4 @@
-module github.com/thesephist/magnolia
+module github.com/thesephist/oak
 
 go 1.16
 

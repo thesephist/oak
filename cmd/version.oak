@@ -1,8 +1,8 @@
-// mgn version
+// oak version
 
 {
 	println: println
 } := import('std')
 
-println('Magnolia v0.1')
+println('Oak v0.1')
 

@@ -131,8 +131,8 @@ func (v FloatValue) Eq(u Value) bool {
 type BoolValue bool
 
 // interned booleans
-const mgnTrue = BoolValue(true)
-const mgnFalse = BoolValue(false)
+const oakTrue = BoolValue(true)
+const oakFalse = BoolValue(false)
 
 func (v BoolValue) String() string {
 	if v {

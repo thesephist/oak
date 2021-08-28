@@ -181,7 +181,7 @@ MimeTypes := {
 	js: 'application/javascript; charset=utf-8'
 	json: 'application/json; charset=utf-8'
 	ink: 'text/plain; charset=utf-8'
-	mgn: 'text/plain; charset=utf-8'
+	oak: 'text/plain; charset=utf-8'
 
 	jpg: 'image/jpeg'
 	jpeg: 'image/jpeg'
@@ -205,7 +205,7 @@ MethodNotAllowed := {status: 405, body: 'method not allowed'}
 
 fn _hdr(attrs) {
 	base := {
-		'X-Served-By': 'Magnolia/libhttp'
+		'X-Served-By': 'Oak/libhttp'
 		'Content-Type': 'text/plain'
 	}
 	keys(attrs) |> each(fn(k) base.(k) := attrs.(k))
@@ -235,11 +235,7 @@ fn Server {
 				}
 
 				if method {
-					'GET' -> handleWithHeaders(evt)
-					'POST' -> handleWithHeaders(evt)
-					'PUT' -> handleWithHeaders(evt)
-					'DELETE' -> handleWithHeaders(evt)
-					'OPTIONS' -> handleWithHeaders(evt)
+					'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' -> handleWithHeaders(evt)
 					_ -> evt.end({
 						status: 405
 						headers: _hdr({})

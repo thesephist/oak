@@ -6,31 +6,31 @@ import (
 	"strings"
 )
 
-//go:embed lib/std.mgn
+//go:embed lib/std.oak
 var libstd string
 
-//go:embed lib/str.mgn
+//go:embed lib/str.oak
 var libstr string
 
-//go:embed lib/math.mgn
+//go:embed lib/math.oak
 var libmath string
 
-//go:embed lib/sort.mgn
+//go:embed lib/sort.oak
 var libsort string
 
-//go:embed lib/fs.mgn
+//go:embed lib/fs.oak
 var libfs string
 
-//go:embed lib/fmt.mgn
+//go:embed lib/fmt.oak
 var libfmt string
 
-//go:embed lib/http.mgn
+//go:embed lib/http.oak
 var libhttp string
 
-//go:embed lib/syntax.mgn
+//go:embed lib/syntax.oak
 var libsyntax string
 
-//go:embed lib/test.mgn
+//go:embed lib/test.oak
 var libtest string
 
 var stdlibs = map[string]string{
