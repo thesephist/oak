@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -205,15 +206,41 @@ func (v *ListValue) Eq(u Value) bool {
 
 type ObjectValue map[string]Value
 
+// only used for efficient serialization to string
+type serializedObjEntry struct {
+	key  string
+	full string
+}
+
 func (v ObjectValue) String() string {
 	// TODO: fix how this deals with circular references
-	entryStrings := make([]string, len(v))
+	entries := make([]serializedObjEntry, len(v))
+
 	i := 0
 	for key, val := range v {
-		entryStrings[i] = key + ": " + val.String()
+		entries[i] = serializedObjEntry{
+			key:  key,
+			full: key + ": " + val.String(),
+		}
 		i++
 	}
-	return "{" + strings.Join(entryStrings, ", ") + "}"
+
+	// sort entries lexicographically for easier debugging use
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].key < entries[j].key
+	})
+
+	sb := strings.Builder{}
+	sb.WriteString("{")
+	for i, entry := range entries {
+		if i != 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(entry.full)
+	}
+	sb.WriteString("}")
+
+	return sb.String()
 }
 func (v ObjectValue) Eq(u Value) bool {
 	if _, ok := u.(EmptyValue); ok {

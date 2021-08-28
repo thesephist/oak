@@ -88,6 +88,19 @@ func TestObjectLiteral(t *testing.T) {
 	})
 }
 
+func TestObjectStringify(t *testing.T) {
+	expectProgramToReturn(t, `
+		x := {
+			first: {}
+			second: :two
+			_third: {
+				_fourth: 'four'
+			}
+		}
+		x |> string()
+	`, MakeString("{_third: {_fourth: 'four'}, first: {}, second: :two}"))
+}
+
 func TestFunctionDefAndCall(t *testing.T) {
 	expectProgramToReturn(t, `fn getThree() { x := 4, 3 }, getThree()`, IntValue(3))
 }
