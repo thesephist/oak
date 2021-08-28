@@ -14,7 +14,7 @@ func expectProgramToReturn(t *testing.T, program string, expected Value) {
 		t.Errorf("Did not expect program to exit with error: %s", err.Error())
 	}
 	if val == nil {
-		t.Errorf("Return valuue of program should not be nil")
+		t.Errorf("Return value of program should not be nil")
 	} else if !val.Eq(expected) {
 		t.Errorf(fmt.Sprintf("Expected and returned values don't match: %s != %s", expected, val))
 	}
@@ -608,6 +608,16 @@ func TestComplexPipe(t *testing.T) {
 	fn getAdder(env) { env.add1 }
 	100 |> lib.add1() |> lib.double() |> getAdder(lib)()
 	`, IntValue(203))
+}
+
+func TestPipeWithExpr(t *testing.T) {
+	expectProgramToReturn(t, `
+	fn add(a, b) a + b
+	fn double(n) 2 * n
+	fn apply(x, f) f(x)
+
+	10 |> add(20) |> with apply() fn(n) n |> double() + 40
+	`, IntValue(100))
 }
 
 func TestExtraArgs(t *testing.T) {

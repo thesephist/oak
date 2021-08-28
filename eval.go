@@ -533,7 +533,9 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 	case leq:
 		return BoolValue(int64(left) <= int64(right)), nil
 	}
-	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
+	return nil, &runtimeError{
+		reason: fmt.Sprintf("Invalid binary operator %s for ints %s, %s", token{kind: op}, left, right),
+	}
 }
 
 func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
@@ -562,7 +564,9 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
 	case leq:
 		return BoolValue(int64(left) <= int64(right)), nil
 	}
-	panic(fmt.Sprintf("Invalid binary operator %s", token{kind: op}))
+	return nil, &runtimeError{
+		reason: fmt.Sprintf("Invalid binary operator %s for floats %s, %s", token{kind: op}, left, right),
+	}
 }
 
 func (c *Context) evalAsObjKey(node astNode, sc scope) (Value, *runtimeError) {

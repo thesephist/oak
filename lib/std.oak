@@ -204,6 +204,54 @@ fn every(xs, pred) {
 	xs |> reduce(true, fn(acc, x) acc & pred(x))
 }
 
+fn zip(xs, ys, zipper) {
+	zipper := default(zipper, fn(x, y) [x, y])
+	max := if len(xs) < len(ys) {
+		true -> len(xs)
+		_ -> len(ys)
+	}
+	fn sub(acc, i) if i {
+		max -> acc
+		_ -> sub(
+			acc << zipper(xs.(i), ys.(i))
+			i + 1
+		)
+	}
+	sub([], 0)
+}
+
+fn partition(xs, by) if type(by) {
+	:int -> xs |> reduce([], fn(acc, x, i) if i % by {
+		0 -> acc << [x]
+		_ -> {
+			acc.(len(acc) - 1) << x
+			acc
+		}
+	})
+	:function -> {
+		last := fn {} // a clever trick ;) -- fn {} is not equal to anything but itself
+		xs |> reduce([], fn(acc, x) {
+			if this := by(x) {
+				last -> acc.(len(acc) - 1) << x
+				_ -> acc << [x]
+			}
+			last <- this
+			acc
+		})
+	}
+}
+
+fn find(xs, pred) {
+	fn sub(i) if i {
+		len(xs) -> -1
+		_ -> if pred(xs.(i)) {
+			true -> i
+			_ -> sub(i + 1)
+		}
+	}
+	sub(0)
+}
+
 fn indexOf(xs, x) {
 	fn sub(i) if i {
 		len(xs) -> -1
