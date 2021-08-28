@@ -3,6 +3,7 @@
 {
 	println: println
 	slice: slice
+	append: append
 	contains?: contains?
 	map: map
 	each: each
@@ -620,38 +621,45 @@ fn Parser(tokens) {
 						// optional argument list
 						next() // eat the leftParen
 
-						fn sub if !eof?() & peek().type != :rightParen {
-							true -> {
-								arg := expect(:identifier)
-								if arg.type {
-									:error -> {
-										back() // try again
+						fn sub if eof?() {
+							false -> if peek().type {
+								:rightParen -> ?
+								_ -> {
+									arg := expect(:identifier)
+									if arg.type {
+										:error -> {
+											back() // try again
 
-										with notError(expect(:underscore)) fn {
-											args << ''
-											with notError(:comma) fn {
-												sub()
+											with notError(expect(:underscore)) fn {
+												args << ''
+												with notError(:comma) fn {
+													sub()
+												}
 											}
 										}
-									}
-									:ellipsis -> {
-										restArg <- arg.val
-										next() // eat the ellipsis
-										with notError(expect(:comma)) fn {
-											sub()
-										}
-									}
-									_ -> {
-										args << arg.val
-										with notError(expect(:comma)) fn {
-											sub()
+										_ -> if peek().type {
+											:ellipsis -> {
+												restArg <- arg.val
+												next() // eat the ellipsis
+												with notError(expect(:comma)) fn {
+													sub()
+												}
+											}
+											_ -> {
+												args << arg.val
+												with notError(expect(:comma)) fn {
+													sub()
+												}
+											}
 										}
 									}
 								}
 							}
 						}
-						with notError(expect(:rightParen)) fn {
-							parseBody()
+						with notError(sub()) fn {
+							with notError(expect(:rightParen)) fn {
+								parseBody()
+							}
 						}
 					}
 					_ -> parseBody()

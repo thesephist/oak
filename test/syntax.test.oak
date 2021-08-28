@@ -592,7 +592,65 @@ fn run(t) {
 			}]
 		)
 
-		// TODO: with, rest args in fn def, pipe
+		'rest args in fn def' |> t.eq(
+			parse('fn(x, y...) {}')
+			[{
+				type: :function
+				tok: at(1, 1)
+				name: ''
+				args: ['x']
+				restArg: 'y'
+				body: { type: :block, tok: at(1, 13), exprs: [] }
+			}]
+		)
+
+		'with expression' |> t.eq(
+			parse('with f(1, 2) 100')
+			[{
+				type: :fnCall
+				tok: at(1, 7)
+				function: { type: :identifier, tok: at(1, 6), val: 'f' }
+				args: [
+					{ type: :number, tok: at(1, 8), int?: true, val: 1 }
+					{ type: :number, tok: at(1, 11), int?: true, val: 2 }
+					{ type: :number, tok: at(1, 14), int?: true, val: 100 }
+				]
+				restArg: ?
+			}]
+		)
+
+		'pipe arrow operator' |> t.eq(
+			parse('3 |> double() |> with add() 10')
+			[{
+				type: :fnCall
+				tok: at(1, 26)
+				function: {
+					type: :identifier
+					tok: at(1, 23)
+					val: 'add'
+				}
+				args: [
+					{
+						type: :fnCall
+						tok: at(1, 12)
+						function: {
+							type: :identifier
+							tok: at(1, 6)
+							val: 'double'
+						}
+						args: [{
+							type: :number
+							tok: at(1, 1)
+							int?: true
+							val: 3
+						}]
+						restArg: ?
+					}
+					{ type: :number, tok: at(1, 29), int?: true, val: 10 }
+				]
+				restArg: ?
+			}]
+		)
 	}
 }
 
