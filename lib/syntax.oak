@@ -349,6 +349,12 @@ fn Parser(tokens) {
 	index := 0
 	minBinaryPrec := [0]
 
+	// for parsing purposes, we must ignore non-semantic tokens
+	tokens := tokens |> filter(fn(tok) if tok.type {
+		:newline, :comment -> false
+		_ -> true
+	})
+
 	fn error(msg, pos) {
 		type: :error
 		error: msg
@@ -357,11 +363,11 @@ fn Parser(tokens) {
 
 	fn lastMinPrec minBinaryPrec.(len(minBinaryPrec) - 1)
 	fn pushMinPrec(prec) minBinaryPrec << prec
-	fn popMinPrec minBinaryPrec <- slice(minBinaryPrec, 1, len(minBinaryPrec) - 1)
+	fn popMinPrec minBinaryPrec <- slice(minBinaryPrec, 0, len(minBinaryPrec) - 1)
 	fn eof? index = len(tokens)
 	fn peek tokens.(index)
 	fn peekAhead(n) if index + n > len(tokens) {
-		true -> {type: :comma}
+		true -> { type: :comma }
 		_ -> tokens.(index + n)
 	}
 	fn next {
@@ -396,9 +402,27 @@ fn Parser(tokens) {
 		sub()
 	}
 
-	fn notError(x, withNotErr) if x.type {
-		:error -> x
+	fn notError(x, withNotErr) if x {
+		{ type: :error, error: _, pos: _ } -> x
 		_ -> withNotErr(x)
+	}
+
+	fn parseAssignment(left) if peek().type {
+		:assign, :nonlocalAssign -> {
+			nxt := next()
+			node := {
+				type: :assignment
+				tok: nxt
+				local?: nxt.type = :assign
+				left: left
+			}
+
+			with notError(right := parseNode()) fn {
+				node.right := right
+				node
+			}
+		}
+		_ -> left
 	}
 
 	// parseUnit is responsible for parsing the smallest complete syntactic
@@ -411,43 +435,43 @@ fn Parser(tokens) {
 			:stringLiteral -> {
 				type: :string
 				tok: tok
-				payload: tok.payload
+				val: tok.val
 			}
-			:numberLiteral -> if tok.payload |> strContains?('.') {
-				true -> if parsed := float(tok.payload) {
-					? -> error(format('Could not parse floating point number {{0}}', tok.payload), tok.pos)
+			:numberLiteral -> if tok.val |> strContains?('.') {
+				true -> if parsed := float(tok.val) {
+					? -> error(format('Could not parse floating point number {{0}}', tok.val), tok.pos)
 					_ -> {
 						type: :number
 						tok: tok
 						int?: false
-						payload: parsed
+						val: parsed
 					}
 				}
-				_ -> if parsed := int(tok.payload) {
-					? -> error(format('Could not parse integer number {{0}}', tok.payload), tok.pos)
+				_ -> if parsed := int(tok.val) {
+					? -> error(format('Could not parse integer number {{0}}', tok.val), tok.pos)
 					_ -> {
 						type: :number
 						tok: tok
 						int?: true
-						payload: parsed
+						val: parsed
 					}
 				}
 			}
 			:trueLiteral -> {
 				type: :boolean
 				tok: tok
-				payload: true
+				val: true
 			}
 			:falseLiteral -> {
 				type: :boolean
 				tok: tok
-				payload: false
+				val: false
 			}
 			:colon -> if peek().type {
 				:identifier -> {
 					type: :atom
 					tok: tok
-					payload: next().payload
+					val: next().val
 				}
 				_ -> error(format('Expected identifier after ":", got {{0}}', peek()), peek().pos)
 			}
@@ -455,15 +479,15 @@ fn Parser(tokens) {
 				pushMinPrec(0)
 
 				itemNodes := []
-				fn sub if !eof?() & peek().kind != :rightBracket {
-					true -> with notError(node := parseNode) fn {
+				fn sub if !eof?() & peek().type != :rightBracket {
+					true -> with notError(node := parseNode()) fn {
 						with notError(err := expect(:comma)) fn {
 							itemNodes << node
 							sub()
 						}
 					}
 				}
-				with notError(sub()) {
+				with notError(sub()) fn {
 					with notError(err := expect(:rightBracket)) fn {
 						popMinPrec()
 
@@ -500,13 +524,16 @@ fn Parser(tokens) {
 									with notError(expect(:comma)) fn {
 										entries := [{ key: firstExpr, val: valExpr }]
 
-										fn sub if !eof?() & peek().type != :rightBrace {
-											true -> with notError(key := parseNode()) fn {
-												with notError(expect(:colon)) fn {
-													with notError(val := parseNode()) fn {
-														with notError(expect(:comma)) fn {
-															entries << { key: key, val: val }
-															sub()
+										fn sub if eof?() {
+											false -> if peek().type {
+												:rightBrace -> ?
+												_ -> with notError(key := parseNode()) fn {
+													with notError(expect(:colon)) fn {
+														with notError(val := parseNode()) fn {
+															with notError(expect(:comma)) fn {
+																entries << { key: key, val: val }
+																sub()
+															}
 														}
 													}
 												}
@@ -528,7 +555,7 @@ fn Parser(tokens) {
 							}
 							_ -> with notError(expect(:comma)) fn {
 								// it's a block
-								exprs := []
+								exprs := [firstExpr]
 
 								fn sub if !eof?() & peek().type != :rightBrace {
 									true -> with notError(expr := parseNode()) fn {
@@ -559,7 +586,7 @@ fn Parser(tokens) {
 
 				name := if peek().type {
 					// optional named fn
-					:identifier -> next().payload
+					:identifier -> next().val
 					_ -> ''
 				}
 
@@ -569,16 +596,18 @@ fn Parser(tokens) {
 				fn parseBody with notError(body := parseNode()) fn {
 					// Exception to the "{} is empty object" rule is that `fn
 					// {}` parses as a function with an empty block as a body.
-					if body.type = :object & len(body.entries) = 0 {
-						true -> body <- {
+					if body {
+						{ type: :object, tok: _, entries: [] } -> body <- {
 							type: :block
 							tok: body.tok
 							exprs: []
 						}
 					}
+					popMinPrec()
 
 					{
 						type: :function
+						name: name
 						tok: tok
 						args: args
 						restArg: restArg
@@ -606,14 +635,14 @@ fn Parser(tokens) {
 										}
 									}
 									:ellipsis -> {
-										restArg <- arg.payload
+										restArg <- arg.val
 										next() // eat the ellipsis
 										with notError(expect(:comma)) fn {
 											sub()
 										}
 									}
 									_ -> {
-										args << arg.payload
+										args << arg.val
 										with notError(expect(:comma)) fn {
 											sub()
 										}
@@ -635,7 +664,7 @@ fn Parser(tokens) {
 			:identifier -> {
 				type: :identifier
 				tok: tok
-				payload: tok.payload
+				val: tok.val
 			}
 			:minus, :exclam -> with notError(right := parseSubNode()) fn {
 				type: :unary
@@ -644,16 +673,96 @@ fn Parser(tokens) {
 				right: right
 			}
 			:ifKeyword -> {
+				// We want to support multi-target branches, but don't want to
+				// incur the performance overhead in the interpreter/evaluator
+				// of keeping every single target as a Go slice, when the vast
+				// majority of targets will be single-value, which requires
+				// just a pointer to an astNode.
+				//
+				// So instead of doing that, we penalize the multi-value case
+				// by essentially considering it syntax sugar and splitting
+				// such branches into multiple AST branches, each with one
+				// target value.
 				pushMinPrec(0)
-				// TODO: if keyword
+				with notError(condNode := parseNode()) fn {
+					with notError(expect(:leftBrace)) fn {
+						fn subBranch(branches) if eof?() {
+							false -> if peek().type {
+								:rightBrace -> branches
+								_ -> {
+									fn subTarget(targets) if eof?() {
+										true -> targets
+										_ -> with notError(target := parseNode()) fn if peek().type {
+											:branchArrow -> targets << target
+											_ -> with notError(expect(:comma)) fn {
+												subTarget(targets << target)
+											}
+										}
+									}
+									with notError(targets := subTarget([])) fn {
+										with notError(expect(:branchArrow)) fn {
+											with notError(body := parseNode()) fn {
+												with notError(expect(:comma)) fn {
+													 subBranch(branches << targets |> map(fn(target) {
+														type: :ifBranch
+														target: target
+														body: body
+													}))
+												}
+											}
+										}
+									}
+								}
+							}
+							_ -> branches
+						}
+						with notError(branches := subBranch([])) fn {
+							with notError(expect(:rightBrace)) fn {
+								popMinPrec()
+
+								{
+									type: :ifExpr
+									tok: tok
+									cond: condNode
+									branches: branches
+								}
+							}
+						}
+					}
+				}
 			}
 			:withKeyword -> {
 				pushMinPrec(0)
-				// TODO: with keyword
+				with notError(base := parseNode()) fn if base.type {
+					:fnCall -> with notError(lastArg := parseNode()) fn {
+						popMinPrec()
+						base.args << lastArg
+						base
+					}
+					_ -> error(format('with keyword should be followed by a fn call, found {{0}}', base), tok.pos)
+				}
 			}
 			:leftParen -> {
 				pushMinPrec(0)
-				// TODO: left paren
+
+				fn subExpr(exprs) if !eof?() & peek().type != :rightParen {
+					true -> with notError(expr := parseNode()) fn {
+						with notError(expect(:comma)) fn {
+							subExpr(exprs << expr)
+						}
+					}
+					_ -> exprs
+				}
+				with notError(exprs := subExpr([])) fn {
+					with notError(expect(:rightParen)) fn {
+						popMinPrec()
+						{
+							type: :block
+							tok: tok
+							exprs: exprs
+						}
+					}
+				}
 			}
 			_ -> error(format('Unexpected token {{0}} at start of unit', tok), tok.pos)
 		}
@@ -676,32 +785,159 @@ fn Parser(tokens) {
 	// syntax, like terms in unary and binary expressions and in pipelines. It
 	// is in between parseUnit and parseNode.
 	fn parseSubNode {
-		// TODO: parseSubNode
-	}
+		pushMinPrec(0)
+		with notError(node := parseUnit()) fn {
+			fn sub if eof?() {
+				false -> if peek().type {
+					:dot -> {
+						nxt := next() // eat the dot
+						with notError(right := parseUnit()) fn {
+							node <- {
+								type: :propertyAccess
+								tok: nxt
+								left: node
+								right: right
+							}
+							sub()
+						}
+					}
+					:leftParen -> {
+						nxt := next() // eat the leftParen
 
-	// parseNode returns the next top-level astNode from the parser
-	fn parseNode {
-		// TODO: parseNode
-	}
-
-	// for parsing purposes, we must ignore non-semantic tokens
-	tokens := tokens |> filter(fn(tok) if tok.type {
-		:newline -> false
-		:comment -> false
-		_ -> true
-	})
-
-	// parse
-	nodes := []
-	fn sub if !eof?() {
-		true -> with notError(node := parseNode()) fn {
-			with notError(expect(:comma)) fn {
-				nodes << node
+						args := []
+						restArg := ?
+						fn subArg if eof?() {
+							false -> if peek().type {
+								:rightParen -> with notError(expect(:rightParen)) fn {
+									?
+								}
+								_ -> with notError(arg := parseNode()) fn if peek().type {
+									:ellipsis -> {
+										next() // eat the ellipsis
+										with notError(expect(:comma)) fn {
+											restArg <- arg
+											subArg()
+										}
+									}
+									:comma -> {
+										next() // eat the comma
+										args << arg
+										subArg()
+									}
+									_ -> error(format('Expected comma after arg in argument list, got {{0}}', peek().type), peek().pos)
+								}
+							}
+						}
+						with notError(subArg()) fn {
+							node <- {
+								type: :fnCall
+								function: node
+								args: args
+								restArg: restArg
+								tok: nxt
+							}
+							sub()
+						}
+					}
+				}
+			}
+			with notError(sub()) fn {
+				popMinPrec()
+				node
 			}
 		}
 	}
-	with notError(sub()) fn {
-		nodes
+
+	// parseNode returns the next top-level astNode from the parser
+	fn parseNode with notError(node := parseSubNode()) fn {
+		fn sub if eof?() {
+			false -> if peek().type {
+				:comma -> ?
+				// whatever follows an assignment expr cannot bind to the
+				// assignment expression itself by syntax rule, so we simply
+				// return
+				:assign, :nonlocalAssign -> node <- parseAssignment(node)
+				// this case implements a mini Pratt parser threaded through
+				// the larger Oak syntax parser, using the parser struct itself
+				// to keep track of the power / precedence stack since other
+				// forms may be parsed in between, as in 1 + f(g(x := y)) + 2
+				:plus, :minus, :times, :divide, :modulus, :xor, :and, :or,
+				:pushArrow, :greater, :less, :eq, :geq, :leq, :neq -> {
+					minPrec := lastMinPrec()
+					fn subBinary if eof?() {
+						true -> error('Incomplete binary expression', peek().pos)
+						_ -> {
+							peeked := peek()
+							op := peeked.type
+							prec := infixOpPrecedence(op)
+							if prec <= minPrec {
+								false -> {
+									next() // eat the operator
+
+									if eof?() {
+										true -> error(format('Incomplete binary expression with {{0}}', {type: op}), peek().pos)
+										_ -> {
+											pushMinPrec(prec)
+											with notError(right := parseNode()) fn {
+												popMinPrec()
+
+												node <- {
+													type: :binary
+													tok: peeked
+													op: op
+													left: node
+													right: right
+												}
+												subBinary()
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					with notError(subBinary()) fn {
+						// whatever follows a binary expr cannot bind to the
+						// binary expression by syntax rule, so we simply
+						// return
+						node
+					}
+				}
+				:pipeArrow -> {
+					pipe := next() // eat the pipe
+					with notError(pipeRight := parseSubNode()) fn if pipeRight.type {
+						:fnCall -> {
+							pipeRight.args := append([node], pipeRight.args)
+							node <- pipeRight
+							sub()
+						}
+						_ -> error(format('Expected function call after |>, got {{0}}', pipeRight), pipe.pos)
+					}
+				}
+			}
+		}
+		// the trailing comma is handled as necessary in callers of parseNode
+		with notError(sub()) fn {
+			node
+		}
+	}
+
+	{
+		parse: fn {
+			// parse
+			nodes := []
+			fn sub if eof?() {
+				false -> with notError(node := parseNode()) fn {
+					with notError(expect(:comma)) fn {
+						nodes << node
+						sub()
+					}
+				}
+			}
+			with notError(sub()) fn {
+				nodes
+			}
+		}
 	}
 }
 
