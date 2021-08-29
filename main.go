@@ -40,7 +40,16 @@ func main() {
 }
 
 func runRepl() {
-	rl, err := readline.New("> ")
+	var historyFilePath string
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		historyFilePath = path.Join(homeDir, ".oak_history")
+	}
+
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:      "> ",
+		HistoryFile: historyFilePath,
+	})
 	if err != nil {
 		fmt.Println("Could not open the repl.")
 		os.Exit(1)
@@ -77,6 +86,9 @@ func runRepl() {
 			continue
 		}
 		fmt.Println(val)
+
+		// keep last evaluated result as __ in REPL
+		ctx.scope.put("__", val)
 	}
 }
 
