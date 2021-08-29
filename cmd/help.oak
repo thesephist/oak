@@ -2,9 +2,13 @@
 
 {
 	println: println
+	default: default
 } := import('std')
+{
+	format: format
+} := import('fmt')
 
-println('Oak is an expressive, dynamically typed programming language.
+Main := 'Oak is an expressive, dynamically typed programming language.
 
 Run an Oak program:
 	oak <filename> [arguments]
@@ -19,5 +23,49 @@ where commands are:
 	doc         generate or view documentation
 	fmt         autoformat Oak source code
 	test        run tests in *.test.oak files
-')
+	build       compile to a single file, optionally to JS
+Run oak help <command> for more on each command.
+'
+
+Repl := 'Oak REPL is an interactive programming environment for Oak.
+
+The REPL saves history to {{0}}/.oak_history.
+
+Special variables
+	__          last-evaluated result
+'
+
+Doc := 'Generate or read documentation for the Oak language and libraries.
+
+[[ under construction ]]
+'
+
+Fmt := 'Automatically format Oak source files.
+
+[[ under construction ]]
+'
+
+Test := 'Run unit tests in *.test.oak files.
+
+[[ under construction ]]
+'
+
+Build := 'Compile and bundle Oak programs to Oak or JavaScript.
+
+Options
+	--entry     Entrypoint for the bundle (main.oak by default)
+	--web       Compile the bundle to JavaScript, suitable for running in
+	            JavaScript runtimes like web browsers, Node.js, and Deno
+'
+
+// main
+if title := args().2 {
+	? -> Main
+	'repl' -> format(Repl, default(env().HOME, '$HOME'))
+	'doc' -> Doc
+	'fmt' -> Fmt
+	'test' -> Test
+	'build' -> Build
+	_ -> format('No help message available for "{{ 0 }}"', title)
+} |> println()
 

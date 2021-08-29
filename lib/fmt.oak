@@ -29,7 +29,7 @@ fn format(raw, values...) {
 			}
 			1 -> if c {
 				'{' -> which <- 2
-				// if it turns out the earlier brce was not a part of a format
+				// if it turns out the earlier brace was not a part of a format
 				// expression, just backtrack
 				_ -> {
 					buf << '{' + c
