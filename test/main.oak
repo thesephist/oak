@@ -9,6 +9,7 @@ TestRunners := [
 	'str'
 	'sort'
 	'fmt'
+	'json'
 	'syntax'
 ]
 

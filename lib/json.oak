@@ -1,0 +1,282 @@
+// json parser/serializer
+{
+	println: println
+	default: default
+	slice: slice
+	map: map
+} := import('std')
+
+{
+	space?: space?
+	digit?: digit?
+	join: join
+} := import('str')
+
+// string escape '"'
+fn esc(c) if c {
+	'\t' -> '\\t'
+	'\n' -> '\\n'
+	'\r' -> '\\r'
+	'\f' -> '\\f'
+	'\"' -> '\\"'
+	'\\' -> '\\\\'
+	_ -> c
+}
+
+// escape whole string
+fn escape(s) {
+	max := len(s)
+	fn sub(i, acc) if i {
+		max -> acc
+		_ -> sub(i + 1, acc << esc(s.(i)))
+	}
+	sub(0, '')
+}
+
+// any to JSON
+fn serialize(c) if type(c) {
+	// do not serialize functions
+	:null, :function -> 'null'
+	:string -> '"' << escape(c) << '"'
+	:int, :float, :boolean -> string(c)
+	// composite types
+	:list -> '[' << c |> map(serialize) |> join(',') << ']'
+	:object -> '{' << keys(c) |> map(fn(k) '"' << escape(k) << '":' << serialize(c.(k))) |> join(',') << '}'
+}
+
+// is this char a number or .?
+fn num?(c) if c {
+	'' -> false
+	'.' -> true
+	_ -> digit?(c)
+}
+
+// reader implementation with internal state for parsing
+fn Reader(s) {
+	index := 0
+	// has there been a parse error?
+	err? := false
+
+	fn next {
+		index <- index + 1
+		default(s.(index - 1), '')
+	}
+	fn peek default(s.(index), '')
+	fn nextWord(n) if index + n > len(s) {
+		true -> {
+			index <- len(s)
+			?
+		}
+		_ -> {
+			word := s |> slice(index, index + n)
+			index <- index + n
+			word
+		}
+	}
+	// fast-forward through whitespace
+	fn forward {
+		fn sub if space?(peek()) {
+			true -> {
+				index <- index + 1
+				sub()
+			}
+		}
+		sub()
+	}
+
+	{
+		next: next
+		peek: peek
+		forward: forward
+		nextWord: nextWord
+		done?: fn() index >= len(s)
+		err!: fn {
+			err? <- true
+			:error
+		}
+		err?: fn() err?
+	}
+}
+
+fn parseNull(r) if r.nextWord(4) {
+	'null' -> ?
+	_ -> r.err!()
+}
+
+fn parseString(r) {
+	peek := r.peek
+	next := r.next
+
+	next() // eat the double quote
+
+	fn sub(acc) if peek() {
+		'' -> r.err!()
+		'\\' -> {
+			next() // eat the backslash
+			sub(acc << if c := next() {
+				't' -> '\t'
+				'n' -> '\n'
+				'r' -> '\r'
+				'f' -> '\f'
+				'"' -> '"'
+				_ -> c
+			})
+		}
+		'"' -> {
+			next()
+			acc
+		}
+		_ -> sub(acc << next())
+	}
+	sub('')
+}
+
+fn parseNumber(r) {
+	peek := r.peek
+	next := r.next
+
+	negate? := false
+	decimal? := false
+
+	if peek() {
+		'-' -> {
+			next()
+			negate? <- true
+		}
+	}
+
+	fn sub(acc) if num?(peek()) {
+		true -> if peek() {
+			'.' -> if decimal? {
+				true -> r.err!()
+				_ -> {
+					decimal? <- true
+					sub(acc << next())
+				}
+			}
+			_ -> sub(acc << next())
+		}
+		_ -> acc
+	}
+	result := sub('')
+
+	parsed := if decimal? {
+		true -> float(result)
+		_ -> int(result)
+	}
+	if negate? {
+		true -> -parsed
+		_ -> parsed
+	}
+}
+
+fn parseTrue(r) if r.nextWord(4) {
+	'true' -> true
+	_ -> r.err!()
+}
+
+fn parseFalse(r) if r.nextWord(5) {
+	'false' -> false
+	_ -> r.err!()
+}
+
+fn parseList(r) {
+	err? := r.err?
+	peek := r.peek
+	next := r.next
+	forward := r.forward
+
+	next() // eat the [
+	forward()
+
+	fn sub(acc) if err?() {
+		true -> :error
+		_ -> if peek() {
+			'' -> r.err!()
+			']' -> {
+				next() // eat the ]
+				acc
+			}
+			_ -> {
+				acc << _parseReader(r)
+				forward()
+				if peek() {
+					',' -> next()
+				}
+				forward()
+				sub(acc)
+			}
+		}
+	}
+	sub([])
+}
+
+fn parseObject(r) {
+	err? := r.err?
+	peek := r.peek
+	next := r.next
+	forward := r.forward
+
+	next() // eat the {
+	forward()
+
+	fn sub(acc) if err?() {
+		true -> :error
+		_ -> if peek() {
+			'' -> r.err!()
+			'}' -> {
+				next()
+				acc
+			}
+			_ -> {
+				key := parseString(r)
+				if err?() {
+					false -> {
+						forward()
+						if peek() {
+							':' -> next()
+						}
+
+						val := _parseReader(r)
+						if err?() {
+							false -> {
+								forward()
+								if peek() {
+									',' -> next()
+								}
+
+								forward()
+								sub(acc.(key) := val)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	sub({})
+}
+
+fn _parseReader(r) {
+	// trim preceding whitespace
+	r.forward()
+	
+	result := if r.peek() {
+		'n' -> parseNull(r)
+		'"' -> parseString(r)
+		't' -> parseTrue(r)
+		'f' -> parseFalse(r)
+		'[' -> parseList(r)
+		'{' -> parseObject(r)
+		_ -> parseNumber(r)
+	}
+
+	// if there was a parse error, return :error
+	if r.err?() {
+	   	true -> :error
+		_ -> result
+	}
+}
+
+fn parse(s) Reader(s) |> _parseReader()
+
