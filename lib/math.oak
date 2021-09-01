@@ -1,18 +1,44 @@
 // math library
 
 {
+	default: default
 	reduce: reduce
 } := import('std')
 
-sum := fn(xs...) xs |> reduce(0, fn(a, b) a + b)
+fn sign(n) if n >= 0 {
+	true -> 1
+	_ -> -1
+}
 
-min := fn(xs...) xs |> reduce(xs.0, fn(acc, n) if n < acc {
+fn abs(n) if n >= 0 {
+	true -> n
+	_ -> -n
+}
+
+fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
+
+fn min(xs...) xs |> reduce(xs.0, fn(acc, n) if n < acc {
 	true -> n
 	_ -> acc
 })
 
-max := fn(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
+fn max(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
 	true -> n
 	_ -> acc
 })
+
+// always returns a float
+fn round(n, decimals) {
+	decimals := int(decimals) |> default(0)
+	if decimals < 0 {
+		true -> n
+		_ -> {
+			order := pow(10, decimals)
+			if n >= 0 {
+				true -> int(n * order + 0.5) / order
+				_ -> int(n * order - 0.5) / order
+			}
+		}
+	}
+}
 

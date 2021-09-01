@@ -1,0 +1,95 @@
+// libmath tests
+
+std := import('std')
+math := import('math')
+fmt := import('fmt')
+
+fn run(t) {
+	// sign, abs
+	{
+		{
+			sign: sign
+			abs: abs
+		} := math
+
+		'sign of 0 and positive numbers' |> t.eq(
+			[1, 2, 10, 1000] |> std.map(sign)
+			[1, 1, 1, 1]
+		)
+		'sign of negative numbers' |> t.eq(
+			[-1, -2, -10, -1000] |> std.map(sign)
+			[-1, -1, -1, -1]
+		)
+
+		'absolute value of numbers' |> t.eq(
+			[-1000, -10, -2, 1, 0, 1, 2, 10, 1000] |> std.map(abs)
+			[1000, 10, 2, 1, 0, 1, 2, 10, 1000]
+		)
+	}
+
+	// sum
+	{
+		{ sum: sum } := math
+
+		'sum of nothing' |> t.eq(sum(), 0)
+		'sum of 1' |> t.eq(sum(42), 42)
+		'sum of many' |> t.eq(sum(std.range(100)...), 4950)
+	}
+
+	// min, max
+	{
+		{
+			min: min
+			max: max
+		} := math
+
+		'min of empty' |> t.eq(min(), ?)
+		'max of empty' |> t.eq(max(), ?)
+
+		'min of list of 1' |> t.eq(min(-30), -30)
+		'max of list of 1' |> t.eq(max(100), 100)
+
+		list := [39, 254, 5, -2, 0, 3]
+		'min of list' |> t.eq(min(list...), -2)
+		'max of list' |> t.eq(max(list...), 254)
+
+		same := std.range(10) |> std.map(fn 2)
+		'min of same' |> t.eq(min(same...), 2)
+		'max of same' |> t.eq(max(same...), 2)
+	}
+
+	// rounding
+	{
+		{
+			round: round
+		} := math
+
+		'round 0' |> t.eq(round(0), 0.0)
+		[2, 100, -49] |> with std.each() fn(n) {
+			fmt.format('round integer {{0}}', n) |> t.eq(
+				round(n)
+				float(n)
+			)
+		}
+
+		// table test
+		decimals := [-5, 0, 1, 2, 4, 10]
+		[
+			[2.5, [2.5, 3.0, 2.5, 2.5, 2.5, 2.5]]
+			[-2.5, [-2.5, -3.0, -2.5, -2.5, -2.5, -2.5]]
+			[3.141592, [3.141592, 3.0, 3.1, 3.14, 3.1416, 3.141592]]
+			[0.0021828, [0.0021828, 0.0, 0.0, 0.0, 0.0022, 0.0021828]]
+			[-694.20108, [-694.20108, -694.0, -694.2, -694.2, -694.2011, -694.20108]]
+		] |> with std.each() fn(spec) {
+			[value, results] := spec
+			results |> with std.each() fn(result, i) {
+				decimal := decimals.(i)
+				fmt.format('round {{0}} to {{1}} places => {{2}}', value, decimal, result) |> t.eq(
+					round(value, decimal)
+					result
+				)
+			}
+		}
+	}
+}
+
