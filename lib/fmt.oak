@@ -1,10 +1,14 @@
-// string and data formatting library
+// libfmt is the string formatting library for Oak.
 
 {
 	println: println
 } := import('std')
 
-// ported from Ink's std.format
+// format returns the format string `raw`, where each substring of the form
+// "{{N}}" has been replaced by the Nth value given in the arguments. Values
+// may be referenced zero or more times in the format string.
+//
+// format is ported from Ink's std.format function.
 fn format(raw, values...) {
 	// parser state
 	idx := 0
@@ -67,5 +71,6 @@ fn format(raw, values...) {
 	sub()
 }
 
+// printf prints the result of format(raw, values...) to output
 fn printf(raw, values...) println(format(raw, values...))
 

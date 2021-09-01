@@ -1,4 +1,4 @@
-// quicksort + hoare partition
+// libsort implements efficient list sorting algorithms
 
 {
 	default: default
@@ -7,6 +7,10 @@
 	clone: clone
 } := import('std')
 
+// sort! sorts items in the list `xs` by each item's `pred` value, using the
+// Hoare partitioning strategy. If `pred` is not given, each item is sorted by
+// its own value. It mutates the original list for efficiency. If mutation is
+// not desired, use sort below.
 fn sort!(xs, pred) {
 	pred := default(pred, id)
 
@@ -58,5 +62,8 @@ fn sort!(xs, pred) {
 	quicksort(xs, 0, len(xs) - 1)
 }
 
+// sort returns a copy of `xs` that is sorted by `pred`, or by each item's
+// value if `pred` is not given. If the performance cost of a copy is not
+// desirable, use sort!.
 fn sort(xs, pred) xs |> clone() |> sort!(pred)
 

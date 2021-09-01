@@ -1,4 +1,4 @@
-// library for working with Mangolia token streams and syntax trees
+// libsyntax implements a tokenier and parser for the Oak language
 
 {
 	println: println
@@ -34,6 +34,10 @@ fn renderToken(token) if token.val {
 // stream of valid Oak token types, plus any shebang, newlines, and comments it
 // finds. To produce an AST, those non-standard non-AST tokens should be
 // filtered out of the list first.
+//
+// Methods:
+//
+// fn tokenize()    returns a list of tokens
 fn Tokenizer(source) {
 	index := 0
 	line := 1
@@ -346,6 +350,10 @@ fn Tokenizer(source) {
 
 // Parser takes a raw token stream, potentially including newlines and
 // comments, and generates a list of clean Oak AST nodes.
+//
+// Methods:
+//
+// fn parse()   returns a list of AST nodes
 fn Parser(tokens) {
 	index := 0
 	minBinaryPrec := [0]

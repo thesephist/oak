@@ -1,33 +1,40 @@
-// math library
+// libmath implements basic arithmetic and algebraic functions
 
 {
 	default: default
 	reduce: reduce
 } := import('std')
 
+// sign returns -1 for all negative numbers, and 1 otherwise
 fn sign(n) if n >= 0 {
 	true -> 1
 	_ -> -1
 }
 
+// abs returns the absolute value of a real number
 fn abs(n) if n >= 0 {
 	true -> n
 	_ -> -n
 }
 
+// sum takes a sequence of values and returns their sum
 fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
 
+// min returns the minimum value of all given values
 fn min(xs...) xs |> reduce(xs.0, fn(acc, n) if n < acc {
 	true -> n
 	_ -> acc
 })
 
+// max returns the maximum value of all given values
 fn max(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
 	true -> n
 	_ -> acc
 })
 
-// always returns a float
+// round takes a number `n` and returns a floating-point number that represents
+// `n` round to the nearest `decimals`-th decimal place. For negative values of
+// `decimals`, no rounding occurs and `n` is returned exactly.
 fn round(n, decimals) {
 	decimals := int(decimals) |> default(0)
 	if decimals < 0 {

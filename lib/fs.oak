@@ -1,7 +1,20 @@
-// filesystems library
-// offers useful utility wrappers around the built-in filesystem functions
+// libfs offers ergonomic filesystem APIs to Oak programs.
+//
+// It wraps the basic built-in filesystem functions to provide more ergonomic,
+// safer, and efficient implementations of basic filesystem tasks like reading
+// files and walking a directory tree.
+//
+// Most functions in libfs are implemented in both synchronous and asynchronous
+// variants. Sync variants of functions block, and return the value
+// immediately for ease of use. For better performance, we can pass a callback
+// to the function to invoke its asynchronous variant. In that case, the
+// function will not block; instead, the callback will be called some time
+// later with the return value.
 
-ReadBufSize := 4096 // 4k read buffer
+// ReadBufSize is the size of the buffer used to read a file in streaming
+// file-read operations in libfs. This may be changed to alter the behavior of
+// libfs, but it will affect the behavior of libfs globally in your program.
+ReadBufSize := 4096
 
 fn readFileSync(path) {
 	evt := open(path)
@@ -58,6 +71,8 @@ fn readFileAsync(path, withFile) with open(path) fn(evt) if evt.type {
 	}
 }
 
+// readFile reads the entire contents of a file at `path` and returns the file
+// contents as a string if successful, or ? on error.
 fn readFile(path, withFile) if withFile {
 	? -> readFileSync(path)
 	_ -> readFileAsync(path, withFile)
@@ -93,6 +108,9 @@ fn writeFileAsync(path, file, withEnd) with open(path, :truncate) fn(evt) if evt
 	}
 }
 
+// writeFile writes all data in `file` to a file at `path`, and returns true on
+// success and ? on error. If the file does not exist, it will be created. If
+// it exists, it will be truncated.
 fn writeFile(path, file, withEnd) if withEnd {
 	? -> writeFileSync(path, file)
 	_ -> writeFileAsync(path, file, withEnd)
@@ -111,6 +129,7 @@ fn statFileAsync(path, withStat) with stat(path) fn(evt) if evt.type {
 	_ -> withStat(evt.data)
 }
 
+// statFile returns the result of stat() if successful, and ? otherwise.
 fn statFile(path, withStat) if withStat {
 	? -> statFileSync(path)
 	_ -> statFileAsync(path, withStat)
@@ -129,6 +148,9 @@ fn listFilesAsync(path, withFiles) with ls(path) fn(evt) if evt.type {
 	_ -> withFiles(evt.data)
 }
 
+// listFiles returns a list of files and directories in a directory at `path`.
+// If the directory does not exist or is not a directory, or if the read
+// failed, it returns ?.
 fn listFiles(path, withFiles) if withFiles {
 	? -> listFilesSync(path)
 	_ -> listFilesAsync(path, withFiles)

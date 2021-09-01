@@ -1,4 +1,4 @@
-// unit testing library
+// libtest is a unit testing library for Oak
 
 {
 	each: each
@@ -10,6 +10,17 @@
 	printf: printf
 } := import('fmt')
 
+// new constructs a new test suite, named `title`
+//
+// Methods:
+//
+// fn eq(name, result, expect)      asserts that a test named `name` returned the
+//                                  result `result`, and should expect `expect`.
+// fn skip(name, result, expect)    ignores the result of this test for reporting
+// fn reportFailed()                only reports to the console any failed tests
+// fn report()                      reports the result of all tests to the console
+// fn exit()                        exits the program with a non-zero exit code
+//                                  if not all tests passed.
 fn new(title) {
 	Tests := []
 	Skipped := []

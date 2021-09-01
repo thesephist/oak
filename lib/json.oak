@@ -1,4 +1,5 @@
-// json parser/serializer
+// libjson implements a JSON parser and serializer for Oak values
+
 {
 	println: println
 	default: default
@@ -23,7 +24,7 @@ fn esc(c) if c {
 	_ -> c
 }
 
-// escape whole string
+// escapes whole string
 fn escape(s) {
 	max := len(s)
 	fn sub(i, acc) if i {
@@ -33,7 +34,7 @@ fn escape(s) {
 	sub(0, '')
 }
 
-// any to JSON
+// serialize takes an Oak value and returns its JSON representation
 fn serialize(c) if type(c) {
 	// do not serialize functions
 	:null, :function -> 'null'
@@ -278,5 +279,7 @@ fn _parseReader(r) {
 	}
 }
 
+// parse takes a potentially valid JSON string, and returns its Oak
+// representation if valid JSON, or :error if the parse fails.
 fn parse(s) Reader(s) |> _parseReader()
 

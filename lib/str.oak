@@ -1,4 +1,7 @@
-// strings library
+// libstr is the core string library for Oak.
+//
+// It provides a set of utility functions for working with strings and data
+// encoded in strings in Oak programs.
 
 {
 	default: default
@@ -7,21 +10,32 @@
 	reduce: reduce
 } := import('std')
 
-fn checkRange(lo, hi) fn(c) {
+// checkRange is a higher-order function that returns a function `checker`,
+// which reports whether a given char is within the range [lo, hi], inclusive.
+fn checkRange(lo, hi) fn checker(c) {
 	p := codepoint(c)
-	lo < p & p < hi
+	lo <= p & p <= hi
 }
 
-upper? := checkRange(codepoint('A') - 1, codepoint('Z') + 1)
-lower? := checkRange(codepoint('a') - 1, codepoint('z') + 1)
-digit? := checkRange(codepoint('0') - 1, codepoint('9') + 1)
+// upper? reports whether a given char is an uppercase ASCII letter
+upper? := checkRange(codepoint('A'), codepoint('Z'))
+// lower? reports whether a given char is a lowercase ASCII letter
+lower? := checkRange(codepoint('a'), codepoint('z'))
+// digit? reports whether a given char is an ASCII digit
+digit? := checkRange(codepoint('0'), codepoint('9'))
+// space? reports whether a given char is an ASCII whitespace
 space? := fn(c) if c {
 	' ', '\t', '\n', '\r', '\f' -> true
 	_ -> false
 }
+// letter? reports whether a given char is an ASCII letter
 fn letter?(c) upper?(c) | lower?(c)
+// word? reports whether a given char is a letter or a digit
 fn word?(c) letter?(c) | digit?(c)
 
+// join concatenates together a list of strings into a single string, where
+// each original string in the list is separated by `joiner`. Joiner is the
+// empty string by default.
 fn join(strings, joiner) {
 	joiner := default(joiner, '')
 	if len(strings) {
@@ -30,10 +44,12 @@ fn join(strings, joiner) {
 	}
 }
 
+// startsWith? reports whether a string starts with the substring `prefix`.
 fn startsWith?(s, prefix) prefix |> reduce(true, fn(acc, c, i) {
 	acc & (s.(i) = c)
 })
 
+// endsWith? reports whether a string ends with the substring `suffix`.
 fn endsWith?(s, suffix) {
 	diff := len(s) - len(suffix)
 	suffix |> reduce(true, fn(acc, c, i) {
@@ -41,6 +57,9 @@ fn endsWith?(s, suffix) {
 	})
 }
 
+// _matchesAt? is an internal helper that reports whether a given string `s`
+// contains the substring `substr` at index `idx`. It performs this comparison
+// efficiently, without unnecessary copying compared to other approaches.
 fn _matchesAt?(s, substr, idx) if len(substr) {
 	0 -> true
 	1 -> s.(idx) = substr
@@ -57,6 +76,8 @@ fn _matchesAt?(s, substr, idx) if len(substr) {
 	}
 }
 
+// indexOf returns the first index at which the given substring `substr`
+// appears in the string `s`. If the substring does not exist, it returns -1.
 fn indexOf(s, substr) {
 	max := len(s) - len(substr)
 	fn sub(i) if _matchesAt?(s, substr, i) {
@@ -69,13 +90,16 @@ fn indexOf(s, substr) {
 	sub(0)
 }
 
+// contains? reports whether the string `s` contains the substring `substr`.
 fn contains?(s, substr) indexOf(s, substr) >= 0
 
+// lower returns a string where any uppercase letter in `s` has been down-cased.
 fn lower(s) s |> reduce('', fn(acc, c, i) if upper?(c) {
 	true -> acc.(i) := char(codepoint(c) + 32)
 	_ -> acc.(i) := c
 })
 
+// upper returns a string where any lowercase letter in `s` has been up-cased.
 fn upper(s) s |> reduce('', fn(acc, c, i) if lower?(c) {
 	true -> acc.(i) := char(codepoint(c) - 32)
 	_ -> acc.(i) := c
@@ -97,6 +121,8 @@ fn _replaceNonEmpty(s, old, new) {
 	sub(s, 0)
 }
 
+// replace returns a string where all occurrences of the substring `old` has
+// been replaced by `new` in the string `s`. It does nothing for empty strings.
 fn replace(s, old, new) if old {
 	'' -> s
 	_ -> _replaceNonEmpty(s, old, new)
@@ -118,6 +144,9 @@ fn _splitNonEmpty(s, delim) {
 	sub(s, 0, 0)
 }
 
+// split splits the string `s` by every occurrence of the substring `delim` in
+// it, and returns the result as a list of strings. If `delim` is not
+// specified, split returns a list of every character in the string in order.
 fn split(s, delim) if delim {
 	? -> s |> reduce([], fn(acc, c) acc << c)
 	'' -> s |> reduce([], fn(acc, c) acc << c)
@@ -138,6 +167,8 @@ fn _trimStartNonEmpty(s, prefix) {
 	slice(s, idx)
 }
 
+// trimStart removes any (potentially repeated) occurrences of the string
+// `prefix` from the beginning of string `s`
 fn trimStart(s, prefix) if prefix {
 	'' -> s
 	_ -> _trimStartNonEmpty(s, prefix)
@@ -156,6 +187,8 @@ fn _trimEndNonEmpty(s, suffix) {
 	slice(s, 0, idx)
 }
 
+// trimEnd removes any (potentially repeated) occurrences of the string
+// `suffix` from the end of string `s`
 fn trimEnd(s, suffix) if suffix {
 	'' -> s
 	_ -> _trimEndNonEmpty(s, suffix)
@@ -180,6 +213,9 @@ fn _trimSpace(s) if s {
 	}
 }
 
+// trim removes any (potentially repeated) ocucrrences of the string `part`
+// from either end of the string `s`. If `part` is not specified, trim removes
+// all whitespace from either end of the string `s`.
 fn trim(s, part) if part {
 	? -> _trimSpace(s)
 	_ -> trimStart(trimEnd(s, part), part)

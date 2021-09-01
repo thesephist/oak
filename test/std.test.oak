@@ -251,6 +251,8 @@ fn run(t) {
 		fn even?(n) n % 2 = 0
 		fn add(a, b) a + b
 		fn isX?(c) c = 'X' | c = 'x'
+		fn repeat(c) c << c
+		fn upcase(c) char(codepoint(c) - 32)
 		fn index(_, i) i
 
 		ensureDoesNotMutate('reverse', reverse)
@@ -258,16 +260,20 @@ fn run(t) {
 		ensureDoesNotMutate('filter(f)', fn(xs) filter(xs, even?))
 		ensureDoesNotMutate('flatten(f)', flatten, [[1, 2], [10, 20]])
 
+		'reverse empty string' |> t.eq(reverse(''), '')
+		'reverse len(1) string' |> t.eq(reverse('A'), 'A')
+		'reverse len(n) string' |> t.eq(reverse('hello world'), 'dlrow olleh')
+
 		'reverse empty list' |> t.eq(reverse([]), [])
 		'reverse len(1) list' |> t.eq(reverse([10]), [10])
 		'reverse len(n) list' |> t.eq(reverse([10, 20, 30, 40]), [40, 30, 20, 10])
 
+		'map empty string' |> t.eq(map('', upcase), '')
+		'map string' |> t.eq('abc' |> map(repeat) |> map(upcase), 'AABBCC')
+
 		'map empty list' |> t.eq(map([], double), [])
 		'map list' |> t.eq(map(arr, double), [2, 4, 6, 8, 20])
 		'map callback gets index' |> t.eq(map(arr, index), [0, 1, 2, 3, 4])
-
-		'map empty string' |> t.eq(map('', fn(c) c + ' '), '')
-		'map string' |> t.eq(map('abc', fn(c) c + ' '), 'a b c ')
 
 		'each empty list' |> t.eq(
 			{
@@ -294,6 +300,9 @@ fn run(t) {
 			[0, 1, 2, 3, 4]
 		)
 
+		'filter empty string' |> t.eq(filter('', isX?), '')
+		'filter string' |> t.eq(filter('axbCXingx', isX?), 'xXx')
+
 		'filter empty list' |> t.eq(filter([], even?), [])
 		'filter list' |> t.eq(filter(arr, even?), [2, 4, 10])
 		'filter callback gets index' |> t.eq(
@@ -307,9 +316,6 @@ fn run(t) {
 			}
 			[0, 1, 2, 3, 4]
 		)
-
-		'filter empty string' |> t.eq(filter('', isX?), '')
-		'filter string' |> t.eq(filter('axbCXingx', isX?), 'xXx')
 
 		'reduce empty list' |> t.eq(reduce([], 0, add), 0)
 		'reduce list' |> t.eq(reduce(arr, 0, add), 20)

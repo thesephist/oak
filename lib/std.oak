@@ -1,19 +1,35 @@
-// core standard library
+// libstd is the core standard library for Oak.
+//
+// It defines basic functions for working with Oak values and functions,
+// iterators, and control flow.
 
+// identity returns its first argument
 fn identity(x) x
 
-fn baseIterator(v) if type(v) {
+// _baseIterator is a helper function that returns the "base iterator" of a
+// type, or the "zero value" version of the type.
+fn _baseIterator(v) if type(v) {
 	:string -> ''
 	:list -> []
 	:object -> {}
 }
 
+// default returns x if x is not null, or base otherwise. It is useful when
+// taking optional arguments in functions with default values. For example, we
+// can write
+//
+// fn repeat(n, times) {
+//     // times = 2 by default
+//     times := default(times, 2)
+// }
 fn default(x, base) if x {
 	? -> base
 	_ -> x
 }
 
 _nToH := '0123456789abcdef'
+// toHex takes a number and returns its hexadecimal representation in a string.
+// It fails for negative values of N.
 fn toHex(n) {
 	fn sub(p, acc) if p < 16 {
 		true -> _nToH.(p) + acc
@@ -40,6 +56,8 @@ _hToN := {
 	e: 14
 	f: 15
 }
+// fromHex takes a hexadecimal representation of a number and parses it out to
+// an integer. It fails if the input string is not a valid hexadecimal number.
 fn fromHex(s) {
 	fn sub(i, acc) if i {
 		len(s) -> acc
@@ -48,6 +66,13 @@ fn fromHex(s) {
 	sub(0, 0)
 }
 
+// clamp takes values n, m and "clamps" or constrains it to the range [min,
+// max], inclusive. If n > m, n takes priority and clams m down to the lower
+// value. In the returned value, the following are guaranteed:
+//
+// - min <= n <= max
+// - min <= m <= max
+// - n <= m
 fn clamp(min, max, n, m) {
 	// assumes that at least min < max & n < m
 	n := if n < min {
@@ -71,6 +96,12 @@ fn clamp(min, max, n, m) {
 	[n, m]
 }
 
+// slice takes an iterable xs (string or list), and returns a "slice" of the
+// original from the range [min, max). The slice is a copy, and mutating it
+// will not mutate the original.
+//
+// Both min and max are optional, and will default to 0 and len(xs)
+// respectively.
 fn slice(xs, min, max) {
 	min := default(min, 0)
 	max := default(max, len(xs))
@@ -83,9 +114,11 @@ fn slice(xs, min, max) {
 			i + 1
 		)
 	}
-	sub(baseIterator(xs), min)
+	sub(_baseIterator(xs), min)
 }
 
+// clone takes any Oak value and produces a shallow clone of it that will not
+// mutate if the original mutates.
 fn clone(x) if type(x) {
 	:string -> '' + x
 	:list -> slice(x)
@@ -93,16 +126,23 @@ fn clone(x) if type(x) {
 	_ -> x
 }
 
+// append joins two iterable values (strings or lists) together, mutating the
+// first argument. If mutation is not desired, use std.join.
 fn append(xs, ys) {
 	xlen := len(xs)
 	ys |> each(fn(y, i) xs.(xlen + i) := y)
 	xs
 }
 
+// join joins two iterable values (strings or lists) together, while mutating
+// neither values. If efficiency is desired, use std.append.
 fn join(xs, ys) clone(xs) |> append(ys)
 
 // functional iterators
 
+// range returns a list of numbers in range [start, end), incrementing by step.
+// It is analogous to Python's range builtin, and will default to step = 0 and
+// start = 0 when those optional values are missing.
 fn range(start, end, step) {
 	step := default(step, 1)
 	if end {
@@ -135,6 +175,8 @@ fn range(start, end, step) {
 	}
 }
 
+// reverse reverses the order of all elements in a given iterable, producing a
+// copy.
 fn reverse(xs) {
 	fn sub(acc, i) if i < 0 {
 		true -> acc
@@ -143,9 +185,12 @@ fn reverse(xs) {
 			i - 1
 		)
 	}
-	sub([], len(xs) - 1)
+	sub(_baseIterator(xs), len(xs) - 1)
 }
 
+// map produces a copy of the given iterable where each element has been put
+// through some mapper function f. The mapper function receives arguments
+// (element, index).
 fn map(xs, f) {
 	fn sub(acc, i) if i {
 		len(xs) -> acc
@@ -154,9 +199,11 @@ fn map(xs, f) {
 			i + 1
 		)
 	}
-	sub(baseIterator(xs), 0)
+	sub(_baseIterator(xs), 0)
 }
 
+// each calls the given iterator function f for each element of the given
+// iterable xs. The iterator function receives arguments (element, index).
 fn each(xs, f) {
 	fn sub(i) if i {
 		len(xs) -> ?
@@ -168,6 +215,9 @@ fn each(xs, f) {
 	sub(0)
 }
 
+// filter produces an iterable containing only the elements of xs that return
+// true when passed to the filter function f. The function f receives arguments
+// (element, index).
 fn filter(xs, f) {
 	fn sub(acc, i) if i {
 		len(xs) -> acc
@@ -178,9 +228,16 @@ fn filter(xs, f) {
 			sub(acc, i + 1)
 		}
 	}
-	sub(baseIterator(xs), 0)
+	sub(_baseIterator(xs), 0)
 }
 
+// reduce accumulates elements of the iterable xs on a value, starting with
+// seed and passing it to the reducer function f. The reducer receives
+// arguments (accumulator, element, index).
+//
+// For example, a "sum" function may be implemented:
+//
+// numbers |> with reduce(0) fn(accumulator, elem) accumulator + elem
 fn reduce(xs, seed, f) {
 	fn sub(acc, i) if i {
 		len(xs) -> acc
@@ -192,18 +249,35 @@ fn reduce(xs, seed, f) {
 	sub(seed, 0)
 }
 
+// flatten takes a list of lists and flattens it to a list of elements. The
+// flattening is only 1 level deep.
 fn flatten(xs) xs |> reduce([], append)
 
+// some checks whether at least one item in the given iterable is true, or is
+// true by some predicate pred.
 fn some(xs, pred) {
 	pred := default(pred, identity)
 	xs |> reduce(false, fn(acc, x) acc | pred(x))
 }
 
+// every checks whether every item in the given iterable is true, or is true by
+// some predicate pred.
 fn every(xs, pred) {
 	pred := default(pred, identity)
 	xs |> reduce(true, fn(acc, x) acc & pred(x))
 }
 
+// zip "zips" together each pair of items from two iterables. If the zipper
+// function is not given, each pair of items are put into a 2-element list.
+// Otherwise, zipper is called on each pair of items and the result is placed
+// into the resulting list.
+//
+// Illustrative examples:
+//
+// zip([1, 2, 3], [4, 5, 6])
+//     // => [[1, 2], [3, 4], [5, 6]]
+// with zip([1, 2, 3], [4, 5, 6]) fn(a, b) a * b
+//     // => [4, 10, 18]
 fn zip(xs, ys, zipper) {
 	zipper := default(zipper, fn(x, y) [x, y])
 	max := if len(xs) < len(ys) {
@@ -220,6 +294,11 @@ fn zip(xs, ys, zipper) {
 	sub([], 0)
 }
 
+// partition divides the sequence of items in the iterable xs into a list of
+// lists (partitions). If `by` is an integer, each partition will contain that
+// number of items. If `by` is a function, the partition will be cut anywhere
+// the result of the function changes from one item to the next. For any other
+// values of `by`, partition returns null.
 fn partition(xs, by) if type(by) {
 	:int -> xs |> reduce([], fn(acc, x, i) if i % by {
 		0 -> acc << [x]
@@ -241,6 +320,8 @@ fn partition(xs, by) if type(by) {
 	}
 }
 
+// find returns the index of the first item in the iterable xs for which the
+// predicate returns true. If no match is found, find returns -1.
 fn find(xs, pred) {
 	fn sub(i) if i {
 		len(xs) -> -1
@@ -252,6 +333,8 @@ fn find(xs, pred) {
 	sub(0)
 }
 
+// indexOf returns the index of the first item equal to x in the iterable xs.
+// If no match is found, indexOf returns -1.
 fn indexOf(xs, x) {
 	fn sub(i) if i {
 		len(xs) -> -1
@@ -263,13 +346,14 @@ fn indexOf(xs, x) {
 	sub(0)
 }
 
+// contains? reports whether an iterable contains an item equal to x.
 fn contains?(xs, x) indexOf(xs, x) > -1
 
 // loop takes a loop count `max` and a callback, and invokes the callback `max`
-// times. Can be used to infinitely loop if N < 0. Callback is passed in two
+// times. It can be used to infinitely loop if N < 0. Callback is passed in two
 // arguments:
-// 1. count, the current loop count
-// 2. breaker, a fn to be called to exit early from the loop
+// - count, the current loop count
+// - breaker, a fn to be called to exit early from the loop
 fn loop(max, f) {
 	max := default(max, -1)
 	broken := false
@@ -289,6 +373,8 @@ fn loop(max, f) {
 
 // OS interfaces
 
+// println prints every value passed to it, in its default string
+// representation, separated by a space.
 fn println(xs...) {
 	xs |> each(fn(x, i) if i {
 		0 -> print(string(x))

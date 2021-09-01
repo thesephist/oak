@@ -1,4 +1,7 @@
-// http server and routing library
+// libhttp offers utilities for writing HTTP server applications in Oak.
+//
+// It contains functions and objects we need to implement basic HTTP serving
+// and routing functionality.
 
 {
 	println: println
@@ -44,12 +47,17 @@ fn _encodeChar(encodeSlash?) fn(c) {
 		_ -> '%' + upper(toHex(codepoint(c)))
 	}
 }
+// percentEncodeKeepSlash encodes the string `s` in the "percent encoding" or
+// URI encoding scheme, but preserves `/` characters.
 fn percentEncodeKeepSlash(s) s |> map(_encodeChar(false)) |> join()
+// percentEncode encodes the string `s` in the "percent encoding" or URI encoding scheme.
 fn percentEncode(s) s |> map(_encodeChar(true)) |> join()
 
-upperAF? := checkRange(codepoint('A') - 1, codepoint('F') + 1)
-lowerAF? := checkRange(codepoint('a') - 1, codepoint('f') + 1)
+upperAF? := checkRange(codepoint('A'), codepoint('F'))
+lowerAF? := checkRange(codepoint('a'), codepoint('f'))
+// hex? reports whether a particular character is a valid hexadecimal character
 fn hex?(c) digit?(c) | upperAF?(c) | lowerAF?(c)
+// percentDecode decodes a URI-encoded value from `str`
 fn percentDecode(str) {
 	// possible values:
 	// :default
@@ -90,6 +98,19 @@ fn percentDecode(str) {
 	})
 }
 
+// Router constructs a router object, which encapsulates state for routing HTTP
+// paths to request handlers.
+//
+// Methods:
+//
+// fn add(pattern, handler)     adds a handler for some path pattern.
+//                              The pattern may contain :params to capture a part
+//                              of the path, or *params to capture the rest of the
+//                              remaining path. e.g. /:app/static/*staticPath
+//                              The handler must be of type fn(params) fn(req, end).
+// fn catch(handler)            adds a catch-all requeset handler
+// fn match(path)               takes a path and invokes the correct registered
+//                              request handler
 fn Router {
 	self := []
 
@@ -194,13 +215,16 @@ MimeTypes := {
 	zip: 'application/zip'
 }
 
+// mimeForPath takes a path and returns a likely MIME type string
 fn mimeForPath(path) {
 	parts := path |> split('.')
 	ending := parts.(len(parts) - 1)
 	default(MimeTypes.(ending), 'application/octet-stream')
 }
 
+// NotFound represents a 404 Not Found response
 NotFound := {status: 404, body: 'file not found'}
+// MethodNotAllowed represents a 405 Method Not Allowed response
 MethodNotAllowed := {status: 405, body: 'method not allowed'}
 
 fn _hdr(attrs) {
@@ -212,6 +236,14 @@ fn _hdr(attrs) {
 	base
 }
 
+// Server constructs an HTTP application server capable of routing.
+//
+// Methods:
+//
+// fn route(pattern, handler)       adds a handler for some path pattern.
+//                                  The arguments are identical to Router.add.
+// fn start(port)                   starts the server and begins listening for
+//                                  requests to the specified local port.
 fn Server {
 	router := Router()
 
@@ -252,12 +284,15 @@ fn Server {
 	}
 }
 
-// use like:
+// handleStatic is a pre-configured route handler for responding to requests
+// for static files. Use like:
 //
+// server := Server()
 // with server.route('/static/*staticPath') fn(params) {
 //     serveStatic('./static/' + params.staticPath)
 // }
 // with server.route('/') fn serveStatic('./index.html')
+// server.start(8080)
 fn handleStatic(path) fn(req, end) if req.method {
 	'GET' -> with readFile('./' + path) fn(file) if file {
 		? -> end(NotFound)
