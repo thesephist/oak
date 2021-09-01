@@ -1,0 +1,23 @@
+// oak cat -- syntax highlighter
+
+{
+	slice: slice
+	each: each
+} := import('std')
+{
+	readFile: readFile
+} := import('fs')
+{
+	printf: printf
+} := import('fmt')
+{
+	Tokenizer: Tokenizer
+	Parser: Parser
+} := import('syntax')
+
+// TODO: add syntax highlighting
+args() |> slice(2) |> with each() fn(path) if file := readFile(path) {
+	? -> printf('[oak cat] Could not open file {{0}}', path)
+	_ -> print(file)
+}
+

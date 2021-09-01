@@ -20,12 +20,21 @@ General usage:
 where commands are:
 	version     print version information
 	help        print this message
+	cat         print syntax-highlighted Oak source
 	doc         generate or view documentation
 	fmt         autoformat Oak source code
 	test        run tests in *.test.oak files
 	build       compile to a single file, optionally to JS
 Run oak help <command> for more on each command.
 '
+
+Cat := 'Print syntax-highlighted Oak source files to supported terminals.
+
+Oak cat works much like the UNIX utility `cat`, except that `oak cat`
+syntax-highlights Oak source code in the process. This is useful when trying to
+read Oak programs in the terminal outside of an editor with syntax highlighting
+support for Oak, and also serves as a demonstration of how to use the
+\'syntax\' Oak standard library.'
 
 Repl := 'Oak REPL is an interactive programming environment for Oak.
 
@@ -62,6 +71,7 @@ Options
 if title := args().2 {
 	? -> Main
 	'repl' -> format(Repl, default(env().HOME, '$HOME'))
+	'cat' -> Cat
 	'doc' -> Doc
 	'fmt' -> Fmt
 	'test' -> Test
