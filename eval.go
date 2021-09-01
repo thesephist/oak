@@ -1125,8 +1125,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return nil, &incompatibleError
 		}
 		return nil, &runtimeError{
-			reason: fmt.Sprintf("Binary operator %s is not defined for values %s (%t), %s (%t)",
-				token{kind: n.op}, leftComputed, leftComputed, rightComputed, rightComputed),
+			reason: fmt.Sprintf("Binary operator %s is not defined for values %s, %s",
+				token{kind: n.op}, leftComputed, rightComputed),
 			pos: n.pos(),
 		}
 	case fnCallNode:
