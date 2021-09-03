@@ -443,6 +443,17 @@ fn run(t) {
 			}
 			200
 		)
+		'loop with no (infinite) count and breaker' |> t.eq(
+			{
+				iterations := 0
+				with loop() fn(count, break) if count {
+					200 -> break()
+					_ -> iterations <- iterations + 1
+				}
+				iterations
+			}
+			200
+		)
 	}
 }
 
