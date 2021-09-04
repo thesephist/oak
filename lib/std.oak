@@ -352,6 +352,9 @@ fn contains?(xs, x) indexOf(xs, x) > -1
 // values takes an object and returns a list of its values in arbitrary order.
 fn values(obj) keys(obj) |> with map() fn(key) obj.(key)
 
+// entries takes an object and returns a list of pairs [key, value] in arbitrary order.
+fn entries(obj) keys(obj) |> with map() fn(key) [key, obj.(key)]
+
 // loop takes a loop count `max` and a callback, and invokes the callback `max`
 // times. It can be used to infinitely loop if N < 0. Callback is passed in two
 // arguments:

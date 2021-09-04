@@ -406,20 +406,40 @@ fn run(t) {
 		'contains? duplicate item' |> t.eq(contains?([:a, :b, :c, :d, :c], :c), true)
 	}
 
-	// object operators: values
+	// object operators: values, entries
 	{
 		{
 			values: values
+			entries: entries
 		} := std
 
 		'values of empty obj' |> t.eq(values({}), [])
 		'values of obj' |> t.eq(
-			{a: :ay, b: 2, c: [1, 2]} |> values() |> with std.every() fn(x) [:ay, 2, [1, 2]] |> std.contains?(x)
+			{a: :ay, b: 2, c: [1, 2]} |>
+				values() |>
+				with std.every() fn(x) [:ay, 2, [1, 2]] |> std.contains?(x)
 			true
 		)
 		'values of empty list' |> t.eq(values([]), [])
 		'values of list' |> t.eq(
-			std.range(10) |> values() |> with std.every() fn(x) std.range(10) |> std.contains?(x)
+			std.range(10) |>
+				values() |>
+				with std.every() fn(x) std.range(10) |> std.contains?(x)
+			true
+		)
+
+		'entries of empty obj' |> t.eq(entries({}), [])
+		'entries of obj' |> t.eq(
+			{a: :ay, b: 2, c: [1, 2]} |>
+				entries() |>
+				with std.every() fn(x) [['a', :ay], ['b', 2], ['c', [1, 2]]] |> std.contains?(x)
+			true
+		)
+		'entries of empty list' |> t.eq(entries([]), [])
+		'entries of list' |> t.eq(
+			std.range(10) |>
+				entries() |>
+				with std.every() fn(x) std.range(10) |> std.map(fn(n) [n, n]) |> std.contains?(x)
 			true
 		)
 	}
