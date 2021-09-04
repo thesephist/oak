@@ -287,6 +287,14 @@ func TestEmptyIfExpr(t *testing.T) {
 	expectProgramToReturn(t, `if 100 {}`, null)
 }
 
+func TestEmptyIfCondition(t *testing.T) {
+	expectProgramToReturn(t, `if {
+		false -> 10
+		true -> 20
+		_ -> 30
+	}`, IntValue(20))
+}
+
 func TestBasicIfExpr(t *testing.T) {
 	expectProgramToReturn(t, `if 2 * 2 {
 		? -> 100

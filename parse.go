@@ -657,9 +657,21 @@ func (p *parser) parseUnit() (astNode, error) {
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
 
-		condNode, err := p.parseNode()
-		if err != nil {
-			return nil, err
+		// if no explicit condition is provided (i.e. if the keyword is
+		// followed by a { ... }), we assume the condition is "true" to allow
+		// for the useful `if { case, case ... }` pattern.
+		var condNode astNode
+		var err error
+		if p.peek().kind == leftBrace {
+			condNode = booleanNode{
+				payload: true,
+				tok:     &tok,
+			}
+		} else {
+			condNode, err = p.parseNode()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if _, err = p.expect(leftBrace); err != nil {

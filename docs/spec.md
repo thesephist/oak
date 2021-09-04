@@ -47,12 +47,12 @@ binaryExpr := expr (+ - * / % ^ & | > < = >= <= <<) binaryExpr
 prefixCall := expr '(' (expr ',')* ')'
 infixCall := expr '|>' prefixCall
 
-ifExpr := 'if' expr '{' ifClause* '}'
+ifExpr := 'if' expr? '{' ifClause* '}'
 ifClause := expr '->' expr ','
 
 withExpr := 'with' prefixCall fnLiteral
 
-block := '{' expr* '}' | '(' expr* ')'
+block := '{' expr+ '}' | '(' expr* ')'
 ```
 
 ### AST node types
