@@ -406,6 +406,24 @@ fn run(t) {
 		'contains? duplicate item' |> t.eq(contains?([:a, :b, :c, :d, :c], :c), true)
 	}
 
+	// object operators: values
+	{
+		{
+			values: values
+		} := std
+
+		'values of empty obj' |> t.eq(values({}), [])
+		'values of obj' |> t.eq(
+			{a: :ay, b: 2, c: [1, 2]} |> values() |> with std.every() fn(x) [:ay, 2, [1, 2]] |> std.contains?(x)
+			true
+		)
+		'values of empty list' |> t.eq(values([]), [])
+		'values of list' |> t.eq(
+			std.range(10) |> values() |> with std.every() fn(x) std.range(10) |> std.contains?(x)
+			true
+		)
+	}
+
 	// control flow constructs
 	{
 		{
