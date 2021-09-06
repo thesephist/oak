@@ -1,0 +1,84 @@
+// libcli tests
+
+std := import('std')
+str := import('str')
+cli := import('cli')
+
+fn run(t) {
+	// parseArgv
+	{
+		// helper so I can call like p('--opts=1 arg1 arg2')
+		fn p(args) cli.parseArgv(['/bin/oak', 'main.oak'] |>
+			std.join(args |> str.split(' ') |> std.filter(fn(s) s != '')))
+
+		'no args' |> t.eq(
+			p('')
+			{
+				exe: '/bin/oak'
+				main: 'main.oak'
+				verb: ?
+				opts: {}
+				args: []
+			}
+		)
+		'complex args' |> t.eq(
+			p('compile --static -O3 --ignore-ub --author thesephist -time today ./a.oak b.oak -- --c.oak')
+			{
+				exe: '/bin/oak'
+				main: 'main.oak'
+				verb: 'compile'
+				opts: {
+					'O3': true
+					'static': true
+					'ignore-ub': true
+					'author': 'thesephist'
+					'time': 'today'
+				}
+				args: [
+					'./a.oak'
+					'b.oak'
+					'--c.oak'
+				]
+			}
+		)
+
+		// edge cases
+		'position arg followed by flag' |> t.eq(
+			p(' do-stuff --flag -- pos1 pos2')
+			{
+				exe: _
+				main: _
+				verb: 'do-stuff'
+				opts: {
+					flag: true
+				}
+				args: ['pos1', 'pos2']
+			}
+		)
+		'no verb, flag in verb position' |> t.eq(
+			p('--do-thing 2,3 arg')
+			{
+				exe: _
+				main: _
+				verb: ?
+				opts: {
+					'do-thing': '2,3'
+				}
+				args: ['arg']
+			}
+		)
+		'no verb, no flag value' |> t.eq(
+			p('-do-thing')
+			{
+				exe: _
+				main: _
+				verb: ?
+				opts: {
+					'do-thing': true
+				}
+				args: []
+			}
+		)
+	}
+}
+

@@ -36,6 +36,9 @@ var libsyntax string
 //go:embed lib/test.oak
 var libtest string
 
+//go:embed lib/cli.oak
+var libcli string
+
 var stdlibs = map[string]string{
 	"std":    libstd,
 	"str":    libstr,
@@ -47,6 +50,7 @@ var stdlibs = map[string]string{
 	"http":   libhttp,
 	"syntax": libsyntax,
 	"test":   libtest,
+	"cli":    libcli,
 }
 
 func isStdLib(name string) bool {

@@ -1,0 +1,87 @@
+// libcli parses command line options and arguments
+
+{
+	println: println
+	default: default
+	slice: slice
+	join: join
+	each: each
+} := import('std')
+{
+	startsWith?: startsWith?
+} := import('str')
+{
+	format: format
+} := import('fmt')
+
+// _maybeOpt checks if a given string is a CLI flag, and if so returns the name
+// of the flag. If not, it returns ?
+fn _maybeOpt(part) if {
+	part |> startsWith?('--') -> part |> slice(2)
+	part |> startsWith?('-') -> part |> slice(1)
+	_ -> ?
+}
+
+// parseArgv parses command-line arguments of the form
+// `./exe verb --flag option arg1 arg2 arg3`
+//
+// Supports:
+//     -flag (implied true)
+//     --flag (implied true)
+//     -opt val
+//     --opt val
+// and all other values are considered (positional) arguments. Flags respect
+// the '--' convention for signaling the start of purely positional arguments.
+fn parseArgv(argv) {
+	// if a flag is in the verb position, amend argv to have verb = ?
+	if _maybeOpt(default(argv.2, '')) {
+		? -> ?
+		_ -> argv <- slice(argv, 0, 2) |> join([?]) |> join(slice(argv, 2))
+	}
+
+	opts := {}
+	args := []
+
+	lastOpt := ?
+	onlyPositional? := false
+
+	argv |> slice(3) |> with each() fn(part) if {
+		part = ? -> ?
+		part = '--' -> onlyPositional? <- true
+		onlyPositional? -> args << part
+		_ -> if [lastOpt, opt := _maybeOpt(part)] {
+			// not opt, no prev opt -> positional arg
+			[?, ?] -> args << part
+			// not opt, prev opt exists -> flag value
+			[_, ?] -> {
+				opts.(lastOpt) := part
+				lastOpt <- ?
+			}
+			// is opt, no prev opt -> queue opt
+			[?, _] -> lastOpt <- opt
+			// is opt, prev opt exists -> last opt = true, queue opt
+			_ -> {
+				opts.(lastOpt) := true
+				lastOpt <- opt
+			}
+		}
+	}
+
+	// if flag was queued, mark it as true
+	if lastOpt {
+		? -> ?
+		_ -> opts.(lastOpt) := true
+	}
+
+	{
+		exe: argv.0
+		main: argv.1
+		verb: argv.2
+		opts: opts
+		args: args
+	}
+}
+
+// parse
+fn parse() parseArgv(args())
+
