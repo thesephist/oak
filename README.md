@@ -43,12 +43,12 @@ http := import('http')
 server := http.Server()
 with server.route('/hello/:name') fn(params) {
     fn(req, end) if req.method {
-        'GET' -&gt; end({
+        'GET' -> end({
             status: 200
             body: fmt.format('Hello, {{ 0 }}!'
                 std.default(params.name, 'World'))
         })
-        _ -&gt; end(http.MethodNotAllowed)
+        _ -> end(http.MethodNotAllowed)
     }
 }
 server.start(9999)
@@ -168,5 +168,5 @@ Oak (ab)uses GNU Make to run development workflows and tasks.
 - `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
 - `make install` installs the Oak interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
 
-To try Oak by building from source, clone the repository and run `make install` (or simply `go build .`).
+To try Oak by building from source, clone the repository and run `make install` (or simply `go build`).
 
