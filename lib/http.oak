@@ -140,7 +140,12 @@ fn Router {
 		actual := splitPath(path)
 
 		fn findMatchingParams(i) if i {
-			len(desired) -> params
+			len(desired) -> if i {
+				// if len(desired) = len(actual) everything is ok
+				len(actual) -> params
+				// if pattern did not consume all of the path, there's no match
+				_ -> ?
+			}
 			_ -> {
 				desiredPart := default(desired.(i), '')
 				actualPart := default(actual.(i), '')
