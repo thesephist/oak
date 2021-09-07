@@ -1,0 +1,29 @@
+[Unit]
+Description=oaklang.org
+ConditionPathExists=/home/oak-user/go/bin/oak
+After=network.target
+
+[Service]
+Type=simple
+User=oak-user
+LimitNOFILE=1024
+PermissionsStartOnly=true
+
+Restart=on-failure
+RestartSec=100ms
+StartLimitIntervalSec=60
+
+WorkingDirectory=/home/oak-user/src/oak/www
+ExecStart=/home/oak-user/go/bin/oak ./src/main.oak
+
+# make sure log directory exists and owned by syslog
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/log/oaklang.org
+ExecStartPre=/bin/chown syslog:adm /var/log/oaklang.org
+ExecStartPre=/bin/chmod 755 /var/log/oaklang.org
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=oaklang.org
+
+[Install]
+WantedBy=multi-user.target
