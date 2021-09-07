@@ -21,6 +21,39 @@ std.range(1, 101) |> std.each(fn(n) {
 })
 ```
 
+Oak has good support for asynchronous I/O. Here's how you read a file and print it.
+
+```js
+std := import('std')
+fs := import('fs')
+
+with fs.readFile('./file.txt') fn(file) if file {
+    ? -> std.println('Could not read file!')
+    _ -> print(file)
+}
+```
+
+Oak also has a pragmatic standard library that comes built into the `oak` executable. For example, there's a built-in HTTP server and router in the `http` library.
+
+```js
+std := import('std')
+fmt := import('fmt')
+http := import('http')
+
+server := http.Server()
+with server.route('/hello/:name') fn(params) {
+    fn(req, end) if req.method {
+        'GET' -&gt; end({
+            status: 200
+            body: fmt.format('Hello, {{ 0 }}!'
+                std.default(params.name, 'World'))
+        })
+        _ -&gt; end(http.MethodNotAllowed)
+    }
+}
+server.start(9999)
+```
+
 ## Overview
 
 Oak has 7 primitive and 3 complex types.
@@ -133,5 +166,7 @@ Oak (ab)uses GNU Make to run development workflows and tasks.
 - `make run` compiles and runs the Oak binary, which opens an interactive REPL
 - `make tests` or `make t` runs the Go tes suite for the Oak language and interpreter
 - `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
-- `make install` installs the Mangolia interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
+- `make install` installs the Oak interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
+
+To try Oak by building from source, clone the repository and run `make install` (or simply `go build .`).
 
