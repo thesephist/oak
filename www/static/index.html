@@ -1,0 +1,94 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="https://github.com/thesephist/oak" target="_blank">source</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <div class="hero split overlay">
+            <div class="left">
+                <h1>Oak</h1>
+                <p class="tagline">An expressive, simple, dynamic programming language.</p>
+                <a class="button" href="https://github.com/thesephist/oak" target="_blank">Try Oak &rarr;</a>
+                <p class="disclaimer">* Oak is still under construction! An official download and documentation for Oak will be available when the language is more finished.</p>
+            </div>
+            <div class="right">
+                <pre><code>std := import('std')
+fmt := import('fmt')
+http := import('http')
+
+server := http.Server()
+with server.route('/hello/:name') fn(params) {
+    fn(req, end) if req.method {
+        'GET' -&gt; end({
+            status: 200
+            body: fmt.format('Hello, {{ 0 }}!'
+                std.default(params.name, 'World'))
+        })
+        _ -&gt; end(http.MethodNotAllowed)
+    }
+}
+server.start(9999)</code></pre>
+            </div>
+        </div>
+        <article class="overlay">
+            <p>
+            Once upon a time, there was
+            <a href="https://dotink.co" target="_blank">Ink</a>.
+            Ink was a toy programming language, and I used it to build
+            everything from personal productivity apps to compilers to ray
+            tracers. Ink was wonderful, but had a handful of shortcomings and
+            misfeatures that became more and more obvious over time as I used
+            it.
+            </p>
+            <p>
+            Oak is a sequel to Ink that tries to correct many of these early
+            mistakes, while being easier to read and use. Oak is intentionally
+            not "Ink 2.0" — it's not a simple upgrade or bugfix, but a
+            completely different language with quite different semantics and
+            syntax.
+            </p>
+            <p>
+            I've been building Oak since early July 2021. The core language and
+            basic standard libraries are complete, but still feel too unstable
+            to call it ready, and there's a lot missing that I'd like to add to
+            Oak's tooling, like compile-to-JavaScript support baked into the
+            language, and support for automatic code formatting, testing, and
+            documentation generation. This is also why this website is very
+            bare today — I haven't had time to stabilize and document much of
+            anything yet!
+            </p>
+            <p>
+            In the meantime, if you're curious about the language, you can
+            check out the
+            <a href="https://github.com/thesephist/oak" target="_blank">Oak repository</a>
+            on GitHub, where you'll find more details about the language and a
+            guide on how to try it today.
+            </p>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - Linus
+            </div>
+        </div>
+    </footer>
+</body>

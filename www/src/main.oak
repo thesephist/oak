@@ -1,0 +1,49 @@
+// oaklang.org
+//
+// This server handles all static and dynamic API requests to oaklang.org, the
+// main website for the Oak programming language.
+
+{
+	println: println
+	each: each
+	entries: entries
+} := import('std')
+{
+	format: format
+	printf: printf
+} := import('fmt')
+fs := import('fs')
+http := import('http')
+
+Port := 9898
+
+server := http.Server()
+
+{
+	// explicit static paths
+	'/': './static/index.html'
+	'/favicon.ico': './static/favicon.ico'
+} |> entries() |> with each() fn(entry) {
+	[reqPath, fsPath] := entry
+	with server.route(reqPath) fn(params) fn(req, end) if req.method {
+		'GET' -> with fs.readFile(fsPath) fn(file) if file {
+			? -> end(http.NotFound)
+			_ -> end({
+				status: 200
+				headers: {
+					'Content-Type': http.mimeForPath(fsPath)
+				}
+				body: file
+			})
+		}
+		_ -> end(http.MethodNotAllowed)
+	}
+}
+
+with server.route('/*staticPath') fn(params) {
+	http.handleStatic('./static/' + params.staticPath)
+}
+
+server.start(Port)
+printf('oaklang.org running on port {{0}}', Port)
+
