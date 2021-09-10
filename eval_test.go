@@ -88,6 +88,20 @@ func TestObjectLiteral(t *testing.T) {
 	})
 }
 
+func TestListStringify(t *testing.T) {
+	expectProgramToReturn(t, `
+		[
+			string(:atomValue)
+			string(3)
+			string(2.51)
+		]
+	`, MakeList(
+		MakeString(":atomValue"),
+		MakeString("3"),
+		MakeString("2.51"),
+	))
+}
+
 func TestObjectStringify(t *testing.T) {
 	expectProgramToReturn(t, `
 		x := {
