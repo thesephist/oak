@@ -1,0 +1,1574 @@
+// libmd tests
+
+std := import('std')
+str := import('str')
+md := import('../lib/md')
+
+// NOTE: Because we don't want the tests to depend on any internal
+// implementation detail, we only test two high level components of the
+// Markdown module: md.parse: text -> AST and md.compile: AST -> text.
+
+fn run(t) {
+	// md.parse/inline nodes
+	{
+		parse := md.parse
+
+		'plain text' |> t.eq(
+			parse('hello')
+			[{
+				tag: :p
+				children: ['hello']
+			}]
+		)
+		'characters are escaped properly by \\' |> t.eq(
+			parse('\\- x86\\_64')
+			[{
+				tag: :p
+				children: ['- x86_64']
+			}]
+		)
+		'a line ending with a backslash parses correctly (backslash ignored)' |> t.eq(
+			parse('thing \\\\')
+			[{
+				tag: :p
+				children: [
+					'thing '
+					{ tag: :br }
+				]
+			}]
+		)
+		'unpaired delimiters for inline marks present as normal text' |> t.eq(
+			parse('** and _ and ! and `')
+			[{
+				tag: :p
+				children: ['** and _ and ! and `']
+			}]
+		)
+		'text with delimiters parses as one text node' |> t.eq(
+			parse('[([ hi) ]')
+			[{
+				tag: :p
+				children: ['[([ hi) ]']
+			}]
+		)
+		'plain header h1' |> t.eq(
+			parse('# hello')
+			[{
+				tag: :h1
+				children: ['hello']
+			}]
+		)
+		'plain header h4' |> t.eq(
+			parse('#### hello world')
+			[{
+				tag: :h4
+				children: ['hello world']
+			}]
+		)
+		'italic with underscore' |> t.eq(
+			parse('_italicized_')
+			[{
+				tag: :p
+				children: [{
+					tag: :em
+					children: ['italicized']
+				}]
+			}]
+		)
+		'italic with asterisk' |> t.eq(
+			parse('*italicized*')
+			[{
+				tag: :p
+				children: [{
+					tag: :em
+					children: ['italicized']
+				}]
+			}]
+		)
+		'bold with underscore' |> t.eq(
+			parse('__bolded__')
+			[{
+				tag: :p
+				children: [{
+					tag: :strong
+					children: ['bolded']
+				}]
+			}]
+		)
+		'bold with asterisk' |> t.eq(
+			parse('**bolded**')
+			[{
+				tag: :p
+				children: [{
+						tag: :strong
+						children: ['bolded']
+				}]
+			}]
+		)
+		'inline code block' |> t.eq(
+			parse('`code block`')
+			[{
+				tag: :p
+				children: [{
+						tag: :code
+						children: ['code block']
+				}]
+			}]
+		)
+		'strikethrough inline' |> t.eq(
+			parse('~struck out~')
+			[{
+				tag: :p
+				children: [{
+						tag: :strike
+						children: ['struck out']
+				}]
+			}]
+		)
+		'strikethrough within text' |> t.eq(
+			parse('hi ~hello~ world')
+			[{
+				tag: :p
+				children: [
+						'hi '
+						{
+								tag: :strike
+								children: ['hello']
+						}
+						' world'
+				]
+			}]
+		)
+		'unclosed tags do not close at end of line' |> t.eq(
+			parse('**_mixed case')
+			[{
+				tag: :p
+				children: ['**_mixed case']
+			}]
+		)
+		'italic, bold, code block in header' |> t.eq(
+			parse('## my _big_ **scary** `code`')
+			[{
+				tag: :h2
+				children: [
+					'my '
+					{
+						tag: :em
+						children: ['big']
+					}
+					' '
+					{
+						tag: :strong
+						children: ['scary']
+					}
+					' '
+					{
+						tag: :code
+						children: ['code']
+					}
+				]
+			}]
+		)
+
+		'mixed italic and bold separately' |> t.eq(
+			parse('_ital_ **bold**')
+			[{
+				tag: :p
+				children: [
+					{
+						tag: :em
+						children: ['ital']
+					}
+					' '
+					{
+						tag: :strong
+						children: ['bold']
+					}
+				]
+			}]
+		)
+		'mixed italic and bold together' |> t.eq(
+			parse('this **whole _text_ is bolded**')
+			[{
+				tag: :p
+				children: [
+					'this '
+					{
+						tag: :strong
+						children: [
+							'whole '
+							{
+								tag: :em
+								children: ['text']
+							}
+							' is bolded'
+						]
+					}
+				]
+			}]
+		)
+		'coincident italic and bold' |> t.eq(
+			parse('**_really emphasized_**')
+			[{
+				tag: :p
+				children: [{
+					tag: :strong
+					children: [{
+						tag: :em
+						children: ['really emphasized']
+					}]
+				}]
+			}]
+		)
+
+		'simple unchecked checkbox' |> t.eq(
+			parse('[ ]')
+			[{
+				tag: :p
+				children: [{
+					tag: :checkbox
+					checked: false
+				}]
+			}]
+		)
+		'simple checked checkbox' |> t.eq(
+			parse('[x]')
+			[{
+				tag: :p
+				children: [{
+					tag: :checkbox
+					checked: true
+				}]
+			}]
+		)
+		'checked and unchecked checkboxes inline' |> t.eq(
+			parse('a [ ] b [x][ ] c')
+			[{
+				tag: :p
+				children: [
+					'a '
+					{
+						tag: :checkbox
+						checked: false
+					}
+					' b '
+					{
+						tag: :checkbox
+						checked: true
+					}
+					{
+						tag: :checkbox
+						checked: false
+					}
+					' c'
+				]
+			}]
+		)
+		'almost-checkboxes with too much inside' |> t.eq(
+			parse('[  ] [x ] [')
+			[{
+				tag: :p
+				children: ['[  ] [x ] [']
+			}]
+		)
+		'checkbox inside marks' |> t.eq(
+			parse('**bold [x]**')
+			[{
+				tag: :p
+				children: [{
+					tag: :strong
+					children: [
+						'bold '
+						{
+							tag: :checkbox
+							checked: true
+						}
+					]
+				}]
+			}]
+		)
+		'checkbox inside list item' |> t.eq(
+			parse('- [ ] do this now!')
+			[{
+				tag: :ul
+				children: [{
+					tag: :li
+					children: [
+						{
+							tag: :checkbox
+							checked: false
+						}
+						' do this now!'
+					]
+				}]
+			}]
+		)
+		'checkbox inside header' |> t.eq(
+			parse('# March madness [x]')
+			[{
+				tag: :h1
+				children: [
+					'March madness '
+					{
+						tag: :checkbox
+						checked: true
+					}
+				]
+			}]
+		)
+		'checkboxes followed by ! (regression due to img syntax)' |> t.eq(
+			parse('![x]![ ](x')
+			[{
+				tag: :p
+				children: [
+					'!'
+					{
+						tag: :checkbox
+						checked: true
+					}
+					'!'
+					{
+						tag: :checkbox
+						checked: false
+					}
+					'(x'
+				]
+			}]
+		)
+
+		'plain text link' |> t.eq(
+			parse('[text](dst)')
+			[{
+				tag: :p
+				children: [{
+					tag: :a
+					href: 'dst'
+					children: ['text']
+				}]
+			}]
+		)
+		'rich text link inside' |> t.eq(
+			parse('[rich **text**](#dst-link)')
+			[{
+				tag: :p
+				children: [{
+					tag: :a
+					href: '#dst-link'
+					children: [
+						'rich '
+						{
+							tag: :strong
+							children: ['text']
+						}
+					]
+				}]
+			}]
+		)
+		'rich text link outside' |> t.eq(
+			parse('_[rich text](link)_')
+			[{
+				tag: :p
+				children: [{
+					tag: :em
+					children: [{
+						tag: :a
+						href: 'link'
+						children: ['rich text']
+					}]
+				}]
+			}]
+		)
+		'link href does not get Markdown-formatted' |> t.eq(
+			parse('[link](_dst_)')
+			[{
+				tag: :p
+				children: [{
+					tag: :a
+					href: '_dst_'
+					children: ['link']
+				}]
+			}]
+		)
+
+		'link with preceding []' |> t.eq(
+			parse('[link like this] [another link](dst)')
+			[{
+				tag: :p
+				children: [
+					'[link like this] '
+					{
+						tag: :a
+						href: 'dst'
+						children: ['another link']
+					}
+				]
+			}]
+		)
+		'link with internal []' |> t.eq(
+			parse('[link like this [[another] ](this)')
+			[{
+				tag: :p
+				children: [
+					'[link like this '
+					{
+						tag: :a
+						href: 'this'
+						children: ['[another] ']
+					}
+				]
+			}]
+		)
+		'link with two following ()s' |> t.eq(
+			parse('[link [some*thing*](first)(second)')
+			[{
+				tag: :p
+				children: [
+					'[link '
+					{
+						tag: :a
+						href: 'first'
+						children: [
+							'some'
+							{
+								tag: :em
+								children: ['thing']
+							}
+						]
+					}
+					'(second)'
+				]
+			}]
+		)
+		'incomplete link syntaxes' |> t.eq(
+			parse('[ab [ab] [ab](cd')
+			[{
+				tag: :p
+				children: ['[ab [ab] [ab](cd']
+			}]
+		)
+		'link in surrounding text' |> t.eq(
+			parse('ab [cd](ef) ghi')
+			[{
+				tag: :p
+				children: [
+					'ab '
+					{
+						tag: :a
+						href: 'ef'
+						children: ['cd']
+					}
+					' ghi'
+				]
+			}]
+		)
+
+		'! without following link syntax is not an image' |> t.eq(
+			parse('hello !image')
+			[{
+				tag: :p
+				children: ['hello !image']
+			}]
+		)
+		'! followed by link syntax is an image' |> t.eq(
+			parse('![alt text](dst text)')
+			[{
+				tag: :p
+				children: [{
+					tag: :img
+					alt: 'alt text'
+					src: 'dst text'
+				}]
+			}]
+		)
+		'text in alt region of image is not formatted' |> t.eq(
+			parse('![alt **text**](dst)')
+			[{
+				tag: :p
+				children: [{
+					tag: :img
+					alt: 'alt **text**'
+					src: 'dst'
+				}]
+			}]
+		)
+		'image in link' |> t.eq(
+			parse('[an ![image](linked) thing](https://google.com/)')
+			[{
+				tag: :p
+				children: [{
+					tag: :a
+					href: 'https://google.com/'
+					children: [
+						'an '
+						{
+							tag: :img
+							alt: 'image'
+							src: 'linked'
+						}
+						' thing'
+					]
+				}]
+			}]
+		)
+		'image in surrounding text' |> t.eq(
+			parse('ab ![cd](ef) ghi')
+			[{
+				tag: :p
+				children: [
+					'ab '
+					{
+						tag: :img
+						alt: 'cd'
+						src: 'ef'
+					}
+					' ghi'
+				]
+			}]
+		)
+		'incomplete image syntaxes' |> t.eq(
+			parse('![ab ![ab] ![ab](cd')
+			[{
+				tag: :p
+				children: ['![ab ![ab] ![ab](cd']
+			}]
+		)
+	}
+
+	// md.parse/block nodes
+	{
+		parse := md.parse
+
+		fn parseLines(lines) lines |> str.join('\n') |> parse()
+
+		'consecutive lines parse as one paragraph' |> t.eq(
+			parseLines(['hello', 'world'])
+			[{
+				tag: :p
+				children: ['hello world']
+			}]
+		)
+		'nonconsecutive lines parse as two paragraphs' |> t.eq(
+			parseLines(['a', 'b', '', 'd'])
+			[
+				{
+					tag: :p
+					children: ['a b']
+				}
+				{
+					tag: :p
+					children: ['d']
+				}
+			]
+		)
+		'line that ends with two spaces for <br />' |> t.eq(
+			parseLines(['_hello_  ', 'world']),
+			[{
+				tag: :p
+				children: [
+					{
+						tag: :em
+						children: ['hello']
+					}
+					{tag: :br}
+					'world'
+				]
+			}]
+		)
+		'line that ends with two spaces for <br />' |> t.eq(
+			parseLines(['_hello_ \\', 'world']),
+			[{
+				tag: :p
+				children: [
+					{
+						tag: :em
+						children: ['hello']
+					}
+					' '
+					{tag: :br}
+					'world'
+				]
+			}]
+		)
+
+		'one line block quote' |> t.eq(
+			parse('>hello world'),
+			[{
+				tag: :blockquote
+				children: [{
+					tag: :p
+					children: ['hello world']
+				}]
+			}]
+		)
+		'multiline block quote' |> t.eq(
+			parseLines(['>hello world', '>goodbye!']),
+			[{
+				tag: :blockquote
+				children: [
+					{
+						tag: :p
+						children: ['hello world goodbye!']
+					}
+				]
+			}]
+		)
+		'block quote in text' |> t.eq(
+			parseLines(['first', '>blockquote!', 'second'])
+			[
+				{
+					tag: :p
+					children: ['first']
+				}
+				{
+					tag: :blockquote
+					children: [{
+							tag: :p
+							children: ['blockquote!']
+					}]
+				}
+				{
+					tag: :p
+					children: ['second']
+				}
+			]
+		)
+		'multiline block quote in text' |> t.eq(
+			parseLines(['>blockquote!', '>continued *here*', 'second'])
+			[
+				{
+					tag: :blockquote
+					children: [
+						{
+							tag: :p
+							children: [
+								'blockquote! continued '
+								{
+										tag: :em
+										children: ['here']
+								}
+							]
+						}
+					]
+				}
+				{
+					tag: :p
+					children: ['second']
+				}
+			]
+		)
+		'quoted block inside quoted block' |> t.eq(
+			parseLines(['>layer 1', '>>layer 2', '>>layer 2', '>layer 1']),
+			[{
+				tag: :blockquote
+				children: [
+					{
+						tag: :p
+						children: ['layer 1']
+					}
+					{
+						tag: :blockquote
+						children: [{
+							tag: :p
+							children: ['layer 2 layer 2']
+						}]
+					}
+					{
+						tag: :p
+						children: ['layer 1']
+					}
+				]
+			}]
+		)
+		lines := [
+			'>1'
+			'>- A'
+			'>  - B'
+			'>- C'
+			'>2'
+		]
+		'nested list inside a quoted block' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :blockquote
+				children: [
+					{
+						tag: :p
+						children: ['1']
+					}
+					{
+						tag: :ul
+						children: [
+							{
+								tag: :li
+								children: [
+									'A'
+									{
+										tag: :ul
+										children: [{
+											tag: :li
+											children: ['B']
+										}]
+									}
+								]
+							}
+							{
+								tag: :li
+								children: ['C']
+							}
+						]
+					}
+					{
+						tag: :p
+						children: ['2']
+					}
+				]
+			}]
+		)
+
+		'unordered list with one item' |> t.eq(
+			parse('- hello world')
+			[{
+				tag: :ul
+				children: [{
+					tag: :li
+					children: ['hello world']
+				}]
+			}]
+		)
+		'if unordered list prefixed twice, removes only 1 bullet' |> t.eq(
+			parse('- - Thing.'),
+			[{
+				tag: :ul
+				children: [{
+					tag: :li
+					children: ['- Thing.']
+				}]
+			}]
+		)
+		'small unordered list' |> t.eq(
+			parseLines(['- a', '- b']),
+			[{
+				tag: :ul
+				children: [
+					{
+						tag: :li
+						children: ['a']
+					}
+					{
+						tag: :li
+						children: ['b']
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'- baa baa **black sheep**'
+			'- old ![mcdonalds](had) a farm!'
+			'- done.'
+		]
+		'unordered list with formatted text' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ul
+				children: [
+					{
+						tag: :li
+						children: [
+							'baa baa '
+							{
+								tag: :strong
+								children: ['black sheep']
+							}
+						]
+					}
+					{
+						tag: :li
+						children: [
+							'old '
+							{
+								tag: :img
+								alt: 'mcdonalds'
+								src: 'had'
+							}
+							' a farm!'
+						]
+					}
+					{
+						tag: :li
+						children: ['done.']
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'- first level'
+			'  - second level'
+			'- first level again'
+		]
+		'unordered list with nesting' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ul
+				children: [
+					{
+						tag: :li
+						children: [
+							'first level'
+							{
+								tag: :ul
+								children: [{
+									tag: :li
+									children: ['second level']
+								}]
+							}
+						]
+					}
+					{
+						tag: :li
+						children: ['first level again']
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'first paragraph'
+			'- a'
+			'  - b'
+			'- c'
+			'  - d'
+			'    - d2'
+			'    - d3'
+			'  - e'
+			'- f'
+			'last paragraph'
+		]
+		'unordered list with multiple nesting' |> t.eq(
+			parseLines(lines)
+			[
+				{
+					tag: :p
+					children: ['first paragraph']
+				}
+				{
+					tag: :ul
+					children: [
+						{
+							tag: :li
+							children: [
+								'a'
+								{
+									tag: :ul
+									children: [{
+										tag: :li
+										children: ['b']
+									}]
+								}
+							]
+						}
+						{
+							tag: :li
+							children: [
+								'c'
+								{
+									tag: :ul
+									children: [
+										{
+											tag: :li
+											children: [
+												'd'
+												{
+													tag: :ul
+													children: [
+														{
+															tag: :li
+															children: ['d2']
+														}
+														{
+															tag: :li
+															children: ['d3']
+														}
+													]
+												}
+											]
+										}
+										{
+											tag: :li
+											children: ['e']
+										}
+									]
+								}
+							]
+						}
+						{
+							tag: :li
+							children: ['f']
+						}
+					]
+				}
+				{
+					tag: :p
+					children: ['last paragraph']
+				}
+			]
+		)
+
+		lines := [
+			'first random line'
+			'- first list item'
+			'- second list item'
+			'last random line'
+		]
+		'unordered list in text' |> t.eq(
+			parseLines(lines)
+			[
+				{
+					tag: :p
+					children: ['first random line']
+				}
+				{
+					tag: :ul
+					children: [
+						{
+							tag: :li
+							children: ['first list item']
+						}
+						{
+							tag: :li
+							children: ['second list item']
+						}
+					]
+				}
+				{
+					tag: :p
+					children: ['last random line']
+				}
+			]
+		)
+
+		'ordered list with one item' |> t.eq(
+			parse('1. hello world'),
+			[{
+				tag: :ol
+				children: [{
+					tag: :li
+					children: ['hello world']
+				}]
+			}]
+		)
+		'ordered list with more than one item' |> t.eq(
+			parseLines(['1. hello', '2. goodbye']),
+			[{
+				tag: :ol
+				children: [
+					{
+						tag: :li
+						children: ['hello']
+					}
+					{
+						tag: :li
+						children: ['goodbye']
+					}
+				]
+			}]
+		)
+		'ordered list with formatted text' |> t.eq(
+			parseLines(['1. *italic* text', '2. __bold__ text']),
+			[{
+				tag: :ol
+				children: [
+					{
+						tag: :li
+						children: [
+							{
+								tag: :em
+								children: ['italic']
+							}
+							' text'
+						]
+					}
+					{
+						tag: :li
+						children: [
+							{
+								tag: :strong
+								children: ['bold']
+							}
+							' text'
+						]
+					}
+				]
+			}]
+		)
+		'list item with both prefixes, bullet first' |> t.eq(
+			parse('- 1. Hello')
+			[{
+				tag: :ul
+				children: [{
+					tag: :li
+					children: ['1. Hello']
+				}]
+			}]
+		)
+		'list item with both prefixes, number first' |> t.eq(
+			parse('1. - Hello'),
+			[{
+				tag: :ol
+				children: [{
+					tag: :li
+					children: ['- Hello']
+				}]
+			}]
+		)
+
+		lines := [
+			'1. first level'
+			'  2. second level'
+			'3. first level again'
+		]
+		'ordered list with nesting' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ol
+				children: [
+					{
+						tag: :li
+						children: [
+							'first level'
+							{
+								tag: :ol
+								children: [{
+									tag: :li
+									children: ['second level']
+								}]
+							}
+						]
+					}
+					{
+						tag: :li
+						children: ['first level again']
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'12. a'
+			'100. b'
+			'999. c d'
+		]
+		'ordered list with incorrect numbering' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ol
+				children: [
+					{
+						tag: :li
+						children: ['a']
+					}
+					{
+						tag: :li
+						children: ['b']
+					}
+					{
+						tag: :li
+						children: ['c d']
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'- A'
+			'- B'
+			'3. C'
+			'4. D'
+		]
+		'mixed list of ordered and unordered list gets separated' |> t.eq(
+			parseLines(lines)
+			[
+				{
+					tag: :ul
+					children: [
+						{tag: :li, children: ['A']}
+						{tag: :li, children: ['B']}
+					]
+				}
+				{
+					tag: :ol
+					children: [
+						{tag: :li, children: ['C']}
+						{tag: :li, children: ['D']}
+					]
+				}
+			]
+		)
+
+		lines := [
+			'1. first'
+			'2. second'
+			'3. third'
+			'  - A'
+			'    1. A subpoint'
+			'  - B'
+			'4. fourth'
+			'5. fifth'
+			'  100. C'
+				'  101. D'
+		]
+		'mixed nested ordered and unordered list' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ol
+				children: [
+					{tag: :li, children: ['first']}
+					{tag: :li, children: ['second']}
+					{
+						tag: :li
+						children: [
+							'third'
+							{
+								tag: :ul
+								children: [
+									{tag: :li, children: [
+										'A'
+										{
+												tag: :ol
+												children: [{tag: :li, children: ['A subpoint']}]
+										}
+									]}
+									{tag: :li, children: ['B']}
+								]
+							}
+						]
+					}
+					{tag: :li, children: ['fourth']}
+					{
+						tag: :li
+						children: [
+							'fifth'
+							{
+								tag: :ol
+								children: [
+									{tag: :li, children: ['C']}
+									{tag: :li, children: ['D']}
+								]
+							}
+						]
+					}
+				]
+			}]
+		)
+
+		lines := [
+			'1. header'
+			'  - bulleted'
+			'  2. numbered'
+		]
+		'mixed list type under a level of nesting' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :ol
+				children: [{tag: :li, children: [
+					'header'
+					{
+						tag: :ul
+						children: [{tag: :li, children: ['bulleted']}]
+					}
+					{
+						tag: :ol
+						children: [{tag: :li, children: ['numbered']}]
+					}
+				]}]
+			}]
+		)
+
+		lines := [
+			'. first'
+			' . second'
+			'1.third'
+			'1a. fourth'
+		]
+		'numbered list without incorrect prefix does not parse as list' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :p
+				children: ['. first  . second 1.third 1a. fourth']
+			}]
+		)
+
+		'one line code block' |> t.eq(
+			parseLines(['```', 'hello **not bold**', '```']),
+			[{
+				tag: :pre
+				children: [{
+					tag: :code
+					lang: ''
+					children: ['hello **not bold**']
+				}]
+			}]
+		)
+		lines := [
+			'```'
+			'hello world()'
+			'\t-ing'
+			'*foo := bar/baz'
+			'```'
+		]
+		'multiline code block' |> t.eq(
+			parseLines(lines),
+			[{
+				tag: :pre
+				children: [{
+					tag: :code
+					lang: ''
+					children: ['hello world()\n\t-ing\n*foo := bar/baz']
+				}]
+			}]
+		)
+		'code block with language tag' |> t.eq(
+			parseLines(['```ink', 'log := std.log', '```']),
+			[{
+				tag: :pre
+				children: [{
+					tag: :code
+					lang: 'ink'
+					children: ['log := std.log']
+				}]
+			}]
+		)
+
+		'!html in one line' |> t.eq(
+			parse('!html <img src="dst" alt="me!">'),
+			[{
+				tag: :rawHTML
+				children: ['<img src="dst" alt="me!">']
+			}]
+		)
+		'multiline !html' |> t.eq(
+			parseLines(['!html <div class="hi"', 'hidden', '></div>']),
+			[{
+				tag: :rawHTML
+				children: ['<div class="hi"\nhidden\n></div>']
+			}]
+		)
+		lines := [
+			'hello'
+			''
+			'!html <', 'hr', '/>'
+			''
+			'bye'
+		]
+		'multiline !html in other text' |> t.eq(
+			parseLines(lines)
+			[
+				{
+					tag: :p
+					children: ['hello']
+				}
+				{
+					tag: :rawHTML
+					children: ['<\nhr\n/>']
+				}
+				{
+					tag: :p
+					children: ['bye']
+				}
+			]
+		)
+
+		'neverending code block does not break parser' |> t.eq(
+			parseLines(['```', 'ahh!']),
+			[{
+				tag: :pre
+				children: [{
+					tag: :code
+					lang: ''
+					children: ['ahh!']
+				}]
+			}]
+		)
+
+		'horizontal dividers between paragraphs' |> t.eq(
+			parseLines(['a', '---', 'b', 'b', '***', 'c'])
+			[
+				{tag: :p, children: ['a']}
+				{tag: :hr}
+				{tag: :p, children: ['b b']}
+				{tag: :hr}
+				{tag: :p, children: ['c']}
+			]
+		)
+
+		'hr mark followed by excess characters' |> t.eq(
+			parseLines(['a', '--- whatever', 'b'])
+			[
+				{tag: :p, children: ['a']}
+				{tag: :hr}
+				{tag: :p, children: ['b']}
+			]
+		)
+	}
+
+	// md.compile
+	{
+		compile := md.compile
+
+		'plain text' |> t.eq(
+			compile(['hello world'])
+			'hello world'
+		)
+		'dangerous HTML characters < and & are escaped safely' |> t.eq(
+			compile(['<hi> & <bye> &amp;'])
+			'&lt;hi> &amp; &lt;bye> &amp;amp;'
+		)
+		'single paragraph' |> t.eq(
+			compile([{
+				tag: :p
+				children: ['goodbye world']
+			}])
+			'<p>goodbye world</p>'
+		)
+		'inline marks' |> t.eq(
+			compile([{
+				tag: :p
+				children: [
+					'abc '
+					{
+						tag: :strong
+						children: ['def']
+					}
+					' ghi '
+					{
+						tag: :em
+						children: ['jkl']
+					}
+				]
+			}])
+			'<p>abc <strong>def</strong> ghi <em>jkl</em></p>'
+		)
+		'nested marks' |> t.eq(
+			compile([{
+				tag: :p
+				children: [{
+					tag: :code
+					children: [{
+						tag: :strong
+						children: ['internals check']
+					}]
+				}]
+			}])
+			'<p><code><strong>internals check</strong></code></p>'
+		)
+		'links' |> t.eq(
+			compile([{
+				tag: :p
+				children: [{
+					tag: :a
+					href: 'some url'
+					children: [{
+						tag: :em
+						children: ['click here']
+					}]
+				}]
+			}])
+			'<p><a href="some url"><em>click here</em></a></p>'
+		)
+		'checkboxes' |> t.eq(
+			compile([{
+				tag: :p
+				children: [
+					{
+						tag: :checkbox
+						checked: true
+					}
+					' followed by '
+					{
+						tag: :checkbox
+						checked: false
+					}
+				]
+			}])
+			'<p><input type="checkbox" checked/> followed by <input type="checkbox" /></p>'
+		)
+		'image' |> t.eq(
+			compile([{
+				tag: :p
+				children: [{
+					tag: :img
+					alt: 'alternative text'
+					src: 'https://linus.zone/pic'
+				}]
+			}])
+			'<p><img alt="alternative text" src="https://linus.zone/pic"/></p>'
+		)
+		'headers' |> t.eq(
+			compile([
+				{
+					tag: :h1
+					children: ['first header']
+				}
+				{
+					tag: :h3
+					children: [
+						{
+							tag: :em
+							children: ['second']
+						}
+						' header'
+					]
+				}
+			])
+			'<h1>first header</h1><h3><em>second</em> header</h3>'
+		)
+		'pre tag preserves whitespace' |> t.eq(
+			compile([
+				{
+					tag: :pre
+					children: ['first line\nsecond line, indented\nthird line']
+				}
+			])
+			'<pre>first line\nsecond line, indented\nthird line</pre>'
+		)
+		'pre tag with code inside' |> t.eq(
+			compile([{
+				tag: :pre
+				children: [{
+					tag: :code
+					children: ['first line\nsecond line\nthird']
+				}]
+			}])
+			'<pre><code>first line\nsecond line\nthird</code></pre>'
+		)
+		'code with language attribute' |> t.eq(
+			compile([{
+				tag: :code
+				lang: 'ink'
+				children: ['log := std(\'log\')']
+			}])
+			'<code data-lang="ink">log := std(\'log\')</code>'
+		)
+
+		'nested list with one item' |> t.eq(
+			compile([{
+				tag: :ul
+				children: [
+					{
+						tag: :li
+						children: ['my list item']
+					}
+				]
+			}])
+			'<ul><li>my list item</li></ul>'
+		)
+		'nested list with many items' |> t.eq(
+			compile([{
+				tag: :ul
+				children: [
+					{
+						tag: :li
+						children: [
+							'first'
+							{
+								tag: :ul
+								children: [
+									{
+										tag: :li
+										children: ['sub-first']
+									}
+									{
+										tag: :li
+										children: ['sub-first']
+									}
+								]
+							}
+						]
+					}
+					{
+						tag: :li
+						children: ['second']
+					}
+				]
+			}])
+			'<ul><li>first<ul><li>sub-first</li><li>sub-first</li></ul></li><li>second</li></ul>'
+		)
+
+		'horizontal rule' |> t.eq(
+			compile([
+				{
+					tag: :p
+					children: ['above line']
+				}
+				{
+					tag: :hr
+				}
+				{
+					tag: :p
+					children: ['below line']
+				}
+			])
+			'<p>above line</p><hr/><p>below line</p>'
+		)
+		'line break within paragraph' |> t.eq(
+			compile([
+				{
+					tag: :p
+					children: [
+						'before break'
+						{
+								tag: :br
+						}
+						'after break'
+					]
+				}
+			])
+			'<p>before break<br/>after break</p>'
+		)
+
+		'raw html' |> t.eq(
+			compile([
+				{
+					tag: :p
+					children: ['before html']
+				}
+				{
+					tag: :rawHTML
+					children: ['<img src="dst" loading="lazy" />']
+				}
+				{
+					tag: :p
+					children: ['after html']
+				}
+			])
+			'<p>before html</p><img src="dst" loading="lazy" /><p>after html</p>'
+		)
+
+		'unknown tags' |> t.eq(
+			compile([{
+				tag: :broken
+			}])
+			'<span style="color:red">Unknown Markdown node {tag: :broken}</span>'
+		)
+	}
+
+	// md.transform integration sanity tests
+	{
+		transform := md.transform
+
+		'plain text' |> t.eq(
+			transform('hello world')
+			'<p>hello world</p>'
+		)
+		'inline marks' |> t.eq(
+			transform('**bold** _italic_ `code line`')
+			'<p><strong>bold</strong> <em>italic</em> <code>code line</code></p>'
+		)
+		'header' |> t.eq(
+			transform('## totally [AWESOME](link)')
+			'<h2>totally <a href="link">AWESOME</a></h2>'
+		)
+	}
+}
+

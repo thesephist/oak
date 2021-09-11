@@ -1,0 +1,663 @@
+// libmd implements a Markdown parser and renderer
+
+{
+	println: println
+	slice: slice
+	map: map
+	each: each
+	filter: filter
+	reduce: reduce
+	every: every
+	append: append
+} := import('std')
+{
+	digit?: digit?
+	letter?: letter?
+	space?: space?
+	word?: word?
+	indexOf: indexOf
+	startsWith?: startsWith?
+	endsWith?: endsWith?
+	trimStart: trimStart
+	replace: replace
+	join: join
+	split: split
+} := import('str')
+{
+	format: format
+} := import('fmt')
+
+// Type-generic Reader over an Oak iterable interface, i.e. strings and lists.
+// This Reader is generic so that we can read through either a string (a list
+// of chars) or a list of strings.
+fn Reader(s) {
+	i := 0
+
+	fn peek s.(i)
+	fn last s.(i + 1)
+	fn back if i {
+		0 -> 0
+		_ -> i <- i - 1
+	}
+	fn next if i {
+		len(s) -> ?
+		_ -> {
+			c := s.(i)
+			i <- i + 1
+			c
+		}
+	}
+	fn expect?(prefix) if s |> slice(i) |> startsWith?(prefix) {
+		true -> {
+			i <- i + len(prefix)
+			true
+		}
+		_ -> false
+	}
+	fn itemIndex(list, it) {
+		fn sub(i) if i < len(list) {
+			true -> if list.(i) {
+				it -> i
+				_ -> sub(i + 1)
+			}
+			_ -> -1
+		}
+		sub(0)
+	}
+	fn readUntil(c) if index := s |> slice(i) |> itemIndex(c) {
+		-1 -> ?
+		_ -> {
+			substr := s |> slice(i, i + index)
+			i <- i + index
+			substr
+		}
+	}
+	fn readUntilPrefix(prefix) {
+		fn sub(index) if index + len(prefix) > len(s) {
+			true -> ?
+			_ -> if part := s |> slice(index, index + len(prefix)) {
+				prefix -> {
+					substr := s |> slice(i, index)
+					i <- index
+					substr
+				}
+				_ -> sub(i + 1)
+			}
+		}
+		sub(i)
+	}
+	fn readUntilEnd {
+		substr := s |> slice(i)
+		i <- len(s)
+		substr
+	}
+	// readUntilMatchingDelim is a helper specifically for parsing delimited
+	// expressions like text in [] or (), that will attempt to read until a
+	// matching delimiter and return that read if the match exists, and return
+	// () if no match exists. This fn accounts for nested delimiters and
+	// ignores matching pairs within the delimited text expression.
+	fn readUntilMatchingDelim(left) {
+		right := if left {
+			// currently only supports [] and () (for Markdown links)
+			'[' -> ']'
+			'(' -> ')'
+			_ -> ?
+		}
+
+		matchingDelimIdx := {
+			fn sub(index, stack) if stack {
+				0 -> index - 1
+				_ -> if c := s.(index) {
+					? -> -1
+					left -> sub(index + 1, stack + 1)
+					right -> sub(index + 1, stack - 1)
+					_ -> sub(index + 1, stack)
+				}
+			}
+			sub(i, 1)
+		}
+
+		if matchingDelimIdx {
+			-1 -> ?
+			_ -> {
+				substr := s |> slice(i, matchingDelimIdx)
+				i <- matchingDelimIdx
+				substr
+			}
+		}
+	}
+
+	{
+		peek: peek
+		last: last
+		back: back
+		next: next
+		expect?: expect?
+		readUntil: readUntil
+		readUntilPrefix: readUntilPrefix
+		readUntilEnd: readUntilEnd
+		readUntilMatchingDelim: readUntilMatchingDelim
+	}
+}
+
+// uword? reports whether a given character is a "word character", i.e. whether
+// it is a part of a normal word. It intends to be UTF8 Unicode-aware and is
+// used for text token disambiguation.
+fn uword?(c) if word?(c) {
+	true -> true
+	_ -> codepoint(c) > 127
+}
+
+// tokenizeText tokenizes a paragraph or paragraph-like Markdown text (like
+// headers) into a token stream
+//
+// This function encapsulates all disambiguation rules for e.g. parens inside A
+// (link) tag parens, underscores inside words, and escaped special characters
+// with backslashes.
+fn tokenizeText(line) {
+	reader := Reader(line)
+
+	peek := reader.peek
+	next := reader.next
+
+	tokens := ['']
+	fn push(tok) tokens << tok << ''
+	fn append(suffix) tokens.(len(tokens) - 1) << suffix
+
+	fn sub if c := next() {
+		? -> ?
+		// italics & bold
+		'_', '*' -> {
+			if peek() {
+				c -> {
+					next()
+					push(c + c)
+				}
+				_ -> push(c)
+			}
+			sub()
+		}
+		// \ escapes any character
+		'\\' -> if d := next() {
+			? -> ?
+			_ -> sub(append(d))
+		}
+		// code snippet
+		'`'
+		// strikethrough
+		'~'
+		// image
+		'!', '[', ']', '(', ')' -> sub(push(c))
+		_ -> sub(append(c))
+	}
+	sub()
+
+	tokens |> with filter() fn(tok) tok != ''
+}
+
+// unifyTextNodes normalizes a Markdown AST so that runs of consecutive plain
+// text nodes (strings) are combined into single plain text nodes.
+fn unifyTextNodes(nodes, joiner) nodes |> with reduce([]) fn(acc, child) if type(child) {
+	:string -> if type(acc.(len(acc) - 1)) {
+		:string -> {
+			acc.(len(acc) - 1) << joiner << child
+			acc
+		}
+		_ -> acc << child
+	}
+	_ -> acc << if child.children {
+		? -> child
+		_ -> child.children := unifyTextNodes(child.children, joiner)
+	}
+}
+
+// parseText takes a stream of inline tokens from a header or paragraph section
+// of a Markdown document and produces a list of inline AST nodes to be
+// included in a Node.H or Node.P.
+fn parseText(tokens) {
+	reader := Reader(tokens)
+
+	peek := reader.peek
+	next := reader.next
+	readUntil := reader.readUntil
+	readUntilMatchingDelim := reader.readUntilMatchingDelim
+
+	fn handleDelimitedRange(tok, tag, nodes, sub) if range := readUntil(tok) {
+		? -> sub(nodes << tok)
+		_ -> {
+			next() // eat trailing tok
+			sub(nodes << {
+				tag: tag
+				children: parseText(range)
+			})
+		}
+	}
+
+	fn sub(nodes) if tok := next() {
+		? -> nodes
+		'_' -> handleDelimitedRange('_', :em, nodes, sub)
+		'__' -> handleDelimitedRange('__', :strong, nodes, sub)
+		'*' -> handleDelimitedRange('*', :em, nodes, sub)
+		'**' -> handleDelimitedRange('**', :strong, nodes, sub)
+		'`' -> handleDelimitedRange('`', :code, nodes, sub)
+		'~' -> handleDelimitedRange('~', :strike, nodes, sub)
+		'[' -> if range := readUntilMatchingDelim('[') {
+			? -> sub(nodes << tok)
+			['x'] -> {
+				next() // eat matching ]
+				sub(nodes << {
+					tag: :checkbox
+					checked: true
+				})
+			}
+			[' '] -> {
+				next() // eat matching ]
+				sub(nodes << {
+					tag: :checkbox
+					checked: false
+				})
+			}
+			// eat matching ], then (
+			_ -> if c := (next(), next()) {
+				'(' -> if urlRange := readUntilMatchingDelim(c) {
+					? -> sub(nodes << tok + join(range) + ']' + c)
+					_ -> {
+						next() // swallow matching )
+						sub(nodes << {
+							tag: :a
+							href: join(urlRange)
+							children: parseText(range)
+						})
+					}
+				}
+				? -> sub(nodes << tok + join(range) + ']')
+				_ -> sub(nodes << tok + join(range) + ']' + c)
+			}
+		}
+		'!' -> if peek() {
+			'[' -> if range := (next(), readUntilMatchingDelim('[')) {
+				? -> sub(nodes << tok + '[')
+				['x'] -> {
+					next() // eat matching ]
+					sub(nodes << tok << {
+						tag: :checkbox
+						checked: true
+					})
+				}
+				[' '] -> {
+					next() // eat matching ]
+					sub(nodes << tok << {
+						tag: :checkbox
+						checked: false
+					})
+				}
+				// eat matching ], then (
+				_ -> if c := (next(), next()) {
+					'(' -> if urlRange := readUntilMatchingDelim(c) {
+						? -> sub(nodes << tok + '[' + join(range) + ']' + c)
+						_ -> {
+							next() // swallow matching )
+							sub(nodes << {
+								tag: :img
+								alt: join(range)
+								src: join(urlRange)
+							})
+						}
+					}
+					? -> sub(nodes << tok + '[' + join(range) + ']')
+					_ -> sub(nodes << tok + '[' + join(range) + ']' + c)
+				}
+			}
+			_ -> sub(nodes << tok)
+		}
+		_ -> sub(nodes << tok)
+	}
+	sub([]) |> unifyTextNodes('')
+}
+
+fn uListItemLine?(line) if line {
+	? -> false
+	_ -> line |> trimStart(' ') |> trimStart('\t') |> startsWith?('- ')
+}
+
+fn oListItemLine?(line) if line {
+	? -> false
+	_ -> {
+		trimmedStart := line |> trimStart(' ') |> trimStart('\t')
+		if dotIdx := trimmedStart |> indexOf('. ') {
+			-1, 0 -> false
+			_ -> trimmedStart |> slice(0, dotIdx) |> split() |> every(digit?)
+		}
+	}
+}
+
+fn listItemLine?(line) uListItemLine?(line) | oListItemLine?(line)
+
+fn trimUListGetLevel(reader) {
+	level := len(reader.readUntil('-'))
+	reader.next() // '-'
+	reader.next() // ' '
+	level
+}
+
+fn trimOListGetLevel(reader) {
+	peek := reader.peek
+	next := reader.next
+
+	// read while whitespace
+	fn sub(i) if space?(peek()) {
+		true -> {
+			next()
+			sub(i + 1)
+		}
+		_ -> i
+	}
+	level := sub(0)
+
+	// eat until dot
+	reader.readUntil('.')
+	next() // eat the .
+
+	// if space after dot, swallow it
+	if peek() {
+		' ' -> next()
+	}
+	level
+}
+
+// lineNodeType reports the node type of a particular Markdown line for parsing
+fn lineNodeType(line) if {
+	line = ? -> ?
+	line = '' -> :empty
+	startsWith?(line, '# ') -> :h1
+	startsWith?(line, '## ') -> :h2
+	startsWith?(line, '### ') -> :h3
+	startsWith?(line, '#### ') -> :h4
+	startsWith?(line, '##### ') -> :h5
+	startsWith?(line, '###### ') -> :h6
+	startsWith?(line, '>') -> :blockquote
+	startsWith?(line, '```') -> :pre
+	startsWith?(line, '---'), startsWith?(line, '***') -> :hr
+	startsWith?(line, '!html') -> :rawHTML
+	uListItemLine?(line) -> :ul
+	oListItemLine?(line) -> :ol
+	_ -> :p
+}
+
+// parse parses a byte string of Markdown formatted text into a Markdown AST,
+// by looking at each line and either changing internal state if the line is a
+// special line like a code fence or a raw HTML literal, or calling
+// tokenizeText() if the line is a raw paragraph or header.
+fn parse(text) text |> split('\n') |> Reader() |> parseDoc()
+
+// parseDoc parses a Markdown docment from a line Reader. This allows
+// sub-sections of the document to re-use this document parser to parse e.g.
+// quoted sections that should be parsed as an independent subsection by
+// providing a line Reader interface.
+fn parseDoc(lineReader) {
+	fn sub(doc) if nodeType := lineNodeType(lineReader.peek()) {
+		:h1, :h2, :h3, :h4, :h5, :h6 -> sub(doc << parseHeader(nodeType, lineReader))
+		:blockquote -> sub(doc << parseBlockQuote(lineReader))
+		:pre -> sub(doc << parseCodeBlock(lineReader))
+		:ul, :ol -> sub(doc << parseList(lineReader, nodeType))
+		:rawHTML -> sub(doc << parseRawHTML(lineReader))
+		:p -> sub(doc << parseParagraph(lineReader))
+		:hr -> {
+			lineReader.next()
+			sub(doc << { tag: :hr })
+		}
+		:empty -> {
+			lineReader.next()
+			sub(doc)
+		}
+		_ -> doc
+	}
+	sub([])
+}
+
+fn parseHeader(nodeType, lineReader) {
+	reader := Reader(lineReader.next())
+	reader.readUntil(' ')
+	reader.next()
+
+	text := reader.readUntilEnd()
+	{
+		tag: nodeType
+		children: tokenizeText(text) |> parseText()
+	}
+}
+
+fn parseBlockQuote(lineReader) {
+	peek := lineReader.peek
+	next := lineReader.next
+
+	// A piece of a document inside a quoted block needs to be parsed as if it
+	// were its own document. The BlockQuotedLineReader provides a line Reader
+	// that masquerades as a document reader to parseDoc.
+	fn BlockQuoteLineReader(lineReader) {
+		fn returnIfQuoted(line) if lineNodeType(line) {
+			:blockquote -> line |> slice(1)
+			_ -> ?
+		}
+
+		fn peek returnIfQuoted(lineReader.peek())
+		fn last returnIfQuoted(lineReader.last())
+		fn back lineReader.back()
+		fn next if lineNodeType(lineReader.peek()) {
+			:blockquote -> lineReader.next() |> trimStart('>')
+			_ -> ?
+		}
+		fn expect? ? // NOTE: not implemented
+		fn readUntil(c) lineReader.readdUntil('>' << c) |>
+			with map() fn(line) line |> slice(1)
+		fn readUntilPrefix(prefix) lineReader.readUntilPrefix('>' << c) |>
+			with map() fn(line) line |> slice(1)
+		fn readUntilMatchingDelim ? // NOTE: not implemented
+
+		{
+			peek: peek
+			last: last
+			back: back
+			next: next
+			expect?: expect?
+			readUntil: readUntil
+			readUntilPrefix: readUntilPrefix
+			readUntilEnd: lineReader.readUntilEnd
+			readUntilMatchingDelim: readUntilMatchingDelim
+		}
+	}
+
+	{
+		tag: :blockquote
+		children: BlockQuoteLineReader(lineReader) |> parseDoc()
+	}
+}
+
+fn parseCodeBlock(lineReader) {
+	peek := lineReader.peek
+	next := lineReader.next
+
+	startTag := next() // eat starting pre tag
+	lang := if rest := startTag |> slice(3) {
+		'' -> ''
+		_ -> rest
+	}
+
+	fn sub(lines) if lineNodeType(peek()) {
+		:pre, ? -> lines
+		_ -> sub(lines << next())
+	}
+	children := sub([])
+
+	next() // eat ending pre tag
+
+	{
+		tag: :pre
+		children: [{
+			tag: :code
+			lang: lang
+			children: unifyTextNodes(children, '\n')
+		}]
+	}
+}
+
+fn parseRawHTML(lineReader) {
+	peek := lineReader.peek
+	next := lineReader.next
+
+	startMarkLine := next()
+	firstLine := startMarkLine |> slice(len('!html '))
+
+	fn sub(lines) if lineNodeType(peek()) {
+		:empty, ? -> lines
+		_ -> sub(lines << next())
+	}
+	children := sub([firstLine])
+
+	{
+		tag: :rawHTML
+		children: unifyTextNodes(children, '\n')
+	}
+}
+
+fn parseList(lineReader, listType) {
+	peek := lineReader.peek
+	next := lineReader.next
+
+	fn sub(items) if listItemLine?(peek()) {
+		false -> items
+		_ -> {
+			// TODO: provide a way for one listItem to contain 2+ paragraphs
+			// The current convention seems to be that if there is at least one
+			// multi-paragraph listItem in a UL, every listItem in the UL gets
+			// <p>s rather than inline text nodes as content.
+			line := next()
+			lineType := lineNodeType(line)
+			reader := Reader(line)
+			trimmer := if lineType {
+				:ul -> trimUListGetLevel
+				:ol -> trimOListGetLevel
+			}
+			level := trimmer(reader)
+
+			text := reader.readUntilEnd()
+			listItem := {
+				tag: :li
+				level: level
+				children: tokenizeText(text) |> parseText()
+			}
+
+			// handle list items that have distinct levels
+			if lastItem := items.(len(items) - 1) {
+				? -> sub(items << listItem)
+				_ -> if {
+					lastItem.level = level -> if lineType {
+						// continue if same list type; otherwise re-parse
+						listType -> sub(items << listItem)
+						_ -> {
+							lineReader.back()
+							items
+						}
+					}
+					lastItem.level < level -> {
+						// indent in: begin parsing a separate list
+						lineReader.back()
+						list := parseList(lineReader, lineType)
+						lastItem.children << list
+						sub(items)
+					}
+					_ -> {
+						// indent out: give up control in this parsing depth
+						lineReader.back()
+						items
+					}
+				}
+			}
+		}
+	}
+	children := sub([])
+
+	// remove the level annotations
+	children := children |> with map() fn(child) if child {
+		{
+			tag: :li
+			level: _
+			children: _
+		} -> {
+			tag: :li
+			children: child.children
+		}
+		_ -> child
+	}
+
+	{
+		tag: listType
+		children: children
+	}
+}
+
+fn parseParagraph(lineReader) {
+	peek := lineReader.peek
+	next := lineReader.next
+
+	fn sub(lines) if lineNodeType(peek()) {
+		:p -> {
+			text := next()
+			if [text |> endsWith?('  '), text.(len(text) - 1)] {
+				[true, _] -> {
+					lines |> append(text |> slice(0, len(text) - 2) |>
+						tokenizeText() |> parseText())
+					sub(lines << { tag: :br })
+				}
+				[_, '\\'] -> {
+					lines |> append(text |> slice(0, len(text) - 1) |>
+						tokenizeText() |> parseText())
+					sub(lines << { tag: :br })
+				}
+				_ -> sub(lines |> append(tokenizeText(text) |> parseText()))
+			}
+		}
+		_ -> lines
+	}
+	children := sub([])
+
+	{
+		tag: :p
+		children: unifyTextNodes(children, ' ')
+	}
+}
+
+// compile transforms a Markdown AST node to HTML
+fn compile(nodes) nodes |> map(compileNode) |> join()
+
+fn wrap(tag, node) '<' << tag << '>' << compile(node.children) << '</' << tag << '>'
+
+// compileNode transforms an individual Markdown AST node into HTML
+fn compileNode(node) if type(node) {
+	:string -> node |> replace('&', '&amp;') |> replace('<', '&lt;')
+	_ -> if node.tag {
+		:p, :em, :strong, :strike,
+		:h1, :h2, :h3, :h4, :h5, :h6,
+		:pre, :ul, :ol, :li, :blockquote -> wrap(node.tag |> string() |> slice(1), node)
+		:a -> '<a href="{{0}}">{{1}}</a>' |> format(node.href, compile(node.children))
+		:img -> '<img alt="{{0}}" src="{{1}}"/>' |> format(node.alt, node.src)
+		:code -> if node.lang {
+			'', ? -> wrap('code', node)
+			_ -> '<code data-lang="{{0}}">{{1}}</code>' |>
+				format(node.lang, compile(node.children))
+		}
+		:checkbox -> '<input type="checkbox" ' << if node.checked {
+			true -> 'checked'
+			_ -> ''
+		} << '/>'
+		:br -> '<br/>'
+		:hr -> '<hr/>'
+		:rawHTML -> node.children.0
+		_ -> '<span style="color:red">Unknown Markdown node {{0}}</span>' |> format(string(node))
+	}
+}
+
+// transform wraps the Markdown parser and compiler into a single function to be
+// invoked by the library consumer.
+fn transform(text) text |> parse() |> compile()
+

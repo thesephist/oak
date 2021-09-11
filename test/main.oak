@@ -11,8 +11,9 @@ TestRunners := [
 	'sort'
 	'fmt'
 	'json'
-	'syntax'
 	'cli'
+	'md'
+	'syntax'
 ]
 
 // allow selection of tests to run with CLI arguments
