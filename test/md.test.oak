@@ -100,8 +100,8 @@ fn run(t) {
 			[{
 				tag: :p
 				children: [{
-						tag: :strong
-						children: ['bolded']
+					tag: :strong
+					children: ['bolded']
 				}]
 			}]
 		)
@@ -110,8 +110,8 @@ fn run(t) {
 			[{
 				tag: :p
 				children: [{
-						tag: :code
-						children: ['code block']
+					tag: :code
+					children: ['code block']
 				}]
 			}]
 		)
@@ -120,8 +120,8 @@ fn run(t) {
 			[{
 				tag: :p
 				children: [{
-						tag: :strike
-						children: ['struck out']
+					tag: :strike
+					children: ['struck out']
 				}]
 			}]
 		)
@@ -130,12 +130,12 @@ fn run(t) {
 			[{
 				tag: :p
 				children: [
-						'hi '
-						{
-								tag: :strike
-								children: ['hello']
-						}
-						' world'
+					'hi '
+					{
+						tag: :strike
+						children: ['hello']
+					}
+					' world'
 				]
 			}]
 		)
@@ -622,8 +622,8 @@ fn run(t) {
 				{
 					tag: :blockquote
 					children: [{
-							tag: :p
-							children: ['blockquote!']
+						tag: :p
+						children: ['blockquote!']
 					}]
 				}
 				{
@@ -643,8 +643,8 @@ fn run(t) {
 							children: [
 								'blockquote! continued '
 								{
-										tag: :em
-										children: ['here']
+									tag: :em
+									children: ['here']
 								}
 							]
 						}
@@ -1135,8 +1135,8 @@ fn run(t) {
 									{tag: :li, children: [
 										'A'
 										{
-												tag: :ol
-												children: [{tag: :li, children: ['A subpoint']}]
+											tag: :ol
+											children: [{ tag: :li, children: ['A subpoint'] }]
 										}
 									]}
 									{tag: :li, children: ['B']}
@@ -1171,17 +1171,20 @@ fn run(t) {
 			parseLines(lines),
 			[{
 				tag: :ol
-				children: [{tag: :li, children: [
-					'header'
-					{
-						tag: :ul
-						children: [{tag: :li, children: ['bulleted']}]
-					}
-					{
-						tag: :ol
-						children: [{tag: :li, children: ['numbered']}]
-					}
-				]}]
+				children: [{
+					tag: :li
+					children: [
+						'header'
+						{
+							tag: :ul
+							children: [{ tag: :li, children: ['bulleted'] }]
+						}
+						{
+							tag: :ol
+							children: [{ tag: :li, children: ['numbered'] }]
+						}
+					]
+				}]
 			}]
 		)
 
@@ -1518,7 +1521,7 @@ fn run(t) {
 					children: [
 						'before break'
 						{
-								tag: :br
+							tag: :br
 						}
 						'after break'
 					]

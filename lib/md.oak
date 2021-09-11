@@ -104,20 +104,17 @@ fn Reader(s) {
 			_ -> ?
 		}
 
-		matchingDelimIdx := {
-			fn sub(index, stack) if stack {
-				0 -> index - 1
-				_ -> if c := s.(index) {
-					? -> -1
-					left -> sub(index + 1, stack + 1)
-					right -> sub(index + 1, stack - 1)
-					_ -> sub(index + 1, stack)
-				}
+		fn sub(index, stack) if stack {
+			0 -> index - 1
+			_ -> if c := s.(index) {
+				? -> -1
+				left -> sub(index + 1, stack + 1)
+				right -> sub(index + 1, stack - 1)
+				_ -> sub(index + 1, stack)
 			}
-			sub(i, 1)
 		}
 
-		if matchingDelimIdx {
+		if matchingDelimIdx := sub(i, 1) {
 			-1 -> ?
 			_ -> {
 				substr := s |> slice(i, matchingDelimIdx)
@@ -578,16 +575,8 @@ fn parseList(lineReader, listType) {
 	children := sub([])
 
 	// remove the level annotations
-	children := children |> with map() fn(child) if child {
-		{
-			tag: :li
-			level: _
-			children: _
-		} -> {
-			tag: :li
-			children: child.children
-		}
-		_ -> child
+	children |> with each() fn(child) if child.tag {
+		:li -> child.level := _
 	}
 
 	{
@@ -619,11 +608,10 @@ fn parseParagraph(lineReader) {
 		}
 		_ -> lines
 	}
-	children := sub([])
 
 	{
 		tag: :p
-		children: unifyTextNodes(children, ' ')
+		children: sub([]) |> unifyTextNodes(' ')
 	}
 }
 
