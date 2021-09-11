@@ -4,7 +4,7 @@ std := import('std')
 {
 	Tokenizer: Tokenizer
 	Parser: Parser
-} := import('syntax')
+} := import('../lib/syntax')
 
 fn run(t) {
 	// tokenizer tests
@@ -263,6 +263,14 @@ fn run(t) {
 			[]
 		)
 
+		'boolean literals' |> t.eq(
+			parse('true, false')
+			[
+				{ type: :boolean, val: true, tok:at(1, 1) }
+				{ type: :boolean, val: false, tok:at(1, 7) }
+			]
+		)
+
 		'number literals' |> t.eq(
 			parse('12, 24.5, 0')
 			[
@@ -507,7 +515,7 @@ fn run(t) {
 		'if expression' |> t.eq(
 			parse('if 1 + 2 {
 				3 + 4 -> 5
-				f() -> 10
+				f(), g() -> 10
 				_ -> ?
 			}')
 			[{
@@ -531,7 +539,7 @@ fn run(t) {
 					}
 				}
 				branches: [
-					[{
+					{
 						type: :ifBranch
 						target: {
 							type: :binary
@@ -556,8 +564,8 @@ fn run(t) {
 							int?: true
 							val: 5
 						}
-					}]
-					[{
+					}
+					{
 						type: :ifBranch
 						target: {
 							type: :fnCall
@@ -572,12 +580,32 @@ fn run(t) {
 						}
 						body: {
 							type: :number
-							tok: at(3, 12)
+							tok: at(3, 17)
 							int?: true
 							val: 10
 						}
-					}]
-					[{
+					}
+					{
+						type: :ifBranch
+						target: {
+							type: :fnCall
+							tok: at(3, 11)
+							function: {
+								type: :identifier
+								tok: at(3, 10)
+								val: 'g'
+							}
+							args: []
+							restArg: ?
+						}
+						body: {
+							type: :number
+							tok: at(3, 17)
+							int?: true
+							val: 10
+						}
+					}
+					{
 						type: :ifBranch
 						target: {
 							type: :empty
@@ -587,8 +615,36 @@ fn run(t) {
 							type: :null
 							tok: at(4, 10)
 						}
-					}]
+					}
 				]
+			}]
+		)
+
+		'if expression with implicit cond' |> t.eq(
+			parse('if {
+				? -> 3
+			}')
+			[{
+				type: :ifExpr
+				tok: at(1, 1)
+				cond: {
+					type: :boolean
+					tok: at(1, 1)
+					val: true
+				}
+				branches: [{
+					type: :ifBranch
+					target: {
+						type: :null
+						tok: at(2, 5)
+					}
+					body: {
+						type: :number
+						tok: at(2, 10)
+						int?: true
+						val: 3
+					}
+				}]
 			}]
 		)
 

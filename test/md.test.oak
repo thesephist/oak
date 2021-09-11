@@ -2,7 +2,7 @@
 
 std := import('std')
 str := import('str')
-md := import('../lib/md')
+md := import('md')
 
 // NOTE: Because we don't want the tests to depend on any internal
 // implementation detail, we only test two high level components of the

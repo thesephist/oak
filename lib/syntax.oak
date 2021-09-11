@@ -684,7 +684,7 @@ fn Parser(tokens) {
 			}
 			:minus, :exclam -> with notError(right := parseSubNode()) fn {
 				type: :unary
-				tok: :tok
+				tok: tok
 				op: tok.type
 				right: right
 			}
@@ -700,7 +700,20 @@ fn Parser(tokens) {
 				// such branches into multiple AST branches, each with one
 				// target value.
 				pushMinPrec(0)
-				with notError(condNode := parseNode()) fn {
+
+				// if no explicit condition is provided (i.e. if the keyword is
+				// followed by a { ... }), we assume the condition is "true" to
+				// allow for the useful `if { case, case ... }` pattern.
+				condNode := if peek().type {
+					:leftBrace -> {
+						type: :boolean
+						val: true
+						tok: tok
+					}
+					_ -> parseNode()
+				}
+
+				with notError(condNode) fn {
 					with notError(expect(:leftBrace)) fn {
 						fn subBranch(branches) if eof?() {
 							false -> if peek().type {
@@ -719,7 +732,7 @@ fn Parser(tokens) {
 										with notError(expect(:branchArrow)) fn {
 											with notError(body := parseNode()) fn {
 												with notError(expect(:comma)) fn {
-													 subBranch(branches << targets |> map(fn(target) {
+													 subBranch(branches |> append(targets |> with map() fn(target) {
 														type: :ifBranch
 														target: target
 														body: body
