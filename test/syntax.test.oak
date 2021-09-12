@@ -59,6 +59,17 @@ fn run(t) {
 			]
 		)
 
+		'atom literals' |> t.eq(
+			tokenize(':whatever :not_found_404')
+			[
+				Token(:colon, [1, 1])
+				Token(:identifier, [1, 2], 'whatever')
+				Token(:colon, [1, 11])
+				Token(:identifier, [1, 12], 'not_found_404')
+				Token(:comma, [1, 24])
+			]
+		)
+
 		'identifiers' |> t.eq(
 			tokenize('hi _hello? whats_up__ nothing! ')
 			[
@@ -81,6 +92,21 @@ fn run(t) {
 				Token(:times, [1, 16])
 				Token(:numberLiteral, [1, 18], '4')
 				Token(:comma, [1, 18])
+			]
+		)
+		'hanging binary expression' |> t.eq(
+			tokenize('1 + 2 +\n3 *\n4')
+			[
+				Token(:numberLiteral, [1, 1], '1')
+				Token(:plus, [1, 3], ?)
+				Token(:numberLiteral, [1, 5], '2')
+				Token(:plus, [1, 7], ?)
+				Token(:newline, [1, 7], ?)
+				Token(:numberLiteral, [2, 1], '3')
+				Token(:times, [2, 3], ?)
+				Token(:newline, [2, 3], ?)
+				Token(:numberLiteral, [3, 1], '4')
+				Token(:comma, [3, 1], ?)
 			]
 		)
 
@@ -229,6 +255,29 @@ fn run(t) {
 				Token(:comma, [1, 27])
 				Token(:rightParen, [1, 27])
 				Token(:comma, [1, 27])
+			]
+		)
+
+		'with expression' |> t.eq(
+			tokenize('with readFile(path) fn(file) {\n\t// do thing\n}')
+			[
+				Token(:withKeyword, [1, 1], ?)
+				Token(:identifier, [1, 6], 'readFile')
+				Token(:leftParen, [1, 14], ?)
+				Token(:identifier, [1, 15], 'path')
+				Token(:comma, [1, 19], ?)
+				Token(:rightParen, [1, 19], ?)
+				Token(:fnKeyword, [1, 21], ?)
+				Token(:leftParen, [1, 23], ?)
+				Token(:identifier, [1, 24], 'file')
+				Token(:comma, [1, 28], ?)
+				Token(:rightParen, [1, 28], ?)
+				Token(:leftBrace, [1, 30], ?)
+				Token(:newline, [1, 30], ?)
+				Token(:comment, [2, 2], 'do thing')
+				Token(:newline, [2, 12], ?)
+				Token(:rightBrace, [3, 1], ?)
+				Token(:comma, [3, 1], ?)
 			]
 		)
 	}
@@ -708,6 +757,150 @@ fn run(t) {
 		'empty program' |> t.eq(
 			print('')
 			''
+		)
+		'comment program' |> t.eq(
+			print('// this is a comment\n//second comment')
+			'// this is a comment\n// second comment'
+		)
+		'whitespace-only program preserves newlines' |> t.eq(
+			print('   \n\t\n')
+			'\n\n'
+		)
+		'number literals' |> t.eq(
+			print(' 0, 1\n2.34, -0.5670,')
+			'0, 1\n2.34, -0.5670'
+		)
+		'string literals' |> t.eq(
+			print('\'hello\',\'hi\',\n\'what\\\'s up\\n\\t\' ')
+			'\'hello\', \'hi\'\n\'what\\\'s up\\\\n\\\\t\''
+		)
+		'identifier' |> t.eq(
+			print('hi, _hello?, whats_up__, nothing! ')
+			'hi, _hello?, whats_up__, nothing!'
+		)
+		'atoms' |> t.eq(
+			print(':whatever, :not_found_404')
+			':whatever, :not_found_404'
+		)
+		'simple unary expression' |> t.eq(
+			print('!!a+--b')
+			'!!a + --b'
+		)
+		'simple binary expression' |> t.eq(
+			print('total:=one ( )+2 *  \t4   ')
+			'total := one() + 2 * 4'
+		)
+		'delimiters' |> t.eq(
+			print('( [{hi: :hello}      ] )+(    2 )')
+			'([{ hi: :hello }]) + (2)'
+		)
+		'list literal' |> t.eq(
+			print('[   1,a,       :first]')
+			'[1, a, :first]'
+		)
+		'list literal with newlines' |> t.eq(
+			print('[\n\t1,\n\ta,\n\t:first\n]')
+			'[\n\t1\n\ta\n\t:first\n]'
+		)
+		'object literal' |> t.eq(
+			print(' {   1:2,three: \'four\' , five:six,}')
+			'{ 1: 2, three: \'four\', five: six }'
+		)
+		'object literal with newlines' |> t.eq(
+			print('{   \n1:2,\n  three:\'four\'\nfive:six,\nseven::eight\n}')
+			'{\n\t1: 2\n\tthree: \'four\'\n\tfive: six\n\tseven: :eight\n}'
+		)
+		'complex object literal' |> t.eq(
+			print('{\nlist: [\n1,2\nthree,\n],\nobj: {__key: val? + 3}\n   }')
+			'{\n\tlist: [\n\t\t1, 2\n\t\tthree\n\t]\n\tobj: { __key: val? + 3 }\n}'
+		)
+		'overlapping braces on object literals' |> t.eq(
+			print('{\na: b\n}, {\nc: d\n}')
+			'{\n\ta: b\n}, {\n\tc: d\n}'
+		)
+
+		'basic function' |> t.eq(
+			print('fn a(b, c) if a |> c {\nd -> e(_,{f: F}   ,:g,[ h],(i+ j))\n}')
+			'fn a(b, c) if a |> c {\n\td -> e(_, { f: F }, :g, [h], (i + j))\n}'
+		)
+		'variadic function' |> t.eq(
+			print('fn f (  x,y ...\t){?}  ,\n\t\tf(1,[ a ] ...)')
+			'fn f(x, y...) { ? }\nf(1, [a]...)'
+		)
+		'with expression' |> t.eq(
+			print('with readFile (path)fn(file){\n\t// do thing\n}')
+			'with readFile(path) fn(file) {\n\t// do thing\n}'
+		)
+
+		// hanging indents
+		'simple hanging indent' |> t.eq(
+			print('1 + \n2')
+			'1 +\n\t2'
+		)
+		'simple hanging indent with ending newline' |> t.eq(
+			print('1 + \n2\n')
+			'1 +\n\t2\n'
+		)
+		'hanging indent inside delimited list' |> t.eq(
+			print('[1, 2, 3\n4, 5, 6]')
+			'[1, 2, 3\n\t4, 5, 6]'
+		)
+		'hanging indent inside delimited list inside parens' |> t.eq(
+			print('(\n[1, 2, 3\n4, 5, 6]\n)')
+			'(\n\t[1, 2, 3\n\t\t4, 5, 6]\n)'
+		)
+		'hanging indent inside binary expr' |> t.eq(
+			print('total := a + \nb+c')
+			'total := a +\n\tb + c'
+		)
+		'multiline hanging indent in delimited list' |> t.eq(
+			print('[ 1,2,3\n4, 5,6\n7, 8, 9 \n10 ]')
+			'[1, 2, 3\n\t4, 5, 6\n\t7, 8, 9\n\t10]'
+		)
+		'multiline hanging indent in binary expr' |> t.eq(
+			print('total := a + \nb+c*\nd')
+			'total := a +\n\tb + c *\n\td'
+		)
+		'hanging indent after binary expr in delimited list' |> t.eq(
+			print('1+[\n2\n]\na')
+			'1 + [\n\t2\n]\na'
+		)
+		'delimited list in hanging indent line' |> t.eq(
+			// NOTE: this isn't the desired behavior, but a limitation of the
+			// current hanging indent algorithm. It's also not horrible, just
+			// "meh". Since it's passable and fixing it will complicate the
+			// algorithm significantly, I've chosen to live with it
+			// until/unless I find a simpler fix.
+			//
+			// In essence, this amounts to a "documented bug".
+			print('1+\n[\n\t2\n\t]\na')
+			'1 +\n\t[\n\t2\n]\na'
+		)
+
+		// edge cases and regressions
+		'empty block body' |> t.eq(
+			print('{{\n\t\t}}')
+			'{{\n}}'
+		)
+		'indentation collapsing' |> t.eq(
+			print('([{\ntype: :key\nval:_\n}])')
+			'([{\n\ttype: :key\n\tval: _\n}])'
+		)
+		'fn body with comments' |> t.eq(
+			print('fn {\n\t3 + 4//   what is going on?\t\n}')
+			'fn {\n\t3 + 4 // what is going on?\n}'
+		)
+		'complex expr in if condition' |> t.eq(
+			print('if {\nwhatever_\n} { if[23]{30 ->false} -> c }\nif( 2 + 3 ) { }')
+			'if {\n\twhatever_\n} { if [23] { 30 -> false } -> c }\nif (2 + 3) {}'
+		)
+		'just a list in function body' |> t.eq(
+			print('fn name[1,2]\t ,fn[ line,col ]')
+			'fn name [1, 2], fn [line, col]'
+		)
+		'common idiom of if directly inside with callback' |> t.eq(
+			print('with fs.readFile( path , ) fn (file) if file {\n//body\n}')
+			'with fs.readFile(path) fn(file) if file {\n\t// body\n}'
 		)
 	}
 }

@@ -1,6 +1,6 @@
 # Oak 🌳
 
-[![Build Status](https://travis-ci.com/thesephist/oak.svg?branch=main)](https://travis-ci.com/thesephist/oak)
+[![Build Status](https://travis-ci.com/thesephist/oak.svg?branch=main)](https://app.travis-ci.com/thesephist/oak)
 
 **Oak** is an expressive, dynamically typed programming language. It takes the best parts of my experience with [Ink](https://dotink.co/), and adds what I missed and removes what didn't work to get a language that feels just as small and simple, but much more ergonomic and capable.
 

@@ -2,6 +2,8 @@
 
 {
 	println: println
+	default: default
+	range: range
 	slice: slice
 	append: append
 	contains?: contains?
@@ -10,17 +12,22 @@
 	filter: filter
 	reduce: reduce
 } := import('std')
-
 {
 	digit?: digit?
 	word?: word?
 	space?: space?
 	contains?: strContains?
+	join: join
+	replace: replace
+	trimStart: trimStart
 	trim: trim
 } := import('str')
-
+{
+	min: min
+} := import('math')
 {
 	format: format
+	printf: printf
 } := import('fmt')
 
 fn renderPos(pos) '[' + string(pos.0) + ':' + string(pos.1) + ']'
@@ -986,11 +993,292 @@ fn parse(text) {
 //
 // fn print()   returns a pretty-printed string
 fn Printer(tokens) {
-	indentDepth := 0
+	// create a string with N tabs in it
+	fn tabs(n) if {
+		n > 0 -> tabs(n - 1) << '\t'
+		_ -> ''
+	}
+
+	// a single tone -> its printed value
+	fn render(token) if token.type {
+		:comment -> '// ' << token.val
+		:comma -> ','
+		:dot -> '.'
+		:leftParen -> '('
+		:rightParen -> ')'
+		:leftBracket -> '['
+		:rightBracket -> ']'
+		:leftBrace -> '{'
+		:rightBrace -> '}'
+		:assign -> ':='
+		:nonlocalAssign -> '<-'
+		:pipeArrow -> '|>'
+		:branchArrow -> '->'
+		:pushArrow -> '<<'
+		:colon -> ':'
+		:ellipsis -> '...'
+		:qmark -> '?'
+		:exclam -> '!'
+		:plus -> '+'
+		:minus -> '-'
+		:times -> '*'
+		:divide -> '/'
+		:modulus -> '%'
+		:xor -> '^'
+		:and -> '&'
+		:or -> '|'
+		:greater -> '>'
+		:less -> '<'
+		:eq -> '='
+		:geq -> '>='
+		:leq -> '<='
+		:neq -> '!='
+		:ifKeyword -> 'if'
+		:fnKeyword -> 'fn'
+		:withKeyword -> 'with'
+		:underscore -> '_'
+		:identifier -> token.val
+		:trueLiteral -> 'true'
+		:falseLiteral -> 'false'
+		:stringLiteral -> '\'' << token.val |>
+			replace('\\', '\\\\') |>
+			replace('\'', '\\\'') |>
+			replace('\n', '\\\\n') |>
+			replace('\t', '\\\\t') << '\''
+		:numberLiteral -> token.val
+		_ -> {
+			printf('Unknown token {{0}}', token)
+			string(token)
+		}
+	}
+
+	// does a token require a space to follow it in well-formatted code?
+	fn connectingToken?(tokenType) if tokenType {
+		:assign,
+		:nonlocalAssign,
+		:pipeArrow,
+		:branchArrow,
+		:pushArrow,
+		:colon,
+		:plus, :minus, :times, :divide, :modulus,
+		:xor, :and, :or,
+		:greater, :less, :eq, :geq, :leq, :neq -> true
+		_ -> false
+	}
+
+	// shorthand for the last item of a list
+	fn last(list) list.(len(list) - 1)
 
 	fn print {
-		// TODO: pretty-print tokens
-		''
+		// we keep track of lines of code and their corresponding
+		// indent levels separately and merge them at the end.
+		//
+		// this turns out to be simpler than trying to adjust
+		// indentations while also adding on lines of code.
+		lines := ['']
+		indents := []
+
+		// algorithm state
+		curr := 0
+		// TODO: explain why this exists?
+		currs := [0]
+		// indicates whether the following line should have a hanging indent
+		hanging? := false
+
+		// shorthand for adding tokens and spaces to algorithm state
+		fn add(s, tabs) {
+			if last(lines) |> trim('\t') {
+				'' -> last(lines) << trimStart(s, ' ')
+				_ -> last(lines) << s
+			}
+			curr <- curr + tabs
+			currs << curr
+		}
+
+		fn purelyDescendingPrefix(list) if len(list) {
+			0 -> list
+			_ -> {
+				fn sub(i) if {
+					i = len(list) -> list |> slice(0, i)
+					list.(i - 1) > list.(i) -> sub(i + 1)
+					_ -> list |> slice(0, i)
+				}
+				sub(1)
+			}
+		}
+
+		fn indentLine(lastType) {
+			indent := min(currs...)
+
+			// account for hanging indent
+			if {
+				// TODO: explain what this line checks for / does!
+				{
+					prefix := purelyDescendingPrefix(currs)
+					len(prefix) = 1 & default(prefix.0, 0) > indent
+				}
+				hanging? -> indent <- indent + 1
+			}
+
+			// set the hanging indent flag for this current line, so we can
+			// indent accordingly at start of next line
+			hanging? <- if {
+				connectingToken?(lastType)
+				lastType = :dot -> true
+				_ -> false
+			}
+
+			indent
+		}
+
+		// in this loop, we ask whether a space should come before each token.
+		// as a result: a token is only responsible for adding a space before
+		// it, not after it
+		tokens |> with each() fn(token, i) {
+			llastType := default(tokens.(i - 2), { type: :newline }).type
+			lastType := default(tokens.(i - 1), { type: :newline }).type
+			nextType := default(tokens.(i + 1), { type: :newline }).type
+			if [lastType, token.type, nextType] {
+				// this match clause is responsible for computing the correct
+				// level of indentation for the line that comes before this
+				// current newline.
+				//
+				// as a result, we compute each line's indentation level only
+				// after we fully tokenize and render the line itself.
+				[_, :newline, _] -> {
+					indents << indentLine(lastType)
+					currs <- [curr]
+					lines << ''
+				}
+				[_, :dot, _] -> add('.', 0)
+
+				// opening delimiters
+				[_, :leftParen, _] -> if {
+					connectingToken?(lastType)
+					lastType = :comma
+					lastType = :ifKeyword
+					lastType = :withKeyword -> add(' ' << render(token), 1)
+					_ -> add(render(token), 1)
+				}
+				[_, :leftBracket, _]
+				[_, :leftBrace, _] -> if {
+					connectingToken?(lastType),
+					lastType = :identifier
+					lastType = :rightParen
+					lastType = :rightBracket
+					lastType = :rightBrace
+					lastType = :ifKeyword
+					lastType = :fnKeyword
+					lastType = :withKeyword
+					lastType = :comma -> add(' ' << render(token), 1)
+					_ -> add(render(token), 1)
+				}
+
+				// if following a newline, these are exempt from the following rule
+				[:newline, :rightParen, _]
+				[:newline, :rightBracket, _]
+				[:newline, :rightBrace, _] -> add(render(token), -1)
+
+				// ensure { thing } and not {thing}
+				[_, :rightParen, _]
+				[_, :rightBracket, _] -> add(render(token), -1)
+				[_, :rightBrace, _] -> if llastType {
+					:leftParen, :rightParen,
+					:leftBracket, :rightBracket,
+					:leftBrace, :rightBrace -> add(render(token), -1)
+					_ -> add(' ' << render(token), -1)
+				}
+
+				// no-ops, where we rely on automatic comma insertion
+				[_, :comma, :newline]
+				[_, :comma, :rightParen]
+				[_, :comma, :rightBracket]
+				[_, :comma, :rightBrace] -> ?
+
+				// special cases for colon used in atoms
+				[_, :colon, _] -> if  {
+					lastType = :comma,
+					connectingToken?(lastType) -> add(' ' << render(token), 0)
+					_ -> add(':', 0)
+				}
+
+				// no-space tokens
+				[_, :comma, _]
+				[_, :ellipsis, _] -> add(render(token), 0)
+
+				// parens and lists don't include inner space
+				[:leftParen, _, _]
+				[:leftBracket, _, _]
+				// unary exprs or no-space binary exprs
+				[:dot, _, _]
+				[:exclam, _, _]
+				[:minus, _, _] -> add(render(token), 0)
+
+				// atom special case
+				[:colon, :identifier, _] -> if llastType {
+					// if token before colon cannot be end of an object key,
+					// don't insert a space. This isn't a perfect rule but
+					// seems to be a good-enough algorithm.
+					:newline
+					:comma
+					:colon -> add(render(token), 0)
+					_ -> add(' ' << render(token), 0)
+				}
+
+				[:leftBrace, _, _]
+				_ -> add(' ' << render(token), 0)
+			}
+		}
+
+		// indent last line
+		indents << indentLine(last(tokens))
+
+		// indentation collapsing:
+		//
+		// sometimes, multiple delimiter openers in a single line or a callback
+		// being passed into a function will add multiple levels of indentation
+		// in the above algorithm, but we only really want to indent one level
+		// at a time visually, even if semantically there are multiple levels
+		// of nesting present. We try to detect and "collapse" these
+		// indentations into single levels of tab here.
+		//
+		// we do this by scanning lines and finding groups of lines that are
+		// indented by more than 1 level at a time, and de-indenting them until
+		// they're only indented one level.
+		indents |> with each() fn(n, i) if i {
+			0 -> ?
+			_ -> if n < indents.(i - 1) {
+				true -> {
+					// backtrack to the line immediately following the first
+					// line where indent > n
+					fn sub(j) {
+						if {
+							indents.(j) > n -> sub(j - 1)
+							_ -> j + 1
+						}
+					}
+					target := sub(i - 1)
+
+					// if the range from target to current line is indented by
+					// more than 1, de-dent them accordingly
+					if {
+						indents.(target) - n > 1 -> {
+							diff := indents.(target) - n
+							range(target, i) |> with each() fn(j) {
+								indents.(j) := indents.(j) - diff + 1
+							}
+						}
+					}
+				}
+			}
+		}
+
+		indentedLines := lines |> with map() fn(line, i) if line {
+			// we don't indent empty lines
+			'' -> ''
+			_ -> tabs(indents.(i)) << line
+		}
+		indentedLines |> join('\n')
 	}
 
 	{
