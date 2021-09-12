@@ -278,7 +278,7 @@ fn Tokenizer(source) {
 		}
 
 		// snip whitespace before
-		fn eatSpace if space?(sp := peek()){
+		fn eatSpace if space?(sp := peek()) {
 			true -> {
 				if sp {
 					'\n' -> tokens << Token(:newline)
@@ -304,17 +304,17 @@ fn Tokenizer(source) {
 			}
 
 			// snip whitespace after
-			fn eatSpaceAutoInsertComma if space?(peek()){
+			fn eatSpaceAutoInsertComma if space?(peek()) {
 				true -> {
 					if peek() {
 						'\n' -> {
 							if [
-								:comma, :leftParen, :leftBracket, :leftBrace,
-								:plus, :minus, :times, :divide, :modulus, :xor,
-								:and, :or, :exclam, :greater, :less, :eq, :geq,
-								:leq, :assign, :nonlocalAssign, :dot, :colon,
-								:fnKeyword, :ifKeyword, :withKeyword,
-								:pipeArrow, :branchArrow,
+								:comma, :leftParen, :leftBracket, :leftBrace
+								:plus, :minus, :times, :divide, :modulus, :xor
+								:and, :or, :exclam, :greater, :less, :eq, :geq
+								:leq, :assign, :nonlocalAssign, :dot, :colon
+								:fnKeyword, :ifKeyword, :withKeyword
+								:pipeArrow, :branchArrow
 							] |> contains?(nextTok.type) {
 								true -> ? // do nothing
 								_ -> {
@@ -746,7 +746,7 @@ fn Parser(tokens) {
 										with notError(expect(:branchArrow)) fn {
 											with notError(body := parseNode()) fn {
 												with notError(expect(:comma)) fn {
-													 subBranch(branches |> append(targets |> with map() fn(target) {
+													subBranch(branches |> append(targets |> with map() fn(target) {
 														type: :ifBranch
 														target: target
 														body: body
@@ -904,7 +904,7 @@ fn Parser(tokens) {
 				// the larger Oak syntax parser, using the parser struct itself
 				// to keep track of the power / precedence stack since other
 				// forms may be parsed in between, as in 1 + f(g(x := y)) + 2
-				:plus, :minus, :times, :divide, :modulus, :xor, :and, :or,
+				:plus, :minus, :times, :divide, :modulus, :xor, :and, :or
 				:pushArrow, :greater, :less, :eq, :geq, :leq, :neq -> {
 					minPrec := lastMinPrec()
 					fn subBinary if eof?() {
@@ -918,7 +918,7 @@ fn Parser(tokens) {
 									next() // eat the operator
 
 									if eof?() {
-										true -> error(format('Incomplete binary expression with {{0}}', {type: op}), peek().pos)
+										true -> error(format('Incomplete binary expression with {{0}}', { type: op }), peek().pos)
 										_ -> {
 											pushMinPrec(prec)
 											with notError(right := parseNode()) fn {
@@ -1060,14 +1060,14 @@ fn Printer(tokens) {
 
 	// does a token require a space to follow it in well-formatted code?
 	fn connectingToken?(tokenType) if tokenType {
-		:assign,
-		:nonlocalAssign,
-		:pipeArrow,
-		:branchArrow,
-		:pushArrow,
-		:colon,
-		:plus, :minus, :times, :divide, :modulus,
-		:xor, :and, :or,
+		:assign
+		:nonlocalAssign
+		:pipeArrow
+		:branchArrow
+		:pushArrow
+		:colon
+		:plus, :minus, :times, :divide, :modulus
+		:xor, :and, :or
 		:greater, :less, :eq, :geq, :leq, :neq -> true
 		_ -> false
 	}
@@ -1192,9 +1192,9 @@ fn Printer(tokens) {
 				[_, :comma, :rightBrace] -> ?
 
 				// special cases for colon used in atoms
-				[_, :colon, _] -> if  {
-					lastType = :comma,
-					lastType = :leftBrace,
+				[_, :colon, _] -> if {
+					lastType = :comma
+					lastType = :leftBrace
 					connectingToken?(lastType) -> add(' :', 0)
 					_ -> add(':', 0)
 				}
@@ -1206,12 +1206,13 @@ fn Printer(tokens) {
 				// parens and lists don't include inner space
 				[:leftParen, _, _]
 				[:leftBracket, _, _]
-				// no-space binary exprs
-				[:dot, _, _] -> add(render(token), 0)
+
+				// no-space operators
+				[:dot, _, _]
+				[:exclam, _, _] -> add(render(token), 0)
+
 				// unary exprs (which may also be used as binary infix)
-				[:exclam, _, _]
 				[:minus, _, _] -> if llastType {
-					// TODO: explain
 					:ifKeyword
 					:exclam
 					:minus

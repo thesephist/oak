@@ -907,6 +907,11 @@ fn run(t) {
 			print('([{\ntype: :key\nval:_\n}])')
 			'([{\n\ttype: :key\n\tval: _\n}])'
 		)
+		'unary operators as fn body' |> t.eq(
+			print('fn() !t.passed?, fn neg(n) -n')
+			// TODO: undesirable, but algorithmic limitation. Explainain
+			'fn() !t.passed?, fn neg(n) - n'
+		)
 		'fn body with comments' |> t.eq(
 			print('fn {\n\t3 + 4// what is going on?\t\n}')
 			'fn {\n\t3 + 4 // what is going on?\n}'
