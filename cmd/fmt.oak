@@ -1,0 +1,33 @@
+// oak fmt -- automatic code formatter
+
+{
+	println: println
+	slice: slice
+	each: each
+} := import('std')
+{
+	readFile: readFile
+	writeFile: writeFile
+} := import('fs')
+cli := import('cli')
+syntax := import('syntax')
+
+Cli := cli.parse()
+
+Fix? := Cli.opts.fix != ?
+// we don't need a verb, the "verb" will be a file path
+Args := if Cli.verb {
+	? -> Cli.args
+	_ -> Cli.args << Cli.verb
+}
+
+Args |> with each() fn(path) with readFile(path) fn(file) if file {
+	? -> printf('[oak fmt] Could not open file "{{ 0 }}"', path)
+	_ -> if Fix? {
+		true -> with writeFile(path, file |> syntax.print(file)) fn(res) if res {
+			? -> printf('[oak fmt] Could not write file "{{ 0 }}"', path)
+		}
+		_ -> file |> syntax.print(file) |> print()
+	}
+}
+

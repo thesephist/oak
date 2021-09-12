@@ -1,7 +1,6 @@
 // libmd implements a Markdown parser and renderer
 
 {
-	println: println
 	slice: slice
 	map: map
 	each: each

@@ -2,15 +2,14 @@
 
 std := import('std')
 {
-	Tokenizer: Tokenizer
-	Parser: Parser
+	tokenize: tokenize
+	parse: parse
+	print: print
 } := import('../lib/syntax')
 
 fn run(t) {
 	// tokenizer tests
 	{
-		fn tokenize(s) Tokenizer(s).tokenize()
-
 		fn Token(type, pos, val) {
 			type: type
 			val: val
@@ -236,11 +235,6 @@ fn run(t) {
 
 	// parser tests
 	{
-		fn parse(s) {
-			tokens := Tokenizer(s).tokenize()
-			Parser(tokens).parse()
-		}
-
 		// for positions
 		fn at(line, col) {
 			type: _
@@ -706,6 +700,14 @@ fn run(t) {
 				]
 				restArg: ?
 			}]
+		)
+	}
+
+	// printer integration tests
+	{
+		'empty program' |> t.eq(
+			print('')
+			''
 		)
 	}
 }

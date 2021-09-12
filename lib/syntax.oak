@@ -348,6 +348,9 @@ fn Tokenizer(source) {
 	}
 }
 
+// tokenize takes Oak source text and returns a list of tokens
+fn tokenize(text) Tokenizer(text).tokenize()
+
 // Parser takes a raw token stream, potentially including newlines and
 // comments, and generates a list of clean Oak AST nodes.
 //
@@ -968,5 +971,36 @@ fn Parser(tokens) {
 			}
 		}
 	}
+}
+
+// parse takes Oak source text and returns a list of AST nodes
+fn parse(text) {
+	tokens := tokenize(text)
+	Parser(tokens).parse()
+}
+
+// Printer takes a list of Oak tokens and pretty-prints the source code into a
+// string. As a rule, all newlines are preserved, including those in comments.
+//
+// Methods:
+//
+// fn print()   returns a pretty-printed string
+fn Printer(tokens) {
+	indentDepth := 0
+
+	fn print {
+		// TODO: pretty-print tokens
+		''
+	}
+
+	{
+		print: print
+	}
+}
+
+// print takes an Oak source file and returns a pretty-printed string
+fn print(text) {
+	tokens := tokenize(text)
+	Printer(tokens).print()
 }
 
