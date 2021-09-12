@@ -48,8 +48,8 @@ fn new(title) {
 
 			if p? {
 				false -> {
-					printf('	expected: {{ 0 }}', expect)
-					printf('	  result: {{ 0 }}', result)
+					printf('\texpected: {{ 0 }}', expect)
+					printf('\t  result: {{ 0 }}', result)
 				}
 			}
 		})

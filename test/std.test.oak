@@ -415,7 +415,7 @@ fn run(t) {
 
 		'values of empty obj' |> t.eq(values({}), [])
 		'values of obj' |> t.eq(
-			{a: :ay, b: 2, c: [1, 2]} |>
+			{ a: :ay, b: 2, c: [1, 2] } |>
 				values() |>
 				with std.every() fn(x) [:ay, 2, [1, 2]] |> std.contains?(x)
 			true
@@ -430,7 +430,7 @@ fn run(t) {
 
 		'entries of empty obj' |> t.eq(entries({}), [])
 		'entries of obj' |> t.eq(
-			{a: :ay, b: 2, c: [1, 2]} |>
+			{ a: :ay, b: 2, c: [1, 2] } |>
 				entries() |>
 				with std.every() fn(x) [['a', :ay], ['b', 2], ['c', [1, 2]]] |> std.contains?(x)
 			true

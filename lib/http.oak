@@ -124,16 +124,14 @@ fn Router {
 		params := {}
 
 		// process query params
-		[path, query]:= split(path, '?')
+		[path, query] := split(path, '?')
 		if query {
 			? -> ?
 			'' -> ?
 			_ -> query |>
 				split('&') |>
 				map(fn(pair) pair |> split('=')) |>
-				each(fn(pair) {
-					params.(pair.0) := percentDecode(default(pair.1, ''))
-				})
+				with each() fn(pair) params.(pair.0) := percentDecode(default(pair.1, ''))
 		}
 
 		desired := splitPath(pattern)
@@ -228,9 +226,9 @@ fn mimeForPath(path) {
 }
 
 // NotFound represents a 404 Not Found response
-NotFound := {status: 404, body: 'file not found'}
+NotFound := { status: 404, body: 'file not found' }
 // MethodNotAllowed represents a 405 Method Not Allowed response
-MethodNotAllowed := {status: 405, body: 'method not allowed'}
+MethodNotAllowed := { status: 405, body: 'method not allowed' }
 
 fn _hdr(attrs) {
 	base := {
@@ -303,7 +301,7 @@ fn handleStatic(path) fn(req, end) if req.method {
 		? -> end(NotFound)
 		_ -> end({
 			status: 200
-			headers: {'Content-Type': mimeForPath(path)}
+			headers: { 'Content-Type': mimeForPath(path) }
 			body: file
 		})
 	}

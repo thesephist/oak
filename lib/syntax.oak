@@ -19,6 +19,7 @@
 	contains?: strContains?
 	join: join
 	replace: replace
+	startsWith?: startsWith?
 	trimStart: trimStart
 	trimEnd: trimEnd
 	trim: trim
@@ -30,6 +31,8 @@
 	format: format
 	printf: printf
 } := import('fmt')
+
+fn shebang?(text) text |> startsWith?('#!')
 
 fn renderPos(pos) '[' + string(pos.0) + ':' + string(pos.1) + ']'
 
@@ -268,6 +271,9 @@ fn Tokenizer(source) {
 	fn tokenize {
 		tokens := []
 
+		// the tokenizer itself completely ignores shebang lines, as it is not
+		// a language concern -- it is the responsibility of the caller to
+		// process or ignore shebang lines as necessary
 		if peek() = '#' & peekAhead(1) = '!' {
 			true -> {
 				readUntilChar('\n')
@@ -355,6 +361,8 @@ fn Tokenizer(source) {
 	}
 
 	{
+		// undocumented API for libsyntax.print
+		readUntilChar: readUntilChar
 		tokenize: tokenize
 	}
 }
@@ -1213,6 +1221,7 @@ fn Printer(tokens) {
 
 				// unary exprs (which may also be used as binary infix)
 				[:minus, _, _] -> if llastType {
+					:leftParen, :leftBracket, :leftBrace
 					:ifKeyword
 					:exclam
 					:minus
@@ -1305,9 +1314,14 @@ fn Printer(tokens) {
 	}
 }
 
-// print takes an Oak source file and returns a pretty-printed string
+// print takes an Oak source file and returns a pretty-printed string.
+// Unlike Printer.print, print also correctly processes shebang lines.
 fn print(text) {
 	tokens := tokenize(text)
-	Printer(tokens).print()
+	printer := Printer(tokens)
+	if shebang?(text) {
+		true -> Tokenizer(text).readUntilChar('\n') << '\n' << printer.print()
+		_ -> printer.print()
+	}
 }
 

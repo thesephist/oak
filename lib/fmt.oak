@@ -48,7 +48,7 @@ fn format(raw, values...) {
 				}
 				// ignore spaces in keys
 				' ' -> ?
-				_  -> key <- key + c
+				_ -> key <- key + c
 			}
 			3 -> if c {
 				'}' -> which <- 0

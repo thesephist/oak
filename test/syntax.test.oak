@@ -318,8 +318,8 @@ fn run(t) {
 		'boolean literals' |> t.eq(
 			parse('true, false')
 			[
-				{ type: :boolean, val: true, tok:at(1, 1) }
-				{ type: :boolean, val: false, tok:at(1, 7) }
+				{ type: :boolean, val: true, tok: at(1, 1) }
+				{ type: :boolean, val: false, tok: at(1, 7) }
 			]
 		)
 
@@ -465,7 +465,7 @@ fn run(t) {
 				tok: at(1, 5)
 				entries: [{
 					key: { type: :identifier, tok: at(1, 6), val: 'a' }
-					val: { type: :atom, tok: at(1, 9), val: 'ay'}
+					val: { type: :atom, tok: at(1, 9), val: 'ay' }
 				}, {
 					key: {
 						type: :binary
@@ -565,11 +565,7 @@ fn run(t) {
 		)
 
 		'if expression' |> t.eq(
-			parse('if 1 + 2 {
-				3 + 4 -> 5
-				f(), g() -> 10
-				_ -> ?
-			}')
+			parse('if 1 + 2 {\n\t\t\t\t3 + 4 -> 5\n\t\t\t\tf(), g() -> 10\n\t\t\t\t_ -> ?\n\t\t\t}')
 			[{
 				type: :ifExpr
 				tok: at(1, 1)
@@ -673,9 +669,7 @@ fn run(t) {
 		)
 
 		'if expression with implicit cond' |> t.eq(
-			parse('if {
-				? -> 3
-			}')
+			parse('if {\n\t\t\t\t? -> 3\n\t\t\t}')
 			[{
 				type: :ifExpr
 				tok: at(1, 1)
@@ -899,6 +893,10 @@ fn run(t) {
 		)
 
 		// edge cases and regressions
+		'printer correctly keeps shebang line' |> t.eq(
+			print('#!/usr/bin/env oak --flag\n\n2 + 3')
+			'#!/usr/bin/env oak --flag\n\n2 + 3'
+		)
 		'empty block body' |> t.eq(
 			print('{{\n\t\t}}')
 			'{ {\n} }'

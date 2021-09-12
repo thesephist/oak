@@ -623,8 +623,8 @@ fn wrap(tag, node) '<' << tag << '>' << compile(node.children) << '</' << tag <<
 fn compileNode(node) if type(node) {
 	:string -> node |> replace('&', '&amp;') |> replace('<', '&lt;')
 	_ -> if node.tag {
-		:p, :em, :strong, :strike,
-		:h1, :h2, :h3, :h4, :h5, :h6,
+		:p, :em, :strong, :strike
+		:h1, :h2, :h3, :h4, :h5, :h6
 		:pre, :ul, :ol, :li, :blockquote -> wrap(node.tag |> string() |> slice(1), node)
 		:a -> '<a href="{{0}}">{{1}}</a>' |> format(node.href, compile(node.children))
 		:img -> '<img alt="{{0}}" src="{{1}}"/>' |> format(node.alt, node.src)

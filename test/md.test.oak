@@ -561,7 +561,7 @@ fn run(t) {
 			]
 		)
 		'line that ends with two spaces for <br />' |> t.eq(
-			parseLines(['_hello_  ', 'world']),
+			parseLines(['_hello_  ', 'world'])
 			[{
 				tag: :p
 				children: [
@@ -569,13 +569,13 @@ fn run(t) {
 						tag: :em
 						children: ['hello']
 					}
-					{tag: :br}
+					{ tag: :br }
 					'world'
 				]
 			}]
 		)
 		'line that ends with two spaces for <br />' |> t.eq(
-			parseLines(['_hello_ \\', 'world']),
+			parseLines(['_hello_ \\', 'world'])
 			[{
 				tag: :p
 				children: [
@@ -584,14 +584,14 @@ fn run(t) {
 						children: ['hello']
 					}
 					' '
-					{tag: :br}
+					{ tag: :br }
 					'world'
 				]
 			}]
 		)
 
 		'one line block quote' |> t.eq(
-			parse('>hello world'),
+			parse('>hello world')
 			[{
 				tag: :blockquote
 				children: [{
@@ -601,7 +601,7 @@ fn run(t) {
 			}]
 		)
 		'multiline block quote' |> t.eq(
-			parseLines(['>hello world', '>goodbye!']),
+			parseLines(['>hello world', '>goodbye!'])
 			[{
 				tag: :blockquote
 				children: [
@@ -657,7 +657,7 @@ fn run(t) {
 			]
 		)
 		'quoted block inside quoted block' |> t.eq(
-			parseLines(['>layer 1', '>>layer 2', '>>layer 2', '>layer 1']),
+			parseLines(['>layer 1', '>>layer 2', '>>layer 2', '>layer 1'])
 			[{
 				tag: :blockquote
 				children: [
@@ -687,7 +687,7 @@ fn run(t) {
 			'>2'
 		]
 		'nested list inside a quoted block' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :blockquote
 				children: [
@@ -736,7 +736,7 @@ fn run(t) {
 			}]
 		)
 		'if unordered list prefixed twice, removes only 1 bullet' |> t.eq(
-			parse('- - Thing.'),
+			parse('- - Thing.')
 			[{
 				tag: :ul
 				children: [{
@@ -746,7 +746,7 @@ fn run(t) {
 			}]
 		)
 		'small unordered list' |> t.eq(
-			parseLines(['- a', '- b']),
+			parseLines(['- a', '- b'])
 			[{
 				tag: :ul
 				children: [
@@ -768,7 +768,7 @@ fn run(t) {
 			'- done.'
 		]
 		'unordered list with formatted text' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ul
 				children: [
@@ -808,7 +808,7 @@ fn run(t) {
 			'- first level again'
 		]
 		'unordered list with nesting' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ul
 				children: [
@@ -949,7 +949,7 @@ fn run(t) {
 		)
 
 		'ordered list with one item' |> t.eq(
-			parse('1. hello world'),
+			parse('1. hello world')
 			[{
 				tag: :ol
 				children: [{
@@ -959,7 +959,7 @@ fn run(t) {
 			}]
 		)
 		'ordered list with more than one item' |> t.eq(
-			parseLines(['1. hello', '2. goodbye']),
+			parseLines(['1. hello', '2. goodbye'])
 			[{
 				tag: :ol
 				children: [
@@ -975,7 +975,7 @@ fn run(t) {
 			}]
 		)
 		'ordered list with formatted text' |> t.eq(
-			parseLines(['1. *italic* text', '2. __bold__ text']),
+			parseLines(['1. *italic* text', '2. __bold__ text'])
 			[{
 				tag: :ol
 				children: [
@@ -1013,7 +1013,7 @@ fn run(t) {
 			}]
 		)
 		'list item with both prefixes, number first' |> t.eq(
-			parse('1. - Hello'),
+			parse('1. - Hello')
 			[{
 				tag: :ol
 				children: [{
@@ -1029,7 +1029,7 @@ fn run(t) {
 			'3. first level again'
 		]
 		'ordered list with nesting' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ol
 				children: [
@@ -1060,7 +1060,7 @@ fn run(t) {
 			'999. c d'
 		]
 		'ordered list with incorrect numbering' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ol
 				children: [
@@ -1092,15 +1092,15 @@ fn run(t) {
 				{
 					tag: :ul
 					children: [
-						{tag: :li, children: ['A']}
-						{tag: :li, children: ['B']}
+						{ tag: :li, children: ['A'] }
+						{ tag: :li, children: ['B'] }
 					]
 				}
 				{
 					tag: :ol
 					children: [
-						{tag: :li, children: ['C']}
-						{tag: :li, children: ['D']}
+						{ tag: :li, children: ['C'] }
+						{ tag: :li, children: ['D'] }
 					]
 				}
 			]
@@ -1116,15 +1116,15 @@ fn run(t) {
 			'4. fourth'
 			'5. fifth'
 			'  100. C'
-				'  101. D'
+			'  101. D'
 		]
 		'mixed nested ordered and unordered list' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ol
 				children: [
-					{tag: :li, children: ['first']}
-					{tag: :li, children: ['second']}
+					{ tag: :li, children: ['first'] }
+					{ tag: :li, children: ['second'] }
 					{
 						tag: :li
 						children: [
@@ -1132,19 +1132,19 @@ fn run(t) {
 							{
 								tag: :ul
 								children: [
-									{tag: :li, children: [
+									{ tag: :li, children: [
 										'A'
 										{
 											tag: :ol
 											children: [{ tag: :li, children: ['A subpoint'] }]
 										}
-									]}
-									{tag: :li, children: ['B']}
+									] }
+									{ tag: :li, children: ['B'] }
 								]
 							}
 						]
 					}
-					{tag: :li, children: ['fourth']}
+					{ tag: :li, children: ['fourth'] }
 					{
 						tag: :li
 						children: [
@@ -1152,8 +1152,8 @@ fn run(t) {
 							{
 								tag: :ol
 								children: [
-									{tag: :li, children: ['C']}
-									{tag: :li, children: ['D']}
+									{ tag: :li, children: ['C'] }
+									{ tag: :li, children: ['D'] }
 								]
 							}
 						]
@@ -1168,7 +1168,7 @@ fn run(t) {
 			'  2. numbered'
 		]
 		'mixed list type under a level of nesting' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :ol
 				children: [{
@@ -1195,7 +1195,7 @@ fn run(t) {
 			'1a. fourth'
 		]
 		'numbered list without incorrect prefix does not parse as list' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :p
 				children: ['. first  . second 1.third 1a. fourth']
@@ -1203,7 +1203,7 @@ fn run(t) {
 		)
 
 		'one line code block' |> t.eq(
-			parseLines(['```', 'hello **not bold**', '```']),
+			parseLines(['```', 'hello **not bold**', '```'])
 			[{
 				tag: :pre
 				children: [{
@@ -1221,7 +1221,7 @@ fn run(t) {
 			'```'
 		]
 		'multiline code block' |> t.eq(
-			parseLines(lines),
+			parseLines(lines)
 			[{
 				tag: :pre
 				children: [{
@@ -1232,7 +1232,7 @@ fn run(t) {
 			}]
 		)
 		'code block with language tag' |> t.eq(
-			parseLines(['```ink', 'log := std.log', '```']),
+			parseLines(['```ink', 'log := std.log', '```'])
 			[{
 				tag: :pre
 				children: [{
@@ -1244,14 +1244,14 @@ fn run(t) {
 		)
 
 		'!html in one line' |> t.eq(
-			parse('!html <img src="dst" alt="me!">'),
+			parse('!html <img src="dst" alt="me!">')
 			[{
 				tag: :rawHTML
 				children: ['<img src="dst" alt="me!">']
 			}]
 		)
 		'multiline !html' |> t.eq(
-			parseLines(['!html <div class="hi"', 'hidden', '></div>']),
+			parseLines(['!html <div class="hi"', 'hidden', '></div>'])
 			[{
 				tag: :rawHTML
 				children: ['<div class="hi"\nhidden\n></div>']
@@ -1283,7 +1283,7 @@ fn run(t) {
 		)
 
 		'neverending code block does not break parser' |> t.eq(
-			parseLines(['```', 'ahh!']),
+			parseLines(['```', 'ahh!'])
 			[{
 				tag: :pre
 				children: [{
@@ -1297,20 +1297,20 @@ fn run(t) {
 		'horizontal dividers between paragraphs' |> t.eq(
 			parseLines(['a', '---', 'b', 'b', '***', 'c'])
 			[
-				{tag: :p, children: ['a']}
-				{tag: :hr}
-				{tag: :p, children: ['b b']}
-				{tag: :hr}
-				{tag: :p, children: ['c']}
+				{ tag: :p, children: ['a'] }
+				{ tag: :hr }
+				{ tag: :p, children: ['b b'] }
+				{ tag: :hr }
+				{ tag: :p, children: ['c'] }
 			]
 		)
 
 		'hr mark followed by excess characters' |> t.eq(
 			parseLines(['a', '--- whatever', 'b'])
 			[
-				{tag: :p, children: ['a']}
-				{tag: :hr}
-				{tag: :p, children: ['b']}
+				{ tag: :p, children: ['a'] }
+				{ tag: :hr }
+				{ tag: :p, children: ['b'] }
 			]
 		)
 	}

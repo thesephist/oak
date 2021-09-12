@@ -195,11 +195,11 @@ fn run(t) {
 
 		'split splits string into letters if ?' |> t.eq(
 			split('alphabet')
-			['a', 'l', 'p','h', 'a', 'b', 'e', 't']
+			['a', 'l', 'p', 'h', 'a', 'b', 'e', 't']
 		)
 		'split splits string into letters if empty' |> t.eq(
 			split('alphabet', '')
-			['a', 'l', 'p','h', 'a', 'b', 'e', 't']
+			['a', 'l', 'p', 'h', 'a', 'b', 'e', 't']
 		)
 		'split splits string by delimiter' |> t.eq(
 			split('shoots, eats, and leaves', ', ')

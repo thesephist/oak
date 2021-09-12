@@ -173,7 +173,7 @@ fn run(t) {
 				x: ['train', false, 'car', true, { x: ['y', 'z'] }]
 				32: 'thirty-two'
 				nothing: ?
-			 }
+			}
 		]
 
 		targets |> std.each(fn(target) {

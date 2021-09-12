@@ -19,7 +19,7 @@ fn esc(c) if c {
 	'\n' -> '\\n'
 	'\r' -> '\\r'
 	'\f' -> '\\f'
-	'\"' -> '\\"'
+	'"' -> '\\"'
 	'\\' -> '\\\\'
 	_ -> c
 }
@@ -261,7 +261,7 @@ fn parseObject(r) {
 fn _parseReader(r) {
 	// trim preceding whitespace
 	r.forward()
-	
+
 	result := if r.peek() {
 		'n' -> parseNull(r)
 		'"' -> parseString(r)
@@ -274,7 +274,7 @@ fn _parseReader(r) {
 
 	// if there was a parse error, return :error
 	if r.err?() {
-	   	true -> :error
+		true -> :error
 		_ -> result
 	}
 }

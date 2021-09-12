@@ -377,7 +377,7 @@ fn loop(max, f) {
 		max -> ?
 		_ -> if broken {
 			true -> ?
-			_ ->  {
+			_ -> {
 				f(count, breaker)
 				sub(count + 1)
 			}
