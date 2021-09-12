@@ -4,6 +4,11 @@ all: ci
 run:
 	go run .
 
+# run the autoformatter (from system Oak)
+fmt:
+	oak fmt --changes --fix
+f: fmt
+
 # run Go tests
 tests:
 	go test .

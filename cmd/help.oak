@@ -51,7 +51,22 @@ Doc := 'Generate or read documentation for the Oak language and libraries.
 
 Fmt := 'Automatically format Oak source files.
 
-[[ under construction ]]
+Usage
+	oak fmt [files] [options]
+
+Options
+	--fix       Fix any formatting errors in-place, by overwriting any source
+	            files with formatting errors on disk. Without this flag set,
+	            changed versions of the source files will simply be sent to
+	            stdout.
+	--diff      Rather than printing formatted source files in their entirely,
+	            only print a line diff between the original and formatted
+	            files, to show needed changes.
+	            Using this option requires a system `diff` to be installed.
+	--changes   Rather than formatting source files specified in the command
+	            line arguments, check only files with unstaged changes in the
+	            local git repository.
+	            Using this option requires a system `git` to be installed.
 '
 
 Test := 'Run unit tests in *.test.oak files.
