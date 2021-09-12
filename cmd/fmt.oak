@@ -9,6 +9,9 @@
 	readFile: readFile
 	writeFile: writeFile
 } := import('fs')
+{
+	printf: printf
+} := import('fmt')
 cli := import('cli')
 syntax := import('syntax')
 
@@ -22,10 +25,11 @@ Args := if Cli.verb {
 }
 
 Args |> with each() fn(path) with readFile(path) fn(file) if file {
-	? -> printf('[oak fmt] Could not open file "{{ 0 }}"', path)
+	? -> printf('[oak fmt] Could not open file {{ 0 }}', path)
 	_ -> if Fix? {
 		true -> with writeFile(path, file |> syntax.print(file)) fn(res) if res {
-			? -> printf('[oak fmt] Could not write file "{{ 0 }}"', path)
+			? -> printf('[oak fmt] Could not write file {{ 0 }}', path)
+			_ -> printf('[oak fmt] Fixed {{ 0 }}', path)
 		}
 		_ -> file |> syntax.print(file) |> print()
 	}
