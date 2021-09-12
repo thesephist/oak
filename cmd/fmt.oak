@@ -6,6 +6,10 @@
 	each: each
 } := import('std')
 {
+	split: split
+	trim: trim
+} := import('str')
+{
 	readFile: readFile
 	writeFile: writeFile
 } := import('fs')
@@ -21,9 +25,22 @@ Fix? := Cli.opts.fix != ?
 Diff? := Cli.opts.diff != ?
 
 // we don't need a verb, the "verb" will be a file path
-Args := if Cli.verb {
-	? -> Cli.args
-	_ -> Cli.args << Cli.verb
+Args := if Cli.opts.changes != ? {
+	// get list of files from git diff
+	true -> {
+		evt := exec('git', ['diff', '--name-only'], '')
+		if evt.type {
+			:error -> {
+				printf('[oak fmt] Could not get git diff:\n\t{{ 0 }}', evt.error)
+				[]
+			}
+			_ -> evt.stdout |> trim() |> split('\n')
+		}
+	}
+	_ -> if Cli.verb {
+		? -> Cli.args
+		_ -> Cli.args << Cli.verb
+	}
 }
 
 Args |> with each() fn(path) with readFile(path) fn(file) if file {
