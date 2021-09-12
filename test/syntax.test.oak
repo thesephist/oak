@@ -24,7 +24,7 @@ fn run(t) {
 		'comment program' |> t.eq(
 			tokenize('// this is a comment\n//second comment')
 			[
-				Token(:comment, [1, 1], 'this is a comment')
+				Token(:comment, [1, 1], ' this is a comment')
 				Token(:newline, [1, 20])
 				Token(:comment, [2, 1], 'second comment')
 			]
@@ -98,15 +98,15 @@ fn run(t) {
 			tokenize('1 + 2 +\n3 *\n4')
 			[
 				Token(:numberLiteral, [1, 1], '1')
-				Token(:plus, [1, 3], ?)
+				Token(:plus, [1, 3])
 				Token(:numberLiteral, [1, 5], '2')
-				Token(:plus, [1, 7], ?)
-				Token(:newline, [1, 7], ?)
+				Token(:plus, [1, 7])
+				Token(:newline, [1, 7])
 				Token(:numberLiteral, [2, 1], '3')
-				Token(:times, [2, 3], ?)
-				Token(:newline, [2, 3], ?)
+				Token(:times, [2, 3])
+				Token(:newline, [2, 3])
 				Token(:numberLiteral, [3, 1], '4')
-				Token(:comma, [3, 1], ?)
+				Token(:comma, [3, 1])
 			]
 		)
 
@@ -168,6 +168,15 @@ fn run(t) {
 				Token(:newline, [4, 0])
 				Token(:rightBracket, [5, 1])
 				Token(:comma, [5, 1])
+			]
+		)
+
+		'empty object' |> t.eq(
+			tokenize('{}')
+			[
+				Token(:leftBrace, [1, 1])
+				Token(:rightBrace, [1, 2])
+				Token(:comma, [1, 2])
 			]
 		)
 
@@ -261,23 +270,23 @@ fn run(t) {
 		'with expression' |> t.eq(
 			tokenize('with readFile(path) fn(file) {\n\t// do thing\n}')
 			[
-				Token(:withKeyword, [1, 1], ?)
+				Token(:withKeyword, [1, 1])
 				Token(:identifier, [1, 6], 'readFile')
-				Token(:leftParen, [1, 14], ?)
+				Token(:leftParen, [1, 14])
 				Token(:identifier, [1, 15], 'path')
-				Token(:comma, [1, 19], ?)
-				Token(:rightParen, [1, 19], ?)
-				Token(:fnKeyword, [1, 21], ?)
-				Token(:leftParen, [1, 23], ?)
+				Token(:comma, [1, 19])
+				Token(:rightParen, [1, 19])
+				Token(:fnKeyword, [1, 21])
+				Token(:leftParen, [1, 23])
 				Token(:identifier, [1, 24], 'file')
-				Token(:comma, [1, 28], ?)
-				Token(:rightParen, [1, 28], ?)
-				Token(:leftBrace, [1, 30], ?)
-				Token(:newline, [1, 30], ?)
-				Token(:comment, [2, 2], 'do thing')
-				Token(:newline, [2, 12], ?)
-				Token(:rightBrace, [3, 1], ?)
-				Token(:comma, [3, 1], ?)
+				Token(:comma, [1, 28])
+				Token(:rightParen, [1, 28])
+				Token(:leftBrace, [1, 30])
+				Token(:newline, [1, 30])
+				Token(:comment, [2, 2], ' do thing')
+				Token(:newline, [2, 12])
+				Token(:rightBrace, [3, 1])
+				Token(:comma, [3, 1])
 			]
 		)
 	}
@@ -759,8 +768,8 @@ fn run(t) {
 			''
 		)
 		'comment program' |> t.eq(
-			print('// this is a comment\n//second comment')
-			'// this is a comment\n// second comment'
+			print('// this is a comment  \n// \n//    second comment')
+			'// this is a comment\n//\n//    second comment'
 		)
 		'whitespace-only program preserves newlines' |> t.eq(
 			print('   \n\t\n')
@@ -772,7 +781,7 @@ fn run(t) {
 		)
 		'string literals' |> t.eq(
 			print('\'hello\',\'hi\',\n\'what\\\'s up\\n\\t\' ')
-			'\'hello\', \'hi\'\n\'what\\\'s up\\\\n\\\\t\''
+			'\'hello\', \'hi\'\n\'what\\\'s up\\n\\t\''
 		)
 		'identifier' |> t.eq(
 			print('hi, _hello?, whats_up__, nothing! ')
@@ -782,6 +791,10 @@ fn run(t) {
 			print(':whatever, :not_found_404')
 			':whatever, :not_found_404'
 		)
+		'atoms in blocks' |> t.eq(
+			print('(:hi), {:hi}')
+			'(:hi), { :hi }'
+		)
 		'simple unary expression' |> t.eq(
 			print('!!a+--b')
 			'!!a + --b'
@@ -789,6 +802,10 @@ fn run(t) {
 		'simple binary expression' |> t.eq(
 			print('total:=one ( )+2 *  \t4   ')
 			'total := one() + 2 * 4'
+		)
+		'- (:minus) used as infix op' |> t.eq(
+			print('( 1-2 )-3+-2')
+			'(1 - 2) - 3 + -2'
 		)
 		'delimiters' |> t.eq(
 			print('( [{hi: :hello}      ] )+(    2 )')
@@ -802,9 +819,13 @@ fn run(t) {
 			print('[\n\t1,\n\ta,\n\t:first\n]')
 			'[\n\t1\n\ta\n\t:first\n]'
 		)
+		'empty object' |> t.eq(
+			print('{}')
+			'{}'
+		)
 		'object literal' |> t.eq(
-			print(' {   1:2,three: \'four\' , five:six,}')
-			'{ 1: 2, three: \'four\', five: six }'
+			print(' {   1:2,three: \'four\' , five:[ six\t],}')
+			'{ 1: 2, three: \'four\', five: [six] }'
 		)
 		'object literal with newlines' |> t.eq(
 			print('{   \n1:2,\n  three:\'four\'\nfive:six,\nseven::eight\n}')
@@ -880,15 +901,19 @@ fn run(t) {
 		// edge cases and regressions
 		'empty block body' |> t.eq(
 			print('{{\n\t\t}}')
-			'{{\n}}'
+			'{ {\n} }'
 		)
 		'indentation collapsing' |> t.eq(
 			print('([{\ntype: :key\nval:_\n}])')
 			'([{\n\ttype: :key\n\tval: _\n}])'
 		)
 		'fn body with comments' |> t.eq(
-			print('fn {\n\t3 + 4//   what is going on?\t\n}')
+			print('fn {\n\t3 + 4// what is going on?\t\n}')
 			'fn {\n\t3 + 4 // what is going on?\n}'
+		)
+		'unary negation and atoms in if expr' |> t.eq(
+			print('if !  try(){:fail->:error}')
+			'if !try() { :fail -> :error }'
 		)
 		'complex expr in if condition' |> t.eq(
 			print('if {\nwhatever_\n} { if[23]{30 ->false} -> c }\nif( 2 + 3 ) { }')
@@ -900,7 +925,7 @@ fn run(t) {
 		)
 		'common idiom of if directly inside with callback' |> t.eq(
 			print('with fs.readFile( path , ) fn (file) if file {\n//body\n}')
-			'with fs.readFile(path) fn(file) if file {\n\t// body\n}'
+			'with fs.readFile(path) fn(file) if file {\n\t//body\n}'
 		)
 	}
 }

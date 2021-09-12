@@ -20,6 +20,7 @@
 	join: join
 	replace: replace
 	trimStart: trimStart
+	trimEnd: trimEnd
 	trim: trim
 } := import('str')
 {
@@ -196,7 +197,10 @@ fn Tokenizer(source) {
 				// line comment
 				pos := [line, col]
 				next()
-				commentString := readUntilChar('\n') |> trim()
+				commentString := readUntilChar('\n') |> trimEnd(' ') |> trimEnd('\t')
+				if commentString |> trim() = '' {
+					true -> commentString <- ''
+				}
 				TokenAt(:comment, pos, commentString)
 			}
 			_ -> Token(:divide)
@@ -1001,7 +1005,7 @@ fn Printer(tokens) {
 
 	// a single tone -> its printed value
 	fn render(token) if token.type {
-		:comment -> '// ' << token.val
+		:comment -> '//' + token.val
 		:comma -> ','
 		:dot -> '.'
 		:leftParen -> '('
@@ -1043,8 +1047,10 @@ fn Printer(tokens) {
 		:stringLiteral -> '\'' << token.val |>
 			replace('\\', '\\\\') |>
 			replace('\'', '\\\'') |>
-			replace('\n', '\\\\n') |>
-			replace('\t', '\\\\t') << '\''
+			replace('\t', '\\t') |>
+			replace('\n', '\\n') |>
+			replace('\r', '\\r') |>
+			replace('\f', '\\f') << '\''
 		:numberLiteral -> token.val
 		_ -> {
 			printf('Unknown token {{0}}', token)
@@ -1161,17 +1167,10 @@ fn Printer(tokens) {
 					_ -> add(render(token), 1)
 				}
 				[_, :leftBracket, _]
-				[_, :leftBrace, _] -> if {
-					connectingToken?(lastType),
-					lastType = :identifier
-					lastType = :rightParen
-					lastType = :rightBracket
-					lastType = :rightBrace
-					lastType = :ifKeyword
-					lastType = :fnKeyword
-					lastType = :withKeyword
-					lastType = :comma -> add(' ' << render(token), 1)
-					_ -> add(render(token), 1)
+				[_, :leftBrace, _] -> if lastType {
+					:leftParen
+					:leftBracket -> add(render(token), 1)
+					_ -> add(' ' << render(token), 1)
 				}
 
 				// if following a newline, these are exempt from the following rule
@@ -1182,12 +1181,9 @@ fn Printer(tokens) {
 				// ensure { thing } and not {thing}
 				[_, :rightParen, _]
 				[_, :rightBracket, _] -> add(render(token), -1)
-				[_, :rightBrace, _] -> if llastType {
-					:leftParen, :rightParen,
-					:leftBracket, :rightBracket,
-					:leftBrace, :rightBrace -> add(render(token), -1)
-					_ -> add(' ' << render(token), -1)
-				}
+				// empty object/block special case
+				[:leftBrace, :rightBrace, _] -> add(render(token), -1)
+				[_, :rightBrace, _] -> add(' ' << render(token), -1)
 
 				// no-ops, where we rely on automatic comma insertion
 				[_, :comma, :newline]
@@ -1198,7 +1194,8 @@ fn Printer(tokens) {
 				// special cases for colon used in atoms
 				[_, :colon, _] -> if  {
 					lastType = :comma,
-					connectingToken?(lastType) -> add(' ' << render(token), 0)
+					lastType = :leftBrace,
+					connectingToken?(lastType) -> add(' :', 0)
 					_ -> add(':', 0)
 				}
 
@@ -1209,20 +1206,41 @@ fn Printer(tokens) {
 				// parens and lists don't include inner space
 				[:leftParen, _, _]
 				[:leftBracket, _, _]
-				// unary exprs or no-space binary exprs
-				[:dot, _, _]
+				// no-space binary exprs
+				[:dot, _, _] -> add(render(token), 0)
+				// unary exprs (which may also be used as binary infix)
 				[:exclam, _, _]
-				[:minus, _, _] -> add(render(token), 0)
+				[:minus, _, _] -> if llastType {
+					// TODO: explain
+					:ifKeyword
+					:exclam
+					:minus
+					:newline
+					:comma
+					:colon -> add(render(token), 0)
+					_ -> if connectingToken?(llastType) {
+						true -> add(render(token), 0)
+						_ -> add(' ' << render(token), 0)
+					}
+				}
 
 				// atom special case
 				[:colon, :identifier, _] -> if llastType {
 					// if token before colon cannot be end of an object key,
 					// don't insert a space. This isn't a perfect rule but
 					// seems to be a good-enough algorithm.
+					:leftParen, :leftBracket, :leftBrace
+					:rightParen, :rightBracket, :rightBrace
+					:ifKeyword
+					:exclam
+					:minus
 					:newline
 					:comma
 					:colon -> add(render(token), 0)
-					_ -> add(' ' << render(token), 0)
+					_ -> if connectingToken?(llastType) {
+						true -> add(render(token), 0)
+						_ -> add(' ' << render(token), 0)
+					}
 				}
 
 				[:leftBrace, _, _]

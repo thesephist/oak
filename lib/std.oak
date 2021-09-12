@@ -158,14 +158,14 @@ fn range(start, end, step) {
 				true -> fn(n) if n < end {
 					true -> {
 						list << n
-				   		sub(n + step)
+						sub(n + step)
 					}
 					_ -> list
 				}
 				_ -> fn(n) if n > end {
 					true -> {
 						list << n
-				   		sub(n + step)
+						sub(n + step)
 					}
 					_ -> list
 				}
