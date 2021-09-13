@@ -4,10 +4,12 @@
 	println: println
 	slice: slice
 	each: each
+	filter: filter
 } := import('std')
 {
 	split: split
 	trim: trim
+	endsWith?: endsWith?
 } := import('str')
 {
 	readFile: readFile
@@ -34,7 +36,7 @@ Args := if Cli.opts.changes != ? {
 				printf('[oak fmt] Could not get git diff:\n\t{{ 0 }}', evt.error)
 				[]
 			}
-			_ -> evt.stdout |> trim() |> split('\n')
+			_ -> evt.stdout |> trim() |> split('\n') |> with filter() fn(path) path |> endsWith?('.oak')
 		}
 	}
 	_ -> if Cli.verb {
