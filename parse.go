@@ -146,11 +146,12 @@ func (n fnNode) String() string {
 		head = "fn " + n.name
 	}
 
-	if n.restArg == "" {
-		head += "(" + strings.Join(n.args, ", ") + ")"
-	} else {
-		head += "(" + strings.Join(n.args, ", ") + ", " + n.restArg + "...)"
+	argStrings := make([]string, len(n.args))
+	copy(argStrings, n.args)
+	if n.restArg != "" {
+		argStrings = append(argStrings, n.restArg+"...")
 	}
+	head += "(" + strings.Join(argStrings, ", ") + ")"
 
 	return head + " " + n.body.String()
 }
@@ -237,10 +238,12 @@ type fnCallNode struct {
 }
 
 func (n fnCallNode) String() string {
-	// TODO: incorporate restArg
 	argStrings := make([]string, len(n.args))
 	for i, arg := range n.args {
 		argStrings[i] = arg.String()
+	}
+	if n.restArg != nil {
+		argStrings = append(argStrings, n.restArg.String()+"...")
 	}
 	return fmt.Sprintf("call[%s](%s)", n.fn, strings.Join(argStrings, ", "))
 }
