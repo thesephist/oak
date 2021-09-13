@@ -230,7 +230,6 @@ fn Tokenizer(source) {
 		'=' -> Token(:eq)
 		'\'' -> {
 			// TODO: support literal newlines, with extra tabs collapsed to newlines
-			// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 			fn sub(payload) if charInString := next() {
 				? -> payload
 				'\'' -> payload
@@ -1000,6 +999,32 @@ fn parse(text) {
 
 // Printer takes a list of Oak tokens and pretty-prints the source code into a
 // string. As a rule, all newlines are preserved, including those in comments.
+// This differs from the approach of other pretty-printers that prefer to
+// decide on newlines themselves, and is an intentional design decision.
+//
+// Printer is a *token stream-based formatter*. This means unlike many
+// production pretty-printers, syntax.Printer formats code directly from a flat
+// token stream rather than a syntax tree. This has pros and cons.
+//
+// Pros:
+// 1. Resilience. This approach can generally format incomplete code, or code
+//    that may contain syntax errors the parser may not parse. The printer
+//    rarely breaks on bad input.
+// 2. Simplicity. Because the input is a flat list of tokens, the algorithm is
+//    dramatically simpler to write and understand. Each token determines how
+//    it's printed, and each line determines how it's indented.
+// 3. Performance. The simpler design of iterating through a flat list yields
+//    better performance than a full AST based approach.
+//
+// Cons:
+// 1. Fuzzy correctness, especially on edge cases. There are some edge cases
+//    where Printer will yield unexpected output because of context the
+//    algorithm cannot disambiguate fully without a proper AST. Some of these
+//    are documented in test/syntax.test.oak.
+// 2. Lack of ability to make simplifying AST transformations. Some printers
+//    can make basic AST transformations like removing redundant parentheses
+//    during pretty-printing, but using a token based approach precludes us
+//    from doing so.
 //
 // Methods:
 //
@@ -1094,7 +1119,14 @@ fn Printer(tokens) {
 
 		// algorithm state
 		curr := 0
-		// TODO: explain why this exists?
+		// to properly indent a line, we can't simply track a cumulative
+		// indentation level; we need to know what the *lowest level of
+		// indentation achieved in that line* is to account for some cases (see
+		// "overlapping braces" in test/syntax). We do this by keeping a list
+		// of indentation levels after processing every token in a line.
+		//
+		// We still need to keep track of curr itself to keep track of indent
+		// level across lines, and between tokens.
 		currs := [0]
 		// indicates whether the following line should have a hanging indent
 		hanging? := false
@@ -1109,6 +1141,12 @@ fn Printer(tokens) {
 			currs << curr
 		}
 
+		// purelyDescendingPrefix takes a list and returns a slice of the list
+		// starting at index 0 (a "prefix slice") that contains purely
+		// descending elements.
+		//
+		// For example, a purelyDescendingPrefix of [5, 2, 1, 1, 10, 3, 8] is
+		// [5, 2, 1].
 		fn purelyDescendingPrefix(list) if len(list) {
 			0 -> list
 			_ -> {
@@ -1121,16 +1159,59 @@ fn Printer(tokens) {
 			}
 		}
 
+		// indentLine encapsulates the full indentation logic (except for
+		// indentation collapsing, described below) in Printer's formatting
+		// algorithm.
 		fn indentLine(lastType) {
+			// using min(currs...) instead of curr ensures that if a line
+			// closes some indentation levels and re-opens other indentation
+			// levels, the line is indented correctly. It does this by using a
+			// "minimum achieved indentation" during a line's token stream
+			// rather than the final indent level, so that we account for the
+			// same line opening and closing blocks.
+			//
+			// In code like this:
+			// 1 | {
+			// 2 |     something
+			// 3 | } + [{
+			// 4 |     something else
+			// 5 | }]
+			//
+			// In line 3, a pure count of open blocks would have the line
+			// indented 1 level, but intuitively this isn't what we want. We
+			// want line 3 to be indented 0 levels, because the open block was
+			// closed and a different block was opened.
 			indent := min(currs...)
 
-			// account for hanging indent
+			// account for hanging indents
 			if {
-				// TODO: explain what this line checks for / does!
+				// this check ensures correctness of cases where a hanging
+				// indent is preferred even though a given line closes an open
+				// block, because there is content before the block is closed.
+				//
+				// In code like this:
+				// 1 | [1, 2, 3
+				// 2 |     4, 5, 6]
+				//
+				// In line 2, a pure count of open blocks would have the line
+				// indented 0 levels, but intuitively this isn't what we want,
+				// because there is content preceding the closing token ']'.
+				//
+				// We account for this by counting the length of the *purely
+				// descending prefix* of indents after every token in the
+				// current line. In other words, we check if the line closes
+				// existing indents immediately with closing )]}s, or if there
+				// is non-indentation related content at the start of the line.
+				//
+				// If there is such content (len(prefix) <= 1) and the line
+				// eventually closes some indents (prefix.0 > indent), we hang
+				// this line's indent.
 				{
 					prefix := purelyDescendingPrefix(currs)
-					len(prefix) = 1 & default(prefix.0, 0) > indent
+					len(prefix) <= 1 & default(prefix.0, 0) > indent
 				}
+				// the hanging? flag is set by the previous line, from an
+				// incomplete infix operator or other similar constructs
 				hanging? -> indent <- indent + 1
 			}
 

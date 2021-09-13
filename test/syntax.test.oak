@@ -893,7 +893,7 @@ fn run(t) {
 		)
 
 		// edge cases and regressions
-		'printer correctly keeps shebang line' |> t.eq(
+		'correctly keeps shebang line' |> t.eq(
 			print('#!/usr/bin/env oak --flag\n\n2 + 3')
 			'#!/usr/bin/env oak --flag\n\n2 + 3'
 		)
@@ -906,8 +906,20 @@ fn run(t) {
 			'([{\n\ttype: :key\n\tval: _\n}])'
 		)
 		'unary operators as fn body' |> t.eq(
+			// NOTE: here, the unary - operator in front of n should ideally
+			// not be spaced from n. This test doesn't test desired behavior,
+			// but instead a documented bug that's a consequence of the high
+			// level design of syntax.Printer.
+			//
+			// Because the token sequence [_, ')', '-'] can be either something
+			// like a function definition (below) or a binary expression like
+			// (1 + 2) - 3, from a token stream we cannot differentiate one
+			// from another case without fully parsing the AST. To keep with
+			// the token-based formatter design, we had to assume one, and we
+			// currently assume the much more common latter case. I think this
+			// is an acceptable tradeoff for a much simpler and faster printing
+			// algorithm, but this may change in the future.
 			print('fn() !t.passed?, fn neg(n) -n')
-			// TODO: undesirable, but algorithmic limitation. Explainain
 			'fn() !t.passed?, fn neg(n) - n'
 		)
 		'fn body with comments' |> t.eq(

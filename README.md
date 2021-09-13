@@ -159,6 +159,19 @@ readFile('./path', fn(file) {
 
 For a more detailed description of the language, see the [work-in-progress language spec](docs/spec.md).
 
+### Performance
+
+Ink is about 4x slower than Python on pure function call and number-crunching overhead (assessed by a basic `fib(30)` benchmark). As of September 2021, Oak is about another 4x slower than Ink. Both of these figures are worst-case estimates -- becaues Ink and Oak's data structures are far simpler than Python's, the ratios start to go down on more realistic complex programs. But nonetheless, this gives a good estimate of the kind of performance (or, currently, the lack thereof) you can expect from Oak programs. It's not fast.
+
+That's not currently my primary concern, though; my primary concern is implementing a correct and pleasant interpreter that's fast _enough_ for me to write real apps with. Only when speed becomes a problem for software I built with Oak will I really invest much more in speed. I think being as fast as Python and Ruby is a good goal, long-term. Those languages run in production and receive continuous investments into performance tuning, but are far more complex. Oak is much simpler, but it's also just me. I think it evens out the difference.
+
+There are several immediately actionable things we can do to speed up Oak programs' runtime performance, though none are under works today. In order of increasing implementation complexity:
+
+1. Basic compiler optimization techniques applied to the abstract syntax tree, like constant folding and propagation.
+2. Variable name mangling and caching, so string comparisons become `u64` comparisons between machine words.
+3. A thorough audit of the interpreter's memory allocation profile and a memory optimization pass (and the same for L1/L2 cache misses).
+4. A bytecode VM that executes Oak compiled down to more compact and efficient bytecode rather than a syntax tree-walking interpreter.
+
 ## Development
 
 Oak (ab)uses GNU Make to run development workflows and tasks.

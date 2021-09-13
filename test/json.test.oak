@@ -2,7 +2,7 @@
 
 std := import('std')
 fmt := import('fmt')
-json := import('../lib/json')
+json := import('json')
 
 fn run(t) {
 	// serialize
