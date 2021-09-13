@@ -2,7 +2,7 @@
 
 std := import('std')
 fmt := import('fmt')
-json := import('json')
+json := import('../lib/json')
 
 fn run(t) {
 	// serialize
@@ -24,6 +24,10 @@ fn run(t) {
 		'string with escapes' |> t.eq(
 			ser('es"c \\a"pe\nme\t')
 			'"es\\"c \\\\a\\"pe\\nme\\t"'
+		)
+		'atoms' |> t.eq(
+			ser(':_atom_THIS')
+			'":_atom_THIS"'
 		)
 		'true' |> t.eq(
 			ser(true)
@@ -57,18 +61,37 @@ fn run(t) {
 			ser({})
 			'{}'
 		)
-		// TODO: below
 		'ordinary list' |> t.eq(
-
+			ser([10, 20, 1, 0, 'hi', :zero])
+			'[10,20,1,0,"hi",":zero"]'
 		)
 		'nested list' |> t.eq(
-
+			ser([10, [20, 30], [?, _], []])
+			'[10,[20,30],[null,null],[]]'
 		)
 		'ordinary object' |> t.eq(
-
+			[
+				// object keys, and hence serialized JSON keys, are not
+				// guaranteed to be in a deterministic order
+				'{"cd":-4.251,"a":"b"}'
+				'{"a":"b","cd":-4.251}'
+			] |> std.contains?(ser({ a: 'b', cd: -4.251 }))
+			true
 		)
 		'nested object' |> t.eq(
-
+			{
+				serialized := ser([
+					'a'
+					true
+					{ c: 'd', 'e"': 32.14 }
+					['f', {}, ?, -42]
+				])
+				[
+					'["a",true,{"c":"d","e\\"":32.14},["f",{},null,-42]]'
+					'["a",true,{"e\\"":32.14,"c":"d"},["f",{},null,-42]]'
+				] |> std.contains?(serialized)
+			}
+			true
 		)
 	}
 
