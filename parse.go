@@ -366,7 +366,7 @@ func (p *parser) expect(kind tokKind) (token, error) {
 	if next.kind != kind {
 		return token{kind: unknown}, parseError{
 			reason: fmt.Sprintf("Unexpected token %s, expected %s", next, tok),
-			pos:    tok.pos,
+			pos:    next.pos,
 		}
 	}
 
