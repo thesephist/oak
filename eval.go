@@ -583,13 +583,13 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
 	case modulus:
 		return FloatValue(math.Mod(float64(left), float64(right))), nil
 	case greater:
-		return BoolValue(int64(left) > int64(right)), nil
+		return BoolValue(float64(left) > float64(right)), nil
 	case less:
-		return BoolValue(int64(left) < int64(right)), nil
+		return BoolValue(float64(left) < float64(right)), nil
 	case geq:
-		return BoolValue(int64(left) >= int64(right)), nil
+		return BoolValue(float64(left) >= float64(right)), nil
 	case leq:
-		return BoolValue(int64(left) <= int64(right)), nil
+		return BoolValue(float64(left) <= float64(right)), nil
 	}
 	return nil, &runtimeError{
 		reason: fmt.Sprintf("Invalid binary operator %s for floats %s, %s", token{kind: op}, left, right),
