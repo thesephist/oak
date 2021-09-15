@@ -531,34 +531,34 @@ func (c *Context) evalNodes(nodes []astNode) (Value, *runtimeError) {
 func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 	switch op {
 	case plus:
-		return IntValue(int64(left) + int64(right)), nil
+		return IntValue(left + right), nil
 	case minus:
-		return IntValue(int64(left) - int64(right)), nil
+		return IntValue(left - right), nil
 	case times:
-		return IntValue(int64(left) * int64(right)), nil
+		return IntValue(left * right), nil
 	case divide:
 		if right == 0 {
 			return nil, &runtimeError{
 				reason: fmt.Sprintf("Division by zero"),
 			}
 		}
-		return IntValue(int64(left) / int64(right)), nil
+		return IntValue(left / right), nil
 	case modulus:
-		return IntValue(int64(left) % int64(right)), nil
+		return IntValue(left % right), nil
 	case xor:
-		return IntValue(int64(left) ^ int64(right)), nil
+		return IntValue(left ^ right), nil
 	case and:
-		return IntValue(int64(left) & int64(right)), nil
+		return IntValue(left & right), nil
 	case or:
-		return IntValue(int64(left) | int64(right)), nil
+		return IntValue(left | right), nil
 	case greater:
-		return BoolValue(int64(left) > int64(right)), nil
+		return BoolValue(left > right), nil
 	case less:
-		return BoolValue(int64(left) < int64(right)), nil
+		return BoolValue(left < right), nil
 	case geq:
-		return BoolValue(int64(left) >= int64(right)), nil
+		return BoolValue(left >= right), nil
 	case leq:
-		return BoolValue(int64(left) <= int64(right)), nil
+		return BoolValue(left <= right), nil
 	}
 	return nil, &runtimeError{
 		reason: fmt.Sprintf("Invalid binary operator %s for ints %s, %s", token{kind: op}, left, right),
@@ -568,28 +568,28 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
 	switch op {
 	case plus:
-		return FloatValue(float64(left) + float64(right)), nil
+		return FloatValue(left + right), nil
 	case minus:
-		return FloatValue(float64(left) - float64(right)), nil
+		return FloatValue(left - right), nil
 	case times:
-		return FloatValue(float64(left) * float64(right)), nil
+		return FloatValue(left * right), nil
 	case divide:
 		if right == 0 {
 			return nil, &runtimeError{
 				reason: fmt.Sprintf("Division by zero"),
 			}
 		}
-		return FloatValue(float64(left) / float64(right)), nil
+		return FloatValue(left / right), nil
 	case modulus:
 		return FloatValue(math.Mod(float64(left), float64(right))), nil
 	case greater:
-		return BoolValue(float64(left) > float64(right)), nil
+		return BoolValue(left > right), nil
 	case less:
-		return BoolValue(float64(left) < float64(right)), nil
+		return BoolValue(left < right), nil
 	case geq:
-		return BoolValue(float64(left) >= float64(right)), nil
+		return BoolValue(left >= right), nil
 	case leq:
-		return BoolValue(float64(left) <= float64(right)), nil
+		return BoolValue(left <= right), nil
 	}
 	return nil, &runtimeError{
 		reason: fmt.Sprintf("Invalid binary operator %s for floats %s, %s", token{kind: op}, left, right),
@@ -991,16 +991,16 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return nil, err
 		}
 
-		incompatibleError := runtimeError{
-			reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
-				token{kind: n.op}, leftComputed, rightComputed),
-			pos: n.pos(),
-		}
-
 		if n.op == eq {
 			return BoolValue(leftComputed.Eq(rightComputed)), nil
 		} else if n.op == neq {
 			return BoolValue(!leftComputed.Eq(rightComputed)), nil
+		}
+
+		incompatibleError := runtimeError{
+			reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
+				token{kind: n.op}, leftComputed, rightComputed),
+			pos: n.pos(),
 		}
 
 		switch left := leftComputed.(type) {
