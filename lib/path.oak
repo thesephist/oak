@@ -1,0 +1,109 @@
+// libpath implements utilities for working with UNIX style paths on file
+// systems and in URIs
+
+{
+	default: default
+	slice: slice
+	filter: filter
+	reduce: reduce
+} := import('std')
+{
+	startsWith?: startsWith?
+	endsWith?: endsWith?
+	join: strJoin
+	split: strSplit
+	trimEnd: trimEnd
+} := import('str')
+
+// abs? reports whether a path is absolute
+fn abs?(path) path.0 = '/'
+
+
+// rel? reports whether a path is relative
+fn rel?(path) path.0 != '/'
+
+// internal helper, returns the last occurrence of '/' in a string or 0 if it
+// does not appear.
+fn _lastSlash(path) if path {
+	'' -> 0
+	_ -> {
+		fn sub(i) if path.(i) {
+			?, '/' -> i
+			_ -> sub(i - 1)
+		}
+		sub(len(path) - 1)
+	}
+}
+
+// dir returns the portion of the a path that represents the directory
+// containing it. In effect, this is all but the last part of a path.
+fn dir(path) {
+	path := path |> trimEnd('/')
+	path |> slice(0, _lastSlash(path))
+}
+
+// base returns the last element of a path, which is typically the file or
+// directory referred to by the path.
+fn base(path) {
+	path := path |> trimEnd('/')
+	path |> slice(_lastSlash(path) + 1)
+}
+
+// cut returns a [dir, base] pair representing both parts of a path
+fn cut(path) {
+	path := path |> trimEnd('/')
+	lastSlash := _lastSlash(path)
+	[
+		path |> slice(0, lastSlash)
+		path |> slice(lastSlash + 1)
+	]
+}
+
+// clean returns a path normalized with the following transformations
+//
+// 1. Remove consecutive slashes not at the beginning
+// 2. Remove '.'
+// 3. Remove '..' and the (parent) directory right before it, if such parent
+//    directory is in the path
+fn clean(path) {
+	rooted := path.0 = '/'
+	cleaned := path |>
+		strSplit('/') |>
+		reduce([], fn(parts, part, i) if part {
+			// remove consecutive slashes and '.'
+			'', '.' -> parts
+			// remove '..' and its leading dir
+			'..' -> if i {
+				0 -> parts << part
+				_ -> parts |> slice(0, len(parts) - 1)
+			}
+			_ -> parts << part
+	}) |> strJoin('/')
+	if rooted {
+		true -> '/' << cleaned
+		_ -> cleaned
+	}
+}
+
+
+// join joins multiple paths together into a single valid cleaned path
+fn join(parts...) parts |> reduce('', fn(base, path) if base {
+	'' -> path
+	_ -> base << '/' << path
+}) |> clean()
+
+// split returns a list of each element of the path, ignoring the trailing
+// slash. If the path is absolute, the first item is an empty string.
+fn split(path) if path |> trimEnd('/') {
+	'' -> []
+	_ -> path |> strSplit('/') |> filter(fn(s) s != '')
+}
+
+// resolve takes a path and returns an equivalent cleaned, absolute path, using
+// the given base path as the root, or using the current working directory if
+// no base path is given.
+fn resolve(path, base) if abs?(path) {
+	:absolute -> path
+	_ -> join(base |> default(env().PWD), path)
+}
+

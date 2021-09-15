@@ -27,6 +27,9 @@ var libfmt string
 //go:embed lib/json.oak
 var libjson string
 
+//go:embed lib/path.oak
+var libpath string
+
 //go:embed lib/http.oak
 var libhttp string
 
@@ -50,6 +53,7 @@ var stdlibs = map[string]string{
 	"fs":     libfs,
 	"fmt":    libfmt,
 	"json":   libjson,
+	"path":   libpath,
 	"http":   libhttp,
 	"test":   libtest,
 	"cli":    libcli,

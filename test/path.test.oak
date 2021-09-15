@@ -1,0 +1,169 @@
+// libpath tests
+
+std := import('std')
+path := import('../lib/path')
+
+fn run(t) {
+	// abs?, rel?
+	{
+		{ abs?: abs?, rel?: rel? } := path
+
+		'empty absolute path' |> t.eq(
+			[abs?('/'), rel?('/')]
+			[true, false]
+		)
+		'empty relative path' |> t.eq(
+			[abs?(''), rel?('')]
+			[false, true]
+		)
+		'absolute path' |> t.eq(
+			[
+				abs?('/tmp/src/test.oak')
+				rel?('/tmp/src/test.oak')
+			]
+			[true, false]
+		)
+		'relative path' |> t.eq(
+			[
+				abs?('./src/test.oak')
+				rel?('./src/test.oak')
+			]
+			[false, true]
+		)
+	}
+
+	// path components
+	{
+		{ dir: dir, base: base, cut: cut } := path
+
+
+		fn allMatch(name, path, expectDir, expectBase) {
+			(name + ' with dir/base') |> t.eq(
+				[dir(path), base(path)]
+				[expectDir, expectBase]
+			)
+			(name + ' with cut') |> t.eq(
+				cut(path)
+				[expectDir, expectBase]
+			)
+		}
+
+		'empty path' |> allMatch(
+			''
+			'', ''
+		)
+		'empty absolute path' |> allMatch(
+			'/'
+			'', ''
+		)
+		'relative path' |> allMatch(
+			'./src/plugins/test.oak'
+			'./src/plugins', 'test.oak'
+		)
+		'absolute path' |> allMatch(
+			'/home/thesephist/src/oak/README.md'
+			'/home/thesephist/src/oak', 'README.md'
+		)
+		'path ending with /' |> allMatch(
+			'editor/plugins/'
+			'editor', 'plugins'
+		)
+		'path ending with multiple ///' |> allMatch(
+			'editor/plugins///'
+			'editor', 'plugins'
+		)
+	}
+
+	// clean path
+	{
+		clean := path.clean
+
+		'empty path' |> t.eq(
+			clean('')
+			''
+		)
+
+		'root path /' |> t.eq(
+			clean('/')
+			'/'
+		)
+		'dot at root' |> t.eq(
+			clean('/./')
+			'/'
+		)
+		'slash dot' |> t.eq(
+			clean('./')
+			''
+		)
+		'dot slash at root' |> t.eq(
+			clean('/./')
+			'/'
+		)
+
+		'remove trailing slash(es)' |> t.eq(
+			clean('./iphone-13/')
+			'iphone-13'
+		)
+		'remove consecutive slashes' |> t.eq(
+			clean('abc//def/b.c/')
+			'abc/def/b.c'
+		)
+		'remove "."' |> t.eq(
+			clean('./hello/world/./pic.jpg')
+			'hello/world/pic.jpg'
+		)
+		'remove ".." where possible' |> t.eq(
+			clean('../magic/a/../pocket..dir/x/y/../../x.gif')
+			'../magic/pocket..dir/x.gif'
+		)
+	}
+
+	// joining, splitting, resolve
+	{
+		{
+			join: join
+			split: split
+			resolve: resolve
+		} := path
+
+		'join no paths' |> t.eq(
+			join()
+			''
+		)
+		'join 1 path' |> t.eq(
+			join('../abc')
+			'../abc'
+		)
+		'join 2 paths' |> t.eq(
+			join('../abc', '/def')
+			'../abc/def'
+		)
+		'join multiple paths' |> t.eq(
+			join('../abc', '/def', 'ghi', '../xyz.jpg')
+			'../abc/def/xyz.jpg'
+		)
+
+		'split empty path' |> t.eq(
+			split('')
+			[]
+		)
+		'split /' |> t.eq(
+			split('/')
+			[]
+		)
+		'split long path' |> t.eq(
+			split('../abc//def/ghi/../xyz.jpg')
+			['..', 'abc', 'def', 'ghi', '..', 'xyz.jpg']
+		)
+
+		'resolve to /' |> t.eq(
+			resolve('./src/editor.ts', '/') |> path.clean()
+			'/src/editor.ts'
+		)
+		'resolve to base' |> t.eq(
+			resolve('./src/editor.ts', '/home/thesephist')
+			'/home/thesephist/src/editor.ts'
+		)
+	}
+}
+
