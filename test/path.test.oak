@@ -36,7 +36,6 @@ fn run(t) {
 	{
 		{ dir: dir, base: base, cut: cut } := path
 
-
 		fn allMatch(name, path, expectDir, expectBase) {
 			(name + ' with dir/base') |> t.eq(
 				[dir(path), base(path)]
@@ -163,6 +162,10 @@ fn run(t) {
 		'resolve to base' |> t.eq(
 			resolve('./src/editor.ts', '/home/thesephist')
 			'/home/thesephist/src/editor.ts'
+		)
+		'resolve absolute path is a no-op' |> t.eq(
+			resolve('/etc/nginx.default', '/var/log/nginx')
+			'/etc/nginx.default'
 		)
 	}
 }

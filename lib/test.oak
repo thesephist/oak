@@ -3,7 +3,6 @@
 {
 	each: each
 	filter: filter
-	println: println
 } := import('std')
 
 {

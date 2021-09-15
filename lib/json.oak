@@ -1,7 +1,6 @@
 // libjson implements a JSON parser and serializer for Oak values
 
 {
-	println: println
 	default: default
 	slice: slice
 	map: map

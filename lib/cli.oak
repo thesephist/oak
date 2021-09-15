@@ -1,7 +1,6 @@
 // libcli parses command line options and arguments
 
 {
-	println: println
 	default: default
 	slice: slice
 	join: join

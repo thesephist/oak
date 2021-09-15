@@ -20,11 +20,15 @@ var cmdcat string
 //go:embed cmd/fmt.oak
 var cmdfmt string
 
+//go:embed cmd/build.oak
+var cmdbuild string
+
 var cliCommands = map[string]string{
 	"version": cmdversion,
 	"help":    cmdhelp,
 	"cat":     cmdcat,
 	"fmt":     cmdfmt,
+	"build":   cmdbuild,
 }
 
 func performCommandIfExists(command string) bool {

@@ -1,7 +1,6 @@
 // libsyntax implements a tokenier and parser for the Oak language
 
 {
-	println: println
 	default: default
 	range: range
 	slice: slice

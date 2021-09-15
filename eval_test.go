@@ -123,6 +123,23 @@ func TestFunctionDefWithEmpty(t *testing.T) {
 	expectProgramToReturn(t, `fn getThird(_, _, third) third, getThird(1, 2, 3)`, IntValue(3))
 }
 
+func TestFunctionCreatesScope(t *testing.T) {
+	expectProgramToReturn(t, `
+	x := 3
+	fn defineX x := 10
+	defineX()
+	x
+	`, IntValue(3))
+}
+
+func TestBlockCreatesScope(t *testing.T) {
+	expectProgramToReturn(t, `
+	x := 3
+	{ x := 10 }
+	x
+	`, IntValue(3))
+}
+
 func TestEmptyFunctionBody(t *testing.T) {
 	expectProgramToReturn(t, `
 	fn do {

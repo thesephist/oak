@@ -18,7 +18,6 @@
 // abs? reports whether a path is absolute
 fn abs?(path) path.0 = '/'
 
-
 // rel? reports whether a path is relative
 fn rel?(path) path.0 != '/'
 
@@ -85,7 +84,6 @@ fn clean(path) {
 	}
 }
 
-
 // join joins multiple paths together into a single valid cleaned path
 fn join(parts...) parts |> reduce('', fn(base, path) if base {
 	'' -> path
@@ -103,7 +101,7 @@ fn split(path) if path |> trimEnd('/') {
 // the given base path as the root, or using the current working directory if
 // no base path is given.
 fn resolve(path, base) if abs?(path) {
-	:absolute -> path
+	true -> path
 	_ -> join(base |> default(env().PWD), path)
 }
 

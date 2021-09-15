@@ -1,0 +1,236 @@
+// oak build -- compiler and bundler
+
+{
+	println: println
+	default: default
+	slice: slice
+	map: map
+	each: each
+} := import('std')
+{
+	readFile: readFile
+	writeFile: writeFile
+	statFile: statFile
+} := import('fs')
+{
+	printf: printf
+} := import('fmt')
+{
+	dir: dir
+	resolve: resolve
+} := import('path')
+cli := import('cli')
+syntax := import('syntax')
+
+Cli := cli.parse()
+
+Entry := Cli.opts.entry
+Web? := Cli.opts.web != ?
+Output := Cli.opts.output |> default(Cli.opts.o)
+
+if Entry {
+	?, '', true -> {
+		printf('[oak build] No --entry specified.')
+		exit(1)
+	}
+}
+if Output {
+	?, '', true -> {
+		printf('[oak build] No --output specified.')
+		exit(1)
+	}
+}
+if statFile(Entry) {
+	? -> {
+		printf('[oak build] {{0}} does not exist.', Entry)
+		exit(1)
+	}
+}
+
+// absolute path to the entrypoint module
+AbsoluteEntry := resolve(Entry)
+
+// a { string: [Node] } that maps absolute paths of imported modules to their
+// fully parsed AST. We cache it here because we need to potentially astgen
+// modules multiple times in the compilation process. This also serves as the
+// source of truth for which modules the bundle must include.
+ModuleNodes := {}
+
+// cachedParse is a wrapper around syntax.parse that lazily caches the computed
+// AST, so we can minimize redundant work.
+// The path must be absolute, but the text is optional if the path is
+// guaranteed to be cached.
+fn cachedParse(path, text) if cached := ModuleNodes.(path) {
+	? -> {
+		printf('[oak build] Parsing {{0}}...', path)
+		ModuleNodes.(path) := text |> syntax.parse()
+		ModuleNodes.(path)
+	}
+	_ -> cached
+}
+
+// stdlib? reports whether a particular import name is a standard library, or
+// refers to a module that should be found on disk
+fn stdlib?(name) if name {
+	'std', 'str', 'math', 'sort'
+	'fs', 'fmt', 'json', 'path', 'http'
+	'test', 'cli', 'md', 'syntax' -> true
+	_ -> false
+}
+
+// number of modules we started processing
+startedImport := 0
+// number of modules done processing
+finishedImport := 0
+// addImportsFromPath reads and parses a file at a given path, and potentially
+// dispatches further addImportsFromPath calls to modules imported by the given
+// module. Calling this on an entrypoint module will eventually reach all of
+// the modules it imports recursively.
+//
+// Takes a callback, next, that runs when the dependency tree is fully covered.
+fn addImportsFromPath(path, next) {
+	printf('[oak build] Bundling {{0}}', path)
+	startedImport <- startedImport + 1
+
+	with readFile(path) fn(file) if file {
+		? -> printf('[oak build] Import {{0}} does not exist.', path)
+		_ -> {
+			nodes := cachedParse(path, file)
+			finishedImport <- finishedImport + 1
+
+			// find static, top-level imports from this file and queue jobs to
+			// analyze their imports.
+			nodes |> with each() fn(node) if node {
+				{
+					type: :assignment
+					tok: _
+					local?: true
+					left: _
+					right: {
+						type: :fnCall
+						function: { type: :identifier, val: 'import', tok: _ }
+						args: [{ type: :string, val: _, tok: _ }]
+						restArg: ?
+						tok: _
+					}
+				} -> if stdlib?(importName := node.right.args.(0).val) {
+					true -> {
+						// TODO: we need a way to somehow bundle standard
+						// library modules into the bundle, so that if compiled
+						// to JS, stdlib modules can still run. For now, this
+						// is a no-op which is fine for Oak bundles.
+					}
+					_ -> {
+						importPath := resolve(importName, dir(path)) + '.oak'
+						// kick off job if we haven't seen this module before
+						if ModuleNodes.(importPath) {
+							? -> addImportsFromPath(importPath, next)
+						}
+					}
+				}
+			}
+
+			// if there are no more queued jobs, invoke callback
+			if finishedImport {
+				startedImport -> next()
+			}
+		}
+	}
+}
+
+// toModuleAssign translates the AST of a module so that every top level
+// variable declaration assigns to a global `module` object instead.
+fn toModuleAssign(nodes) nodes |> with map() fn(node) {
+	// TODO: Specific cases to deal with:
+	// - Direct assign x := y
+	// - Assign by destructuring { a: a2 } := b or list destructuring
+	// - Named function declarations fn name ...
+	node
+}
+
+// wrapModule takes the body of a module and wraps it in a closure that returns
+// a global `module` object. It returns a single AST node object representing
+// this closure, to be wrapped further into a bundle AST.
+fn wrapModule(nodes) {
+	// wrap nodes in AST of
+	// fn {
+	//     module := {}
+	//     { ... (module code) }
+	//     module
+	// }
+	type: :function
+	name: ''
+	tok: { pos: [1, 1], type: :fnKeyword, val: ? }
+	args: []
+	restArg: ''
+	body: {
+		type: :block
+		tok: { pos: [1, 4], type: :leftBrace, val: ? }
+		exprs: [{
+			left: { tok: { pos: [1, 6], type: :identifier, val: 'module' }, type: :identifier, val: 'module' }
+			local?: true
+			right: { entries: [], tok: { pos: [1, 16], type: :leftBrace, val: ? }, type: :object }
+			tok: { pos: [1, 13], type: :assign, val: ? }
+			type: :assignment
+		}] << nodes << {
+			tok: { pos: [1, 20], type: :identifier, val: 'module' }
+			type: :identifier
+			val: 'module'
+		}
+	}
+}
+
+// wrapBundle takes a list of module AST nodes (closures) and wraps it into a
+// bundle AST with an entrypoint, which is a list of nodes. The bundle AST then
+// gets serialized into Oak or JS code to be written to disk.
+//
+// The bundle contains an object of type { string: Module }, where the module
+// is a closure called exactly once at runtime (on import) to return a `module`
+// exports object which takes the place of the closure that produced it, for
+// later imports of the same module to consume. The runtime also includes a
+// small bit of code to invoke the entrypoint module closure, as well a shim
+// that redefines `import()` in the bundle to check the bundle object instead
+// of executing Oak's default import() builtin.
+fn wrapBundle(modules) {
+	// TODO: modules -> bundle: node[]
+	modules
+}
+
+// renderOakNodes renders Oak AST nodes to Oak program text
+fn renderOakNodes(nodes) {
+	// TODO: render
+	'/* oak build */ {}'
+}
+
+// renderJSNodes renders Oak AST nodes to JavaScript program text.
+// renderJSNodes is also responsible for adding the JavaScript Oak runtime,
+// which provides language compatibility features.
+fn renderJSNodes(nodes) {
+	// TODO: render
+	'/* oak build --web */ {}'
+}
+
+// renderNodes transforms a bundle's AST nodes to compiled program text
+fn renderNodes(nodes) if {
+	Web? -> renderJSNodes(nodes)
+	_ -> renderOakNodes(nodes)
+}
+
+// Start from the entrypoint file and collect all statically imported files
+printf('[oak build] Bundling with entrypoint {{0}}', Entry)
+with addImportsFromPath(AbsoluteEntry) fn {
+	// compile the import map into a bundle with an entrypoint and render to
+	// bundle program text
+	BundleFile := keys(ModuleNodes) |>
+		map(cachedParse) |>
+		map(toModuleAssign) |>
+		map(wrapModule) |>
+		wrapBundle() |>
+		renderNodes()
+
+	with writeFile(Output, BundleFile) fn(res) if res {
+		? -> printf('[oak build] Could not write bundle to {{0}}.', Output)
+		_ -> printf('[oak build] Bundle written to {{0}}', Output)
+	}
+}
+

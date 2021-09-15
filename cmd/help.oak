@@ -78,6 +78,7 @@ Build := 'Compile and bundle Oak programs to Oak or JavaScript.
 
 Options
 	--entry     Entrypoint for the bundle (main.oak by default)
+	--output    Path at which to save the final bundle on disk
 	--web       Compile the bundle to JavaScript, suitable for running in
 	            JavaScript runtimes like web browsers, Node.js, and Deno
 '
