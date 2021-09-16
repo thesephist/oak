@@ -608,6 +608,14 @@ func (c *Context) evalExpr(node astNode, sc scope) (Value, *runtimeError) {
 	return c.evalExprWithOpt(node, sc, false)
 }
 
+func incompatibleError(op tokKind, left, right Value, position pos) *runtimeError {
+	return &runtimeError{
+		reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
+			token{kind: op}, left, right),
+		pos: position,
+	}
+}
+
 func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value, *runtimeError) {
 	switch n := node.(type) {
 	case emptyNode:
@@ -997,19 +1005,13 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return BoolValue(!leftComputed.Eq(rightComputed)), nil
 		}
 
-		incompatibleError := runtimeError{
-			reason: fmt.Sprintf("Cannot %s incompatible values %s, %s",
-				token{kind: n.op}, leftComputed, rightComputed),
-			pos: n.pos(),
-		}
-
 		switch left := leftComputed.(type) {
 		case IntValue:
 			right, ok := rightComputed.(IntValue)
 			if !ok {
 				rightFloat, ok := rightComputed.(FloatValue)
 				if !ok {
-					return nil, &incompatibleError
+					return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 				}
 
 				leftFloat := FloatValue(float64(int64(left)))
@@ -1030,7 +1032,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			if !ok {
 				rightInt, ok := rightComputed.(IntValue)
 				if !ok {
-					return nil, &incompatibleError
+					return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 				}
 
 				right = FloatValue(float64(int64(rightInt)))
@@ -1049,7 +1051,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		case *StringValue:
 			right, ok := rightComputed.(*StringValue)
 			if !ok {
-				return nil, &incompatibleError
+				return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 			}
 
 			switch n.op {
@@ -1101,11 +1103,11 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			case leq:
 				return BoolValue(bytes.Compare(*left, *right) <= 0), nil
 			}
-			return nil, &incompatibleError
+			return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 		case BoolValue:
 			right, ok := rightComputed.(BoolValue)
 			if !ok {
-				return nil, &incompatibleError
+				return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 			}
 
 			switch n.op {
@@ -1122,7 +1124,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				*left = append(*left, rightComputed)
 				return left, nil
 			}
-			return nil, &incompatibleError
+			return nil, incompatibleError(n.op, leftComputed, rightComputed, n.pos())
 		}
 		return nil, &runtimeError{
 			reason: fmt.Sprintf("Binary operator %s is not defined for values %s, %s",
