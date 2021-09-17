@@ -704,11 +704,9 @@ func (c *Context) oakOpen(args []Value) (Value, *runtimeError) {
 	case "readonly":
 		flags = os.O_RDONLY
 	case "readwrite":
-		flags = os.O_RDWR
-	case "append":
-		flags = os.O_RDWR | os.O_APPEND
-	case "create":
 		flags = os.O_RDWR | os.O_CREATE
+	case "append":
+		flags = os.O_RDWR | os.O_CREATE | os.O_APPEND
 	case "truncate":
 		flags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	default:
