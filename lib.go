@@ -27,6 +27,9 @@ var libfmt string
 //go:embed lib/json.oak
 var libjson string
 
+//go:embed lib/datetime.oak
+var libdatetime string
+
 //go:embed lib/path.oak
 var libpath string
 
@@ -46,19 +49,20 @@ var libmd string
 var libsyntax string
 
 var stdlibs = map[string]string{
-	"std":    libstd,
-	"str":    libstr,
-	"math":   libmath,
-	"sort":   libsort,
-	"fs":     libfs,
-	"fmt":    libfmt,
-	"json":   libjson,
-	"path":   libpath,
-	"http":   libhttp,
-	"test":   libtest,
-	"cli":    libcli,
-	"md":     libmd,
-	"syntax": libsyntax,
+	"std":      libstd,
+	"str":      libstr,
+	"math":     libmath,
+	"sort":     libsort,
+	"fs":       libfs,
+	"fmt":      libfmt,
+	"json":     libjson,
+	"datetime": libdatetime,
+	"path":     libpath,
+	"http":     libhttp,
+	"test":     libtest,
+	"cli":      libcli,
+	"md":       libmd,
+	"syntax":   libsyntax,
 }
 
 func isStdLib(name string) bool {

@@ -1,0 +1,27 @@
+// libdatetime provides utilities for working with dates and timestamps
+
+// TODO: tests
+
+{
+	format: format
+} := import('fmt')
+
+// describe computes the year, month, date, hour, minute, and second values
+// from a UNIX timestamp
+fn describe(t) {
+	{
+		year: 0
+		month: 0
+		date: 0
+		hour: 0
+		minute: 0
+		second: 0
+	}
+}
+
+// format takes a timestamp and returns its ISO8601-compliant date string
+fn format {}
+
+// parse takes an ISO8601-compliant date string and returns a timestamp
+fn parse {}
+

@@ -73,7 +73,7 @@ fn cachedParse(path, text) if cached := ModuleNodes.(path) {
 // refers to a module that should be found on disk
 fn stdlib?(name) if name {
 	'std', 'str', 'math', 'sort'
-	'fs', 'fmt', 'json', 'path', 'http'
+	'fs', 'fmt', 'datetime', 'json', 'path', 'http'
 	'test', 'cli', 'md', 'syntax' -> true
 	_ -> false
 }
