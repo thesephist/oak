@@ -229,21 +229,13 @@ fn Tokenizer(source) {
 		'=' -> Token(:eq)
 		'\'' -> {
 			// TODO: support literal newlines, with extra tabs collapsed to newlines
+			pos := [line, col]
 			fn sub(payload) if charInString := next() {
 				? -> payload
 				'\'' -> payload
-				'\\' -> {
-					if charInString := next() {
-						'n' -> charInString := '\n'
-						'r' -> charInString := '\r'
-						'f' -> charInString := '\f'
-						't' -> charInString := '\t'
-					}
-					sub(payload << charInString)
-				}
+				'\\' -> sub(payload << '\\' << next())
 				_ -> sub(payload << charInString)
 			}
-			pos := [line, col]
 			stringContent := sub('')
 			TokenAt(:stringLiteral, pos, stringContent)
 		}
@@ -465,6 +457,21 @@ fn Parser(tokens) {
 				type: :string
 				tok: tok
 				val: tok.val
+				val: {
+					verbatim := tok.val
+					fn sub(parsed, i) if c := verbatim.(i) {
+						? -> parsed
+						'\\' -> if escapedChar := verbatim.(i + 1) {
+							't' -> sub(parsed << '\t', i + 2)
+							'n' -> sub(parsed << '\n', i + 2)
+							'r' -> sub(parsed << '\r', i + 2)
+							'f' -> sub(parsed << '\f', i + 2)
+							_ -> sub(parsed << escapedChar, i + 2)
+						}
+						_ -> sub(parsed << c, i + 1)
+					}
+					sub('', 0)
+				}
 			}
 			:numberLiteral -> if tok.val |> strContains?('.') {
 				true -> if parsed := float(tok.val) {
@@ -1076,13 +1083,7 @@ fn Printer(tokens) {
 		:identifier -> token.val
 		:trueLiteral -> 'true'
 		:falseLiteral -> 'false'
-		:stringLiteral -> '\'' << token.val |>
-			replace('\\', '\\\\') |>
-			replace('\'', '\\\'') |>
-			replace('\t', '\\t') |>
-			replace('\n', '\\n') |>
-			replace('\r', '\\r') |>
-			replace('\f', '\\f') << '\''
+		:stringLiteral -> '\'' << token.val << '\''
 		:numberLiteral -> token.val
 		_ -> {
 			printf('Unknown token {{0}}', token)

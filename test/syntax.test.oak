@@ -54,7 +54,7 @@ fn run(t) {
 			[
 				Token(:stringLiteral, [1, 1], 'hello')
 				Token(:stringLiteral, [1, 9], 'hi')
-				Token(:stringLiteral, [1, 14], 'what\'s up\n\t')
+				Token(:stringLiteral, [1, 14], 'what\\\'s up\\n\\t')
 				Token(:comma, [1, 30])
 			]
 		)
@@ -774,8 +774,8 @@ fn run(t) {
 			'0, 1\n2.34, -0.5670'
 		)
 		'string literals' |> t.eq(
-			print('\'hello\',\'hi\',\n\'what\\\'s up\\n\\t\' ')
-			'\'hello\', \'hi\'\n\'what\\\'s up\\n\\t\''
+			print('\'hello\nworld\',\'hi\',\n\'what\\\'s up\\n\\t\' ')
+			'\'hello\nworld\', \'hi\'\n\'what\\\'s up\\n\\t\''
 		)
 		'identifier' |> t.eq(
 			print('hi, _hello?, whats_up__, nothing! ')
