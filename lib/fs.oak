@@ -78,8 +78,8 @@ fn readFile(path, withFile) if withFile {
 	_ -> readFileAsync(path, withFile)
 }
 
-fn writeFileSync(path, file) {
-	evt := open(path, :truncate)
+fn writeFileSyncWithFlag(path, file, flag) {
+	evt := open(path, flag)
 	if evt.type {
 		:error -> ?
 		_ -> {
@@ -96,7 +96,7 @@ fn writeFileSync(path, file) {
 	}
 }
 
-fn writeFileAsync(path, file, withEnd) with open(path, :truncate) fn(evt) if evt.type {
+fn writeFileAsyncWithFlag(path, file, flag, withEnd) with open(path, flag) fn(evt) if evt.type {
 	:error -> withEnd(?)
 	_ -> with write(fd := evt.fd, 0, file) fn(evt) if evt.type {
 		:error -> with close(fd) fn {
@@ -112,8 +112,16 @@ fn writeFileAsync(path, file, withEnd) with open(path, :truncate) fn(evt) if evt
 // success and ? on error. If the file does not exist, it will be created. If
 // it exists, it will be truncated.
 fn writeFile(path, file, withEnd) if withEnd {
-	? -> writeFileSync(path, file)
-	_ -> writeFileAsync(path, file, withEnd)
+	? -> writeFileSyncWithFlag(path, file, :truncate)
+	_ -> writeFileAsyncWithFlag(path, file, :truncate, withEnd)
+}
+
+// appendFile appends all data in `file` to the end of the file at `path`, and
+// returns true on success and ? on error. If the file does not exist, it will
+// be created.
+fn appendFile(path, file, withEnd) if withEnd {
+	? -> writeFileSyncWithFlag(path, file, :append)
+	_ -> writeFileAsyncWithFlag(path, file, :append, withEnd)
 }
 
 fn statFileSync(path) {

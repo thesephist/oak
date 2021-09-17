@@ -14,7 +14,7 @@
 ReadBuf := 4096
 
 // write the readme.lower
-fn writeLower(text, done) with open('./readme.lower.md', :create) fn(evt) if evt.type {
+fn writeLower(text, done) with open('./readme.lower.md') fn(evt) if evt.type {
 	:error -> printf('Could not open readme: {{ 0 }}', evt.error)
 	_ -> with write(fd := evt.fd, 0, lower(text)) fn(evt) {
 		if evt.type {
