@@ -92,7 +92,7 @@ fn percentDecode(str) {
 			buf := ?
 			if hex?(curr) {
 				false -> decoded << '%' << last << curr
-				_ -> decoded << char(fromHex(lower(last << curr)))
+				_ -> decoded << lower(last << curr) |> fromHex() |> char()
 			}
 		}
 	})
@@ -232,7 +232,7 @@ MethodNotAllowed := { status: 405, body: 'method not allowed' }
 
 fn _hdr(attrs) {
 	base := {
-		'X-Served-By': 'Oak/libhttp'
+		'X-Served-By': 'oak/libhttp'
 		'Content-Type': 'text/plain'
 	}
 	keys(attrs) |> each(fn(k) base.(k) := attrs.(k))
