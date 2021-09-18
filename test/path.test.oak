@@ -1,5 +1,3 @@
-// libpath tests
-
 std := import('std')
 path := import('../lib/path')
 

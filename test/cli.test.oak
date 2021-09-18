@@ -1,5 +1,3 @@
-// libcli tests
-
 std := import('std')
 str := import('str')
 cli := import('cli')

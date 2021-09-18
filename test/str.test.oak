@@ -1,5 +1,3 @@
-// libstr tests
-
 std := import('std')
 str := import('str')
 fmt := import('fmt')

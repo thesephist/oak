@@ -1,5 +1,3 @@
-// libsyntax tests
-
 std := import('std')
 {
 	tokenize: tokenize

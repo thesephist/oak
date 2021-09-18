@@ -1,5 +1,3 @@
-// libmd tests
-
 std := import('std')
 str := import('str')
 md := import('md')

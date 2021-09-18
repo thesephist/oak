@@ -1,5 +1,3 @@
-// libmath tests
-
 std := import('std')
 math := import('math')
 fmt := import('fmt')

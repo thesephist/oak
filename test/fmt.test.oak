@@ -1,5 +1,3 @@
-// libfmt tests
-
 std := import('std')
 fmt := import('fmt')
 

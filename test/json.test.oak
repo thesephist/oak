@@ -1,5 +1,3 @@
-// libjson tests
-
 std := import('std')
 fmt := import('fmt')
 json := import('json')

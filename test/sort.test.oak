@@ -1,5 +1,3 @@
-// libsort tests
-
 std := import('std')
 sort := import('sort')
 
