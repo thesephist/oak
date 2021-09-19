@@ -11,6 +11,7 @@ TestRunners := [
 	'sort'
 	'fmt'
 	'json'
+	'datetime'
 	'path'
 	'cli'
 	'md'

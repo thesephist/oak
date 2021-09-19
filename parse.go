@@ -777,6 +777,8 @@ func (p *parser) parseUnit() (astNode, error) {
 		if _, err := p.expect(rightParen); err != nil {
 			return nil, err
 		}
+		// TODO: If only one body expr and body expr is identifier or literal,
+		// unwrap the blockNode and just return the bare child
 		return blockNode{exprs: exprs, tok: &tok}, nil
 	}
 	return nil, parseError{

@@ -1,27 +1,281 @@
-// libdatetime provides utilities for working with dates and timestamps
-
-// TODO: tests
+// libdatetime provides utilities for working with dates and UNIX timestamps
+//
+// In general libdatetime is designed to be correct for dates in the Common
+// Era, 0001-01-01T00:00:00Z and forward. This may be extended into the past if
+// such behavior is desired, but I haven't hit any such use cases yet.
+//
+// libdatetime deals with UNIX timestamps, positive and negative, extending
+// back to 1 CE and forward arbitrary until integer overflow, but does not deal
+// with millisecond resolution timestamps with the exception of parse() which
+// can parse milliseconds out of an ISO8601 date time string. The library also
+// does not concern itself with time zones, pushing that complexity to call
+// sites.
 
 {
-	format: format
+	default: default
+	slice: slice
+	map: map
+	merge: merge
+} := import('std')
+{
+	endsWith?: endsWith?
+	contains?: strContains?
+	indexOf: strIndexOf
+	padStart: padStart
+	padEnd: padEnd
+	split: split
+} := import('str')
+{
+	format: fmtFormat
 } := import('fmt')
 
-// describe computes the year, month, date, hour, minute, and second values
-// from a UNIX timestamp
-fn describe(t) {
+LeapDay := 31 + 28
+SecondsPerDay := 86400
+DaysPer4Years := 365 * 4 + 1
+DaysPer100Years := 25 * DaysPer4Years - 1
+DaysPer400Years := DaysPer100Years * 4 + 1
+
+// our zero time is the year 1 CE, though the Gregorian calendar doesn't extend
+// that far into the past, to ensure that we can treat all dates in the Common
+// Era correctly without going into negative integer division, and we can take
+// advantage of 400-year cycles in the calendar.
+ZeroYear := 1
+DaysFrom1To1970 := DaysPer400Years * 5 - 365 * 31 - 8 // 8 leap years
+
+// DaysBeforeMonth.(month) is the number of days in a non-leap calendar year
+// _before_ that month, with January = month 1.
+DaysBeforeMonth := [
+	_
+	0
+	31
+	31 + 28
+	31 + 28 + 31
+	31 + 28 + 31 + 30
+	31 + 28 + 31 + 30 + 31
+	31 + 28 + 31 + 30 + 31 + 30
+	31 + 28 + 31 + 30 + 31 + 30 + 31
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31
+]
+
+// leap? reports whether a calendar year is a leap year
+fn leap?(year) year % 4 = 0 & (year % 100 != 0 | year % 400 = 0)
+
+fn _describeDate(t) {
+	// only dealing with full days since zero time
+	d := (t - t % SecondsPerDay) / SecondsPerDay + DaysFrom1To1970
+	if {
+		// when going negative, we should truncate times into dates in the
+		// other direction
+		t < 0 & t % 86400 != 0 -> d <- d - 1
+	}
+
+	n400 := d / DaysPer400Years
+	d := d - DaysPer400Years * n400
+
+	n100 := d / DaysPer100Years
+	// 100-year cycles overshoot every 400 years, so we round down
+	n100 := n100 - n100 / 4
+	d := d - DaysPer100Years * n100
+
+	n4 := d / DaysPer4Years
+	d := d - DaysPer4Years * n4
+
+	n := d / 365
+	// 4-year cycles overshoot every 4 years, so we round down
+	n := n - n / 4
+	d := d - 365 * n
+
+	year := ZeroYear +
+		400 * n400 +
+		100 * n100 +
+		4 * n4 +
+		n
+	month := 0
+	day := d
+
+	leapYear? := leap?(year)
+	if {
+		leapYear? & day = LeapDay -> {
+			month <- 2
+			day <- 29
+		}
+		_ -> {
+			if {
+				// if after leap day, pull dates forward 1 day
+				leapYear? & day > LeapDay -> day <- day - 1
+			}
+
+			fn subMonth(m) if day < DaysBeforeMonth.(m + 1) {
+				true -> m
+				_ -> subMonth(m + 1)
+			}
+			month <- subMonth(1)
+			day <- day - DaysBeforeMonth.(month) + 1
+		}
+	}
+
 	{
-		year: 0
-		month: 0
-		date: 0
-		hour: 0
-		minute: 0
-		second: 0
+		year: year
+		month: month
+		day: day
 	}
 }
 
-// format takes a timestamp and returns its ISO8601-compliant date string
-fn format {}
+fn _describeClock(t) {
+	rem := t % SecondsPerDay
+	if {
+		rem < 0 -> rem <- rem + SecondsPerDay
+	}
+	hour := rem / 3600
+	rem := rem % 3600
+	minute := rem / 60
+	{
+		hour: hour
+		minute: minute
+		second: rem % 60
+	}
+}
+
+// describe computes the year, month, day, hour, minute, and second values from
+// a UNIX timestamp
+fn describe(t) merge(
+	_describeDate(t)
+	_describeClock(t)
+)
+
+// timestamp converts the year, month, day, hour, minute, and second into a
+// positive or negative UNIX timestamp
+fn timestamp(desc) {
+	{
+		year: year
+		month: month
+		day: day
+		hour: hour
+		minute: minute
+		second: second
+	} := desc
+
+	leapYear? := leap?(year)
+
+	year := year - ZeroYear
+	n400 := year / 400, year := year % 400
+	n100 := year / 100, year := year % 100
+	n4 := year / 4, year := year % 4
+
+	daysYearToDate := if leapYear? {
+		true -> if {
+			// before leap day
+			month = 1
+			month = 2 & day < 29 -> DaysBeforeMonth.(month) + day - 1
+			// leap day
+			month = 2 & day = 29 -> 59
+			// after leap day
+			_ -> DaysBeforeMonth.(month) + day
+		}
+		// if not leap year, we want to account for a previous leap day
+		_ -> DaysBeforeMonth.(month) + day - 1
+	}
+	daysFrom1 := DaysPer400Years * n400 +
+		DaysPer100Years * n100 +
+		DaysPer4Years * n4 +
+		365 * year +
+		daysYearToDate
+	daysFrom1970 := daysFrom1 - DaysFrom1To1970
+
+	daysFrom1970 * SecondsPerDay +
+		3600 * hour +
+		60 * minute +
+		second
+}
+
+// format takes a timestamp and returns its ISO8601-compliant date time string.
+// tzOffset is the local time zone's offset from UTC, in minutes, and defaults
+// to 0 representing UTC.
+fn format(t, tzOffset) {
+	tzOffset := default(tzOffset, 0)
+	{
+		year: year
+		month: month
+		day: day
+		hour: hour
+		minute: minute
+		second: second
+	} := describe(t + tzOffset * 60)
+
+	'{{0}}-{{1}}-{{2}}T{{3}}:{{4}}:{{5}}{{6}}' |> fmtFormat(
+		if {
+			year > 9999 -> year |> string() |> padStart(6, '0')
+			year < 0 -> '-' << -year |> string() |> padStart(6, '0')
+			_ -> year |> string() |> padStart(4, '0')
+		}
+		month |> string() |> padStart(2, '0')
+		day |> string() |> padStart(2, '0')
+		hour |> string() |> padStart(2, '0')
+		minute |> string() |> padStart(2, '0')
+		second |> string() |> padStart(2, '0')
+		if {
+			tzOffset = 0 -> 'Z'
+			tzOffset > 0 -> '+' << '{{0}}:{{1}}' |> fmtFormat(
+				string(tzOffset / 60) |> padStart(2, '0')
+				string(tzOffset % 60) |> padStart(2, '0')
+			)
+			_ -> '-' << '{{0}}:{{1}}' |> fmtFormat(
+				string(-tzOffset / 60) |> padStart(2, '0')
+				string(-tzOffset % 60) |> padStart(2, '0')
+			)
+		}
+	)
+}
+
+fn _parseTZOffset(offsetString) if [hh, mm] := offsetString |> split(':') |> map(int) {
+	// if time offset cannot be parsed, we fail the whole parse
+	[], [_], [?, _], [_, ?] -> ?
+	_ -> hh * 60 + mm
+}
 
 // parse takes an ISO8601-compliant date string and returns a timestamp
-fn parse {}
+fn parse(s) if [date, clock] := s |> split('T') {
+	[], [_]
+	[?, _], [_, ?] -> ?
+	_ -> if [year, month, day] := date |> split('-') |> map(int) {
+		[], [_], [_, _]
+		[?, _, _], [_, ?, _], [_, _, ?] -> ?
+		_ -> if [hour, minute, second] := clock |> slice(0, 8) |> split(':') |> map(int) {
+			[], [_], [_, _]
+			[?, _, _], [_, ?, _], [_, _, ?] -> ?
+			_ -> {
+				// milliseconds and time zones
+				[_, maybeMillis] := clock |> split('.') |> map(fn(s) s |> slice(0, 3)) |> map(int)
+				tzOffset := if {
+					clock |> strContains?('+') ->
+						_parseTZOffset(clock |> slice(clock |> strIndexOf('+') + 1))
+					clock |> strContains?('-') -> if parsed :=
+						_parseTZOffset(clock |> slice(clock |> strIndexOf('-') + 1)) {
+						? -> ?
+						_ -> -parsed
+					}
+					_ -> 0
+				}
+
+				if tzOffset {
+					? -> ?
+					_ -> {
+						year: year
+						month: month
+						day: day
+						hour: hour
+						minute: minute
+						second: second
+						millis: default(maybeMillis, 0)
+						tzOffset: tzOffset
+					}
+				}
+			}
+		}
+	}
+}
 

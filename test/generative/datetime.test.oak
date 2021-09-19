@@ -1,0 +1,47 @@
+// Generative tests for datetime timestamp-related functions
+//
+// This script generates 500k random UNIX timestamps from a very large
+// historical range (999 CE - 2500 CE) and ensures the "round-trip behavior":
+// it validates that for each date, UNIX timestamp |> describe |> timestamp is
+// idempotent.
+
+{
+	println: println
+	range: range
+	map: map
+	each: each
+} := import('std')
+{
+	printf: printf
+} := import('fmt')
+{
+	SecondsPerDay: SecondsPerDay
+	describe: describe
+	timestamp: timestamp
+	format: format
+} := import('datetime')
+
+Start := -30610224000
+End := 16725225600
+
+fn randRange(min, max) int(min + rand() * (max - min))
+
+'Generative tests on datetime.(describe, timestamp, format)
+\tfrom {{0}} to {{1}}' |> printf(format(Start), format(End))
+
+range(500000) |>
+	map(fn() randRange(Start, End)) |>
+	with each() fn(stamp, i) if timestamp(describe(stamp)) {
+	stamp -> ?
+	_ -> {
+		formatted := stamp |> format()
+		derivedTimestamp := stamp |> describe() |> timestamp()
+		'#{{0}} did not match: {{1}} {{2}} != {{3}} ({{4}}d off)' |> printf(
+			i
+			formatted
+			stamp
+			derivedTimestamp
+			(stamp - derivedTimestamp) / float(SecondsPerDay)
+		)
+	}
+}

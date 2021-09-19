@@ -1,5 +1,5 @@
 std := import('std')
-path := import('../lib/path')
+path := import('path')
 
 fn run(t) {
 	// abs?, rel?

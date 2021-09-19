@@ -1,0 +1,203 @@
+std := import('std')
+datetime := import('datetime')
+
+// helper to generate datetime descriptions
+fn T(y, m, d, h, min, s) {
+	year: y
+	month: m
+	day: d
+	hour: h |> std.default(0)
+	minute: min |> std.default(0)
+	second: s |> std.default(0)
+}
+
+Conversions := [
+	['UNIX zero', 0, T(1970, 1, 1), '1970-01-01T00:00:00Z']
+	// guess this date ¯\_(ツ)_/¯
+	['October 15, 1998', 908417643, T(1998, 10, 15, 2, 14, 3), '1998-10-15T02:14:03Z']
+	// Y2K
+	['start of 2000', 946684800, T(2000, 1, 1), '2000-01-01T00:00:00Z']
+	// Zero CE
+	['January 1, year 1', -62135596800, T(1, 1, 1), '0001-01-01T00:00:00Z']
+	// fall of the Western Roman Empire
+	['September 4, 476', -47124720000, T(476, 9, 4), '0476-09-04T00:00:00Z']
+	// US Declaration of Independence
+	['July 4, 1776', -6106060800, T(1776, 7, 4), '1776-07-04T00:00:00Z']
+	// Steve Jobs's iPhone announcement
+	['January 9, 2007 9:41AM PST', 1168360860, T(2007, 1, 9, 16, 41, 0), '2007-01-09T16:41:00Z']
+
+	// other strategic dates
+	['normal leap year, before Feb', 1074297600, T(2004, 1, 17), '2004-01-17T00:00:00Z']
+	['normal leap year, leap day', 1078012800, T(2004, 2, 29), '2004-02-29T00:00:00Z']
+	['normal leap year, after Feb', 1103587200, T(2004, 12, 21), '2004-12-21T00:00:00Z']
+	['non-leap year (100y)', -5346518400, T(1800, 7, 30), '1800-07-30T00:00:00Z']
+	['non-non-leap year (400y)', 951782400, T(2000, 2, 29), '2000-02-29T00:00:00Z']
+	['far past', -29808864000, T(1025, 5, 25), '1025-05-25T00:00:00Z']
+	['far future', 64055059200, T(3999, 10, 29), '3999-10-29T00:00:00Z']
+	['last day of year before non-non-leap year', 946598400, T(1999, 12, 31), '1999-12-31T00:00:00Z']
+	['last day of year of non-non-leap year', 978220800, T(2000, 12, 31), '2000-12-31T00:00:00Z']
+	['first day of year following leap year', 1483228800, T(2017, 1, 1), '2017-01-01T00:00:00Z']
+
+	// other strategic times
+	['zero hour, minute, second of year', 1609459200, T(2021, 1, 1, 0, 0, 0), '2021-01-01T00:00:00Z']
+	['last hour, minute, second of year', 1640995199, T(2021, 12, 31, 23, 59, 59), '2021-12-31T23:59:59Z']
+]
+
+fn run(t) {
+	// describe, timestamp
+	{
+		{
+			describe: describe
+			timestamp: timestamp
+		} := datetime
+
+		Conversions |> with std.each() fn(spec) {
+			[name, secs, description] := spec
+			t.eq('describe ' << name
+				describe(secs), description)
+			t.eq('timestamp ' << name
+				timestamp(description), secs)
+		}
+
+		// round-trip tests on 2k generated times, spaced 71 days and 161
+		// seconds apart, starting from Jan 1, 1871 (arbitrary picks).
+		'random round-trip describe/timestamp' |> t.eq(
+			std.range(2000) |>
+				std.map(fn(i) - 3124137600 + 71 * 86400 * i + 161 * i) |>
+				std.every(fn(secs) secs |> describe() |> timestamp() = secs)
+			true
+		)
+	}
+
+	// format, parse
+	{
+		{
+			format: format
+			parse: parse
+		} := datetime
+
+		Conversions |> with std.each() fn(spec) {
+			[name, secs, description, iso] := spec
+			t.eq('format ' << name
+				format(secs), iso)
+			t.eq('parse ' << name
+				parse(iso), std.merge({ millis: 0, tzOffset: 0 }, description))
+		}
+
+		// edge cases, with tzOffset = 0 ("Z")
+		'parse with milliseconds' |> t.eq(
+			parse('2023-10-21T12:34:56.529Z')
+			{
+				year: 2023, month: 10, day: 21
+				hour: 12, minute: 34, second: 56
+				millis: 529
+				tzOffset: 0
+			}
+		)
+		'format with time zone offset = 0 converts to Z' |> t.eq(
+			format(946771200) // 2000-01-02T00:00:00+00:00
+			'2000-01-02T00:00:00Z'
+		)
+
+		// parse with time zone offsets
+		'parse with time zone offset = 0' |> t.eq(
+			parse('2000-01-02T00:00:00+00:00')
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+				millis: 0
+				tzOffset: 0
+			}
+		)
+		'parse with time zone offset > 0' |> t.eq(
+			parse('2000-01-02T00:00:00+04:15')
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+				millis: 0
+				tzOffset: 4 * 60 + 15
+			}
+		)
+		'parse with time zone offset > 0 and millis' |> t.eq(
+			parse('2000-01-02T00:00:00.123+04:15')
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+				millis: 123
+				tzOffset: 4 * 60 + 15
+			}
+		)
+		'parse with time zone offset < 0' |> t.eq(
+			parse('2000-01-02T00:00:00-04:15')
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+				millis: 0
+				tzOffset: - (4 * 60 + 15)
+			}
+		)
+		'parse with time zone offset < 0 and millis' |> t.eq(
+			parse('2000-01-02T00:00:00.456-04:15')
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+				millis: 456
+				tzOffset: - (4 * 60 + 15)
+			}
+		)
+
+		// parse errors
+		'parse with nonsense string returns ?' |> t.eq(
+			parse('2021-nonsense')
+			?
+		)
+		'parse with missing time returns ?' |> t.eq(
+			parse('2000-01-02')
+			?
+		)
+		'parse with malformed date returns ?' |> t.eq(
+			parse('20000102T00:00:00Z')
+			?
+		)
+		'parse with malformed time returns ?' |> t.eq(
+			parse('2000-01-02T123456Z')
+			?
+		)
+		'parse with malformed tzOffset returns ?' |> t.eq(
+			parse('2000-01-02T00:00:00-0z:00')
+			?
+		)
+
+		// round-trip tests on 200 generated times, spaced 701 days and 2161
+		// seconds apart, starting from Jan 1, 1871 (arbitrary picks).
+		'random round-trip format/parse' |> t.eq(
+			std.range(200) |>
+				std.map(fn(i) - 3124137600 + 701 * 86400 * i + 2161 * i) |>
+				std.every(fn(secs) secs |> format() |> parse() |> datetime.timestamp() = secs)
+			true
+		)
+	}
+
+	// leap?
+	{
+		leap? := datetime.leap?
+
+		'multiples of 4' |> t.eq(
+			[-2024, -52, 48, 1040, 1440, 1972, 2024] |> std.every(leap?)
+			true
+		)
+		'multiples of 100' |> t.eq(
+			[-2100, -300, 200, 1300, 1900, 2100] |> std.some(leap?)
+			false
+		)
+		'multiples of 400' |> t.eq(
+			[-2400, -400, 400, 1600, 2000, 2400] |> std.every(leap?)
+			true
+		)
+		'non-leap years' |> t.eq(
+			[-333, -17, 1, 210, 627, 2013, 2021] |> std.some(leap?)
+			false
+		)
+	}
+}
+
