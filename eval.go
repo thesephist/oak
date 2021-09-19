@@ -1163,8 +1163,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 
 		val, err := c.EvalFnValue(maybeFn, thunkable, args...)
 		// we only overwrite the error pos if it's nil (i.e. if it was a "nil
-		// is not a function" error, where EvalFnValue can't correclty position
-		// the error itelf)
+		// is not a function" error, where EvalFnValue can't correctly position
+		// the error itself)
 		if err != nil && err.pos.line == 0 {
 			err.pos = n.pos()
 		}
