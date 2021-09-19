@@ -213,6 +213,56 @@ fn run(t) {
 		)
 	}
 
+	// padStart, padEnd
+	{
+		{
+			padStart: padStart
+			padEnd: padEnd
+		} := str
+
+		'padStart a string which is too long' |> t.eq(
+			padStart('1234567890', 5, '-')
+			'1234567890'
+		)
+		'padStart pads a string with single char' |> t.eq(
+			padStart('123', 5, '-')
+			'--123'
+		)
+		'padStart with multi-char pad' |> t.eq(
+			padStart('1234', 10, 'abc')
+			'abcabc1234'
+		)
+		'padStart requiring partial padding < 1' |> t.eq(
+			padStart('123', 10, 'abcd')
+			'abcdabc123'
+		)
+		'padStart requiring partial padding > 1' |> t.eq(
+			padStart('12345', 10, 'abcdefghijk')
+			'abcde12345'
+		)
+
+		'padEnd a string which is too long' |> t.eq(
+			padEnd('1234567890', 5, '-')
+			'1234567890'
+		)
+		'padEnd pads a string with single char' |> t.eq(
+			padEnd('123', 5, '-')
+			'123--'
+		)
+		'padEnd with multi-char pad' |> t.eq(
+			padEnd('1234', 10, 'abc')
+			'1234abcabc'
+		)
+		'padEnd requiring partial padding < 1' |> t.eq(
+			padEnd('123', 10, 'abcd')
+			'123abcdabc'
+		)
+		'padEnd requiring partial padding > 1' |> t.eq(
+			padEnd('12345', 10, 'abcdefghijk')
+			'12345abcde'
+		)
+	}
+
 	// trimStart, trimEnd, trim
 	{
 		{

@@ -153,6 +153,32 @@ fn split(s, delim) if delim {
 	_ -> _splitNonEmpty(s, delim)
 }
 
+// helper: repeat the string `pad` until it reaches exactly `n` characters.
+fn _extend(pad, n) {
+	times := n / len(pad)
+	part := n % len(pad)
+
+	fn sub(base, i) if i {
+		0 -> base << slice(pad, 0, part)
+		_ -> sub(base << pad, i - 1)
+	}
+	sub('', times)
+}
+
+// padStart prepends the string s with one or more repetitions of pad until the
+// total string is at least n characters long. If len(s) > n, it returns s.
+fn padStart(s, n, pad) if len(s) >= n {
+	true -> s
+	_ -> _extend(pad, n - len(s)) << s
+}
+
+// padEnd appends one or more repetitions of pad to the string s until the
+// total string is at least n characters long. If len(s) > n, it returns s.
+fn padEnd(s, n, pad) if len(s) >= n {
+	true -> s
+	_ -> s + _extend(pad, n - len(s))
+}
+
 fn _trimStartNonEmpty(s, prefix) {
 	max := len(s)
 	lpref := len(prefix)
