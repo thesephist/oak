@@ -355,6 +355,16 @@ fn values(obj) keys(obj) |> with map() fn(key) obj.(key)
 // entries takes an object and returns a list of pairs [key, value] in arbitrary order.
 fn entries(obj) keys(obj) |> with map() fn(key) [key, obj.(key)]
 
+// merge takes a list of objects and merges entries of all subsequent objects
+// onto the first object, mutating the first object. If there are no objects
+// given, merge returns ?
+fn merge(os...) if len(os) {
+	0 -> ?
+	_ -> with reduce(os, os.0) fn(acc, o) {
+		with reduce(keys(o), acc) fn(root, k) root.(k) := o.(k)
+	}
+}
+
 // loop takes a loop count `max` and a callback, and invokes the callback `max`
 // times. It can be used to infinitely loop if N < 0. Callback is passed in two
 // arguments:

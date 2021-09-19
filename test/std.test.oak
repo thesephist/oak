@@ -404,11 +404,12 @@ fn run(t) {
 		'contains? duplicate item' |> t.eq(contains?([:a, :b, :c, :d, :c], :c), true)
 	}
 
-	// object operators: values, entries
+	// object operators: values, entries, merge
 	{
 		{
 			values: values
 			entries: entries
+			merge: merge
 		} := std
 
 		'values of empty obj' |> t.eq(values({}), [])
@@ -439,6 +440,48 @@ fn run(t) {
 				entries() |>
 				with std.every() fn(x) std.range(10) |> std.map(fn(n) [n, n]) |> std.contains?(x)
 			true
+		)
+
+		'merge no objects' |> t.eq(merge(), ?)
+		'merge 1 object' |> t.eq(
+			merge({ a: '10', b: '20' })
+			{ a: '10', b: '20' }
+		)
+		'merge 2 objects' |> t.eq(
+			merge(
+				{ a: '10', b: '20' }
+				{ a: '100', c: '200' }
+			)
+			{ a: '100', b: '20', c: '200' }
+		)
+		'merge N objects' |> t.eq(
+			merge(
+				std.range(10) |>
+					std.map(fn(i) {(i):string(i) + 'val' })...
+			)
+			{
+				0: '0val'
+				1: '1val'
+				2: '2val'
+				3: '3val'
+				4: '4val'
+				5: '5val'
+				6: '6val'
+				7: '7val'
+				8: '8val'
+				9: '9val'
+			}
+		)
+		oo := { a: '100', b: '200', c: '300' }
+		'merge mutates first object' |> t.eq(
+			{
+				oo |> merge({ 10: 'ten', 100: :hundred })
+				oo
+			}
+			{
+				a: '100', b: '200', c: '300'
+				10: 'ten', 100: :hundred
+			}
 		)
 	}
 
