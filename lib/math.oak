@@ -5,6 +5,12 @@
 	reduce: reduce
 } := import('std')
 
+// Pi, the circle constant
+Pi := 3.14159265358979323846264338327950288419716939937510
+
+// E, the base of the natural logarithm
+E := 2.71828182845904523536028747135266249775724709369995
+
 // sign returns -1 for all negative numbers, and 1 otherwise
 fn sign(n) if n >= 0 {
 	true -> 1
