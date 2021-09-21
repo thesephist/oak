@@ -17,7 +17,7 @@
 ReadBufSize := 4096
 
 fn readFileSync(path) {
-	evt := open(path)
+	evt := open(path, :readonly)
 	if evt.type {
 		:error -> ?
 		_ -> {
@@ -47,7 +47,7 @@ fn readFileSync(path) {
 	}
 }
 
-fn readFileAsync(path, withFile) with open(path) fn(evt) if evt.type {
+fn readFileAsync(path, withFile) with open(path, :readonly) fn(evt) if evt.type {
 	:error -> withFile(?)
 	_ -> {
 		fd := evt.fd
