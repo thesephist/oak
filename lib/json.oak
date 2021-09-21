@@ -45,13 +45,6 @@ fn serialize(c) if type(c) {
 	:object -> '{' << keys(c) |> map(fn(k) '"' << escape(k) << '":' << serialize(c.(k))) |> join(',') << '}'
 }
 
-// is this char a number or .?
-fn num?(c) if c {
-	'' -> false
-	'.' -> true
-	_ -> digit?(c)
-}
-
 // reader implementation with internal state for parsing
 fn Reader(s) {
 	index := 0
@@ -105,29 +98,22 @@ fn parseNull(r) if r.nextWord(4) {
 }
 
 fn parseString(r) {
-	peek := r.peek
 	next := r.next
 
 	next() // eat the double quote
 
-	fn sub(acc) if peek() {
+	fn sub(acc) if c := next() {
 		'' -> r.err!()
-		'\\' -> {
-			next() // eat the backslash
-			sub(acc << if c := next() {
-				't' -> '\t'
-				'n' -> '\n'
-				'r' -> '\r'
-				'f' -> '\f'
-				'"' -> '"'
-				_ -> c
-			})
-		}
-		'"' -> {
-			next()
-			acc
-		}
-		_ -> sub(acc << next())
+		'\\' -> sub(acc << if c := next() {
+			't' -> '\t'
+			'n' -> '\n'
+			'r' -> '\r'
+			'f' -> '\f'
+			'"' -> '"'
+			_ -> c
+		})
+		'"' -> acc
+		_ -> sub(acc << c)
 	}
 	sub('')
 }
@@ -136,27 +122,25 @@ fn parseNumber(r) {
 	peek := r.peek
 	next := r.next
 
-	negate? := false
 	decimal? := false
-
-	if peek() {
+	negate? := if peek() {
 		'-' -> {
 			next()
-			negate? <- true
+			true
 		}
+		_ -> false
 	}
 
-	fn sub(acc) if num?(peek()) {
-		true -> if peek() {
-			'.' -> if decimal? {
-				true -> r.err!()
-				_ -> {
-					decimal? <- true
-					sub(acc << next())
-				}
+	fn sub(acc) if peek() {
+		'.' -> if decimal? {
+			true -> r.err!()
+			_ -> {
+				decimal? <- true
+				sub(acc << next())
 			}
-			_ -> sub(acc << next())
 		}
+		'0', '1', '2', '3', '4'
+		'5', '6', '7', '8', '9' -> sub(acc << next())
 		_ -> acc
 	}
 	result := sub('')
