@@ -310,7 +310,7 @@ fn Tokenizer(source) {
 								:and, :or, :exclam, :greater, :less, :eq, :geq
 								:leq, :assign, :nonlocalAssign, :dot, :colon
 								:fnKeyword, :ifKeyword, :withKeyword
-								:pipeArrow, :branchArrow
+								:pipeArrow, :branchArrow, :pushArrow
 							] |> contains?(nextTok.type) {
 								true -> ? // do nothing
 								_ -> {
