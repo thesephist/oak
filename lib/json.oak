@@ -145,13 +145,15 @@ fn parseNumber(r) {
 	}
 	result := sub('')
 
-	parsed := if decimal? {
+	if parsed := if decimal? {
 		true -> float(result)
 		_ -> int(result)
-	}
-	if negate? {
-		true -> -parsed
-		_ -> parsed
+	} {
+		? -> :error
+		_ -> if negate? {
+			true -> -parsed
+			_ -> parsed
+		}
 	}
 }
 

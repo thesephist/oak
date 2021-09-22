@@ -97,6 +97,10 @@ fn run(t) {
 	{
 		p := json.parse
 
+		'empty string or whitespace' |> t.eq(
+			['', '\n', '  \t  '] |> std.map(p)
+			[:error, :error, :error]
+		)
 		'null, true, false' |> t.eq(
 			['null', 'true', 'false'] |> std.map(p)
 			[?, true, false]
