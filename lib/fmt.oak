@@ -10,8 +10,6 @@
 //
 // format is ported from Ink's std.format function.
 fn format(raw, values...) {
-	// parser state
-	idx := 0
 	// parser internal state
 	// 	0 -> normal
 	// 	1 -> seen one {
@@ -23,52 +21,47 @@ fn format(raw, values...) {
 	// result build-up buffer
 	buf := ''
 
-	fn readNext {
-		c := raw.(idx)
-
-		if which {
-			0 -> if c {
-				'{' -> which <- 1
-				_ -> buf << c
-			}
-			1 -> if c {
-				'{' -> which <- 2
-				// if it turns out the earlier brace was not a part of a format
-				// expression, just backtrack
-				_ -> {
-					buf << '{' + c
-					which <- 0
-				}
-			}
-			2 -> if c {
-				'}' -> {
-					buf << string(values.(int(key)))
-					key <- ''
-					which <- 3
-				}
-				// ignore spaces in keys
-				' ' -> ?
-				_ -> key <- key + c
-			}
-			3 -> if c {
-				'}' -> which <- 0
-				// ignore invalid inputs -- treat them as nonexistent
-				_ -> ?
-			}
-		}
-
-		idx <- idx + 1
-	}
-
-	fn sub if idx < len(raw) {
+	fn sub(idx) if idx < len(raw) {
 		true -> {
-			readNext()
-			sub()
+			c := raw.(idx)
+
+			if which {
+				0 -> if c {
+					'{' -> which <- 1
+					_ -> buf << c
+				}
+				1 -> if c {
+					'{' -> which <- 2
+					// if it turns out the earlier brace was not a part of a format
+					// expression, just backtrack
+					_ -> {
+						buf << '{' << c
+						which <- 0
+					}
+				}
+				2 -> if c {
+					'}' -> {
+						buf << string(values.(int(key)))
+						key <- ''
+						which <- 3
+					}
+					// ignore spaces in keys
+					' ' -> ?
+					_ -> key <- key + c
+				}
+				3 -> if c {
+					'}' -> which <- 0
+					// ignore invalid inputs -- treat them as nonexistent
+					_ -> ?
+				}
+			}
+
+			sub(idx + 1)
 		}
 		_ -> buf
 	}
 
-	sub()
+	sub(0)
 }
 
 // printf prints the result of format(raw, values...) to output
