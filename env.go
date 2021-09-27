@@ -107,6 +107,10 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("atan", c.oakAtan)
 	c.LoadFunc("pow", c.oakPow)
 	c.LoadFunc("log", c.oakLog)
+
+	// language and runtime APIs
+	c.LoadFunc("___runtime_lib", c.rtLib)
+	c.LoadFunc("___runtime_lib?", c.rtIsLib)
 }
 
 func errObj(message string) ObjectValue {
@@ -326,6 +330,7 @@ func (c *Context) oakImport(args []Value) (Value, *runtimeError) {
 	}
 
 	ctx := c.ChildContext(path.Dir(filePath))
+	c.eng.importMap[filePath] = ctx.scope
 	ctx.LoadBuiltins()
 
 	ctx.Unlock()
@@ -341,7 +346,6 @@ func (c *Context) oakImport(args []Value) (Value, *runtimeError) {
 		}
 	}
 
-	c.eng.importMap[filePath] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
 }
 
@@ -1386,4 +1390,43 @@ func (c *Context) oakLog(args []Value) (Value, *runtimeError) {
 	// we use math.Log2 here because we want logs of base 2 to give exact
 	// answers, where we care less about other bases
 	return FloatValue(math.Log2(exp) / math.Log2(base)), nil
+}
+
+// __runtime_lib returns the string content of the bundled standard library by
+// the given name, or ? otherwise.
+func (c *Context) rtLib(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("__runtime_lib", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		libName := arg.stringContent()
+		if libSource, ok := stdlibs[libName]; ok {
+			return MakeString(libSource), nil
+		}
+		return null, nil
+	default:
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call __runtime_lib(%s)", args[0]),
+		}
+	}
+}
+
+// __runtime_lib? reports whether a bundled standard library by the given name exists
+func (c *Context) rtIsLib(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("__runtime_lib?", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		libName := arg.stringContent()
+		_, ok := stdlibs[libName]
+		return BoolValue(ok), nil
+	default:
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call __runtime_lib?(%s)", args[0]),
+		}
+	}
 }
