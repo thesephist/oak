@@ -456,7 +456,6 @@ fn Parser(tokens) {
 			:stringLiteral -> {
 				type: :string
 				tok: tok
-				val: tok.val
 				val: {
 					verbatim := tok.val
 					fn sub(parsed, i) if c := verbatim.(i) {
