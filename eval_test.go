@@ -314,6 +314,78 @@ func TestBinaryExprWithinComplexTermsWithinBinaryExpr(t *testing.T) {
 	`, IntValue(16))
 }
 
+func TestAndOperator(t *testing.T) {
+	expectProgramToReturn(t, `
+	[
+		true & true
+		true & false
+		false & true
+		false & false
+		'abcd' & '    '
+		'    ' & 'wxyz'
+		'abcdef' & '   '
+		'   ' & 'abcdef'
+	]
+	`, MakeList(
+		oakTrue,
+		oakFalse,
+		oakFalse,
+		oakFalse,
+		MakeString("    "),
+		MakeString("    "),
+		MakeString("   \x00\x00\x00"),
+		MakeString("   \x00\x00\x00"),
+	))
+}
+
+func TestXorOperator(t *testing.T) {
+	expectProgramToReturn(t, `
+	[
+		true ^ true
+		true ^ false
+		false ^ true
+		false ^ false
+		'ABCD' ^ '    '
+		'    ' ^ 'WXYZ'
+		'ABCDEF' ^ '   '
+		'   ' ^ 'ABCDEF'
+	]
+	`, MakeList(
+		oakFalse,
+		oakTrue,
+		oakTrue,
+		oakFalse,
+		MakeString("abcd"),
+		MakeString("wxyz"),
+		MakeString("abcDEF"),
+		MakeString("abcDEF"),
+	))
+}
+
+func TestOrOperator(t *testing.T) {
+	expectProgramToReturn(t, `
+	[
+		true | true
+		true | false
+		false | true
+		false | false
+		'ABCD' | '    '
+		'    ' | 'WXYZ'
+		'ABCDEF' | '   '
+		'   ' | 'ABCDEF'
+	]
+	`, MakeList(
+		oakTrue,
+		oakTrue,
+		oakTrue,
+		oakFalse,
+		MakeString("abcd"),
+		MakeString("wxyz"),
+		MakeString("abcDEF"),
+		MakeString("abcDEF"),
+	))
+}
+
 func TestEmptyIfExpr(t *testing.T) {
 	expectProgramToReturn(t, `if 100 {}`, null)
 }
@@ -424,7 +496,7 @@ func TestRecursiveFunction(t *testing.T) {
 	`, IntValue(450))
 }
 
-func TestREcursiveFunctionOnList(t *testing.T) {
+func TestRecursiveFunctionOnList(t *testing.T) {
 	expectProgramToReturn(t, `
 	fn each(list, f) {
 		fn sub(i) if i {
