@@ -488,8 +488,39 @@ fn run(t) {
 	// control flow constructs
 	{
 		{
+			once: once
 			loop: loop
 		} := std
+
+		'once called nonce with args' |> t.eq(
+			{
+				n := 0
+				f := once(fn(m) n <- m)
+				n
+			}
+			0
+		)
+		'once called once with args' |> t.eq(
+			{
+				n := 0
+				f := once(fn(m) n <- m)
+				f(10)
+				n
+			}
+			10
+		)
+		'once called N times with args' |> t.eq(
+			{
+				n := 0
+				f := once(fn(m) n <- m)
+				f(10)
+				f(20)
+				f(40)
+				f(80)
+				n
+			}
+			10
+		)
 
 		'loop with 0 count' |> t.eq(
 			{

@@ -365,6 +365,21 @@ fn merge(os...) if len(os) {
 	}
 }
 
+// once takes a function f, and returns a new function g that wraps f so that
+// calling g one or more times ensures f gets called exactly once, the first
+// time g is called. once is useful for ensuring that some callback or
+// initialization logic runs exactly once.
+fn once(f) {
+	called? := false
+	fn(args...) if {
+		called? -> ?
+		_ -> {
+			called? <- true
+			f(args...)
+		}
+	}
+}
+
 // loop takes a loop count `max` and a callback, and invokes the callback `max`
 // times. It can be used to infinitely loop if N < 0. Callback is passed in two
 // arguments:
