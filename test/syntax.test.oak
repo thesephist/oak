@@ -35,6 +35,18 @@ fn run(t) {
 			]
 		)
 
+		'null and empty' |> t.eq(
+			tokenize('?, _, __')
+			[
+				Token(:qmark, [1, 1])
+				Token(:comma, [1, 2])
+				Token(:underscore, [1, 4])
+				Token(:comma, [1, 5])
+				Token(:identifier, [1, 7], '__')
+				Token(:comma, [1, 8])
+			]
+		)
+
 		'number literals' |> t.eq(
 			tokenize(' 0 1 2.34 -0.567')
 			[
@@ -689,6 +701,18 @@ fn run(t) {
 						val: 3
 					}
 				}]
+			}]
+		)
+
+		'empty identifier in fn def' |> t.eq(
+			parse('fn(_, i) {}')
+			[{
+				type: :function
+				tok: at(1, 1)
+				name: ''
+				args: ['_', 'i']
+				restArg: ''
+				body: { type: :block, tok: at(1, 10), exprs: [] }
 			}]
 		)
 

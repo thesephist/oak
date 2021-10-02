@@ -665,8 +665,8 @@ fn Parser(tokens) {
 											back() // try again
 
 											with notError(expect(:underscore)) fn {
-												args << ''
-												with notError(:comma) fn {
+												args << '_'
+												with notError(expect(:comma)) fn {
 													sub()
 												}
 											}
