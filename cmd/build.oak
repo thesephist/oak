@@ -124,14 +124,10 @@ fn addImportsFromPath(path, next) {
 			// analyze their imports.
 			nodes |> with each() fn(node) if {
 				importCallNode?(node) -> if ___runtime_lib?(importName := node.right.args.(0).val) {
+					// for Oak bundles, importing stdlib is a no-op
 					true -> if Web? {
-						// for Oak bundles, importing stdlib is a no-op
-						false -> ?
 						// for JS bundles, bundle the stdlib
-						_ -> nodes := cachedParse(
-							importName
-							___runtime_lib(importName)
-						)
+						true -> cachedParse(importName, ___runtime_lib(importName))
 					}
 					_ -> {
 						importPath := resolve(importName, dir(path)) + '.oak'
@@ -588,14 +584,17 @@ fn renderJSBundle(bundleNode) {
 			} << '])'
 			:block -> if len(node.exprs) {
 				0 -> 'null'
-				_ -> '(function block(){ {{0}}{{1}} })()' |> format(
-					node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
-					{
-						exprs := node.exprs |> map(renderNode)
-						exprs.(len(exprs) - 1) := 'return ' << exprs.(len(exprs) - 1)
-						exprs |> join(';')
-					}
-				)
+				_ -> if len(node.decls) {
+					0 -> '(' << (node.exprs |> map(renderNode) |> join(',')) << ')'
+					_ -> '(()=>{ {{0}}{{1}} })()' |> format(
+						node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
+						{
+							exprs := node.exprs |> map(renderNode)
+							exprs.(len(exprs) - 1) := 'return ' << exprs.(len(exprs) - 1)
+							exprs |> join(';')
+						}
+					)
+				}
 			}
 			:function -> {
 				args := '(' << if node.restArg {
