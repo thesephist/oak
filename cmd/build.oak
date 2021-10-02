@@ -482,6 +482,7 @@ fn renderJSBundle(bundleNode) {
 		'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with'
 		'yield' -> '__oak_js_' << name
 		_ -> name |>
+			clone() |>
 			replace('?', '__oak_qm') |>
 			replace('!', '__oak_exclam')
 	}
@@ -609,8 +610,8 @@ fn renderJSBundle(bundleNode) {
 				if node.name {
 					'' -> 'function' << args << '{return ' << renderNode(node.body) << '}'
 					// use function keyword for named functions, for legible stack traces
-					_ -> formatIdent(node.name) + // + to avoid mutation
-					'=function ' <<
+					_ -> formatIdent(node.name) <<
+						'=function ' <<
 						formatIdent(node.name) <<
 						args << '{return ' << renderNode(node.body) << '}'
 				}
