@@ -81,6 +81,10 @@ Options
 	--output    Path at which to save the final bundle on disk, also -o
 	--web       Compile the bundle to JavaScript, suitable for running in
 	            JavaScript runtimes like web browsers, Node.js, and Deno
+	--include   Comma-separated list of modules to include explicitly in the
+	            bundle, even if the static analyzer cannot find static imports
+	            to it from the entrypoint. Use this option to ensure modules
+	            loaded dynamically at runtime are bundled.
 '
 
 // main

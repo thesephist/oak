@@ -11,9 +11,11 @@
 	append: append
 	entries: entries
 	merge: merge
+	once: once
 } := import('std')
 {
 	join: join
+	split: split
 	replace: replace
 } := import('str')
 {
@@ -40,6 +42,9 @@ Cli := cli.parse()
 Entry := Cli.opts.entry
 Web? := Cli.opts.web != ?
 Output := Cli.opts.output |> default(Cli.opts.o)
+Includes := Cli.opts.include |> default('') |>
+	split(',') |>
+	filter(fn(s) s != '')
 
 if Entry {
 	?, '', true -> {
@@ -633,9 +638,9 @@ fn renderBundle(bundleNode) if {
 	_ -> renderOakBundle(bundleNode)
 }
 
-// Start from the entrypoint file and collect all statically imported files
+// Start from entrypoint and explicit includes, collect all static imports
 printf('[oak build] Bundling with entrypoint {{0}}', Entry)
-with addImportsFromPath(AbsoluteEntry) fn {
+postImport := with once() fn {
 	// compile the import map into a bundle with an entrypoint and render to
 	// bundle program text
 	BundleFile := ModuleNodes |>
@@ -650,16 +655,31 @@ with addImportsFromPath(AbsoluteEntry) fn {
 		_ -> printf('[oak build] Bundle written to {{0}}', Output)
 	}
 }
+Includes |> with each() fn(importName) if ___runtime_lib?(importName) {
+	true -> if Web? {
+		true -> cachedParse(importName, ___runtime_lib(importName))
+	}
+	_ -> {
+		importPath := resolve(importName) + '.oak'
+		if ModuleNodes.(importPath) {
+			? -> addImportsFromPath(importPath, postImport)
+		}
+	}
+}
+addImportsFromPath(AbsoluteEntry, postImport)
 
 
 // constants and runtime
-
 OakJSRuntime := '
 const __Oak_Modules = {};
 function __oak_js_import(name) {
 	if (typeof __Oak_Modules[name] === \'object\') return __Oak_Modules[name];
-	const scope = __Oak_Modules[name]();
-	return __Oak_Modules[name] = scope;
+	const module = __Oak_Modules[name];
+	if (module) {
+		return __Oak_Modules[name] = module();
+	} else {
+		throw new Error(`Could not import Oak module "${name}" at runtime`);
+	}
 }
 function __oak_modularize(name, fn) {
 	__Oak_Modules[name] = fn;
