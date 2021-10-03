@@ -19,6 +19,14 @@ test-oak:
 	go run -race . test/main.oak
 tk: test-oak
 
+# run Oak build --web tests
+test-js:
+	go run . build --entry test/main.oak \
+		-o /tmp/oak-test-main.js \
+		--web \
+		--include std.test:test/std.test;
+	node /tmp/oak-test-main.js
+
 # install as "oak" binary
 install:
 	cp tools/oak.vim ~/.vim/syntax/oak.vim

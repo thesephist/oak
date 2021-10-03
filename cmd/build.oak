@@ -44,7 +44,11 @@ Web? := Cli.opts.web != ?
 Output := Cli.opts.output |> default(Cli.opts.o)
 Includes := Cli.opts.include |> default('') |>
 	split(',') |>
-	filter(fn(s) s != '')
+	filter(fn(s) s != '') |>
+	with map() fn(spec) if [name, path] := spec |> split(':') {
+	[_, _] -> { name: name, path: resolve(path) + '.oak' }
+	_ -> { name: spec, path: resolve(spec) + '.oak' }
+}
 
 if Entry {
 	?, '', true -> {
@@ -230,46 +234,57 @@ fn wrapModule(block) {
 // well a shim that redefines `import()` in the bundle to check the bundle
 // object instead of executing Oak's default import() builtin.
 fn wrapBundle(modules, entryModuleName) {
-	{
-		type: :block
-		tok: { pos: [1, 1], type: :leftBrace, val: ? }
-		decls: []
-		exprs: {
-			// declare all modules with __oak_modularize
-			moduleDefns := modules |> with map() fn(module) {
-				[moduleName, moduleBody] := module
-				{
-					type: :fnCall
-					tok: { pos: [1, 17], type: :leftParen, val: ? }
-					function: {
-						type: :identifier
-						tok: { pos: [1, 1], type: :identifier, val: '__oak_modularize' }
-						val: '__oak_modularize'
-					}
-					args: [
-						{ type: :string, val: moduleName, tok: { type: :stringLiteral, pos: [1, 18], val: moduleName } }
-						moduleBody
-					]
-					restArg: ?
-				}
-			}
-
-			// call into entrypoint
-			moduleDefns << {
+	type: :block
+	tok: { pos: [1, 1], type: :leftBrace, val: ? }
+	decls: []
+	exprs: {
+		// declare all modules with __oak_modularize
+		moduleDefns := modules |> with map() fn(module) {
+			[moduleName, moduleBody] := module
+			{
 				type: :fnCall
-				tok: { pos: [1, 1], type: :leftParen, val: ? }
+				tok: { pos: [1, 17], type: :leftParen, val: ? }
 				function: {
 					type: :identifier
-					tok: { pos: [1, 1], type: :identifier, val: '__oak_js_import' }
-					val: '__oak_js_import'
+					tok: { pos: [1, 1], type: :identifier, val: '__oak_modularize' }
+					val: '__oak_modularize'
 				}
-				args: [{
-					type: :string
-					val: entryModuleName
-					tok: { type: :stringLiteral, pos: [1, 1], val: entryModuleName }
-				}]
+				args: [
+					{ type: :string, val: moduleName, tok: { type: :stringLiteral, pos: [1, 18], val: moduleName } }
+					moduleBody
+				]
 				restArg: ?
 			}
+		}
+
+		// call into entrypoint
+		moduleDefns << {
+			type: :assignment
+			tok: { pos: [1, 0], type: :assign, val: ? }
+			left: { tok: { pos: [1, 0], type: :identifier, val: '__Oak_Import_Aliases' }, type: :identifier, val: '__Oak_Import_Aliases' }
+			local?: true
+			right: {
+				type: :object
+				tok: { pos: [1, 0], type: :leftBrace, val: ? }
+				entries: Includes |> with map() fn(spec) {
+					key: { type: :string, val: spec.name, tok: { pos: [1, 0], type: :stringLiteral, val: spec.name } }
+					val: { type: :string, val: spec.path, tok: { pos: [1, 0], type: :stringLiteral, val: spec.path } }
+				}
+			}
+		} << {
+			type: :fnCall
+			tok: { pos: [1, 0], type: :leftParen, val: ? }
+			function: {
+				type: :identifier
+				tok: { pos: [1, 0], type: :identifier, val: '__oak_js_import' }
+				val: '__oak_js_import'
+			}
+			args: [{
+				type: :string
+				val: entryModuleName
+				tok: { type: :stringLiteral, pos: [1, 0], val: entryModuleName }
+			}]
+			restArg: ?
 		}
 	}
 }
@@ -656,15 +671,12 @@ postImport := with once() fn {
 		_ -> printf('[oak build] Bundle written to {{0}}', Output)
 	}
 }
-Includes |> with each() fn(importName) if ___runtime_lib?(importName) {
+Includes |> with each() fn(spec) if ___runtime_lib?(spec.name) {
 	true -> if Web? {
-		true -> cachedParse(importName, ___runtime_lib(importName))
+		true -> cachedParse(spec.name, ___runtime_lib(spec.name))
 	}
-	_ -> {
-		importPath := resolve(importName) + '.oak'
-		if ModuleNodes.(importPath) {
-			? -> addImportsFromPath(importPath, postImport)
-		}
+	_ -> if ModuleNodes.(spec.path) {
+		? -> addImportsFromPath(spec.path, postImport)
 	}
 }
 addImportsFromPath(AbsoluteEntry, postImport)
@@ -675,7 +687,7 @@ OakJSRuntime := '
 const __Oak_Modules = {};
 function __oak_js_import(name) {
 	if (typeof __Oak_Modules[name] === \'object\') return __Oak_Modules[name];
-	const module = __Oak_Modules[name];
+	const module = __Oak_Modules[name] || __Oak_Modules[__Oak_Import_Aliases[name]];
 	if (module) {
 		return __Oak_Modules[name] = module();
 	} else {
@@ -907,7 +919,7 @@ function keys(x) {
 	if (Array.isArray(x)) {
 		const k = [];
 		for (let i = 0; i < x.length; i ++) k.push(i);
-		return i;
+		return k;
 	} else if (typeof x === \'object\' && x !== null) {
 		return Object.getOwnPropertyNames(x);
 	}
