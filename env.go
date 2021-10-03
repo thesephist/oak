@@ -64,10 +64,10 @@ func (c *Context) LoadBuiltins() {
 
 	// core language and reflection
 	c.LoadFunc("import", c.oakImport)
-	c.LoadFunc("string", c.oakString)
 	c.LoadFunc("int", c.oakInt)
 	c.LoadFunc("float", c.oakFloat)
 	c.LoadFunc("atom", c.oakAtom)
+	c.LoadFunc("string", c.oakString)
 	c.LoadFunc("codepoint", c.oakCodepoint)
 	c.LoadFunc("char", c.oakChar)
 	c.LoadFunc("type", c.oakType)
@@ -79,17 +79,17 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("env", c.oakEnv)
 	c.LoadFunc("time", c.oakTime)
 	c.LoadFunc("nanotime", c.oakNanotime)
-	c.LoadFunc("exit", c.oakExit)
 	c.LoadFunc("rand", c.oakRand)
 	c.LoadFunc("wait", c.callbackify(c.oakWait))
+	c.LoadFunc("exit", c.oakExit)
 	c.LoadFunc("exec", c.callbackify(c.oakExec))
 
 	// i/o interfaces
 	c.LoadFunc("input", c.callbackify(c.oakInput))
 	c.LoadFunc("print", c.oakPrint)
 	c.LoadFunc("ls", c.callbackify(c.oakLs))
-	c.LoadFunc("mkdir", c.callbackify(c.oakMkdir))
 	c.LoadFunc("rm", c.callbackify(c.oakRm))
+	c.LoadFunc("mkdir", c.callbackify(c.oakMkdir))
 	c.LoadFunc("stat", c.callbackify(c.oakStat))
 	c.LoadFunc("open", c.callbackify(c.oakOpen))
 	c.LoadFunc("close", c.callbackify(c.oakClose))
@@ -156,17 +156,59 @@ func (c *Context) callbackify(syncFn builtinFn) builtinFn {
 	}
 }
 
-func (c *Context) oakString(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("string", args, 1); err != nil {
+func (c *Context) oakImport(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("import", args, 1); err != nil {
 		return nil, err
 	}
 
-	switch arg := args[0].(type) {
-	case *StringValue:
-		return arg, nil
-	default:
-		return MakeString(arg.String()), nil
+	pathBytes, ok := args[0].(*StringValue)
+	if !ok {
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
+		}
 	}
+	pathStr := pathBytes.stringContent()
+
+	// if a stdlib, just import the library from binary
+	if isStdLib(pathStr) {
+		return c.LoadLib(pathStr)
+	}
+
+	filePath := pathStr + ".oak"
+	if !filepath.IsAbs(filePath) {
+		filePath = filepath.Join(c.rootPath, filePath)
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Could not open %s, %s", filePath, err.Error()),
+		}
+	}
+	defer file.Close()
+
+	if imported, ok := c.eng.importMap[filePath]; ok {
+		return ObjectValue(imported.vars), nil
+	}
+
+	ctx := c.ChildContext(path.Dir(filePath))
+	c.eng.importMap[filePath] = ctx.scope
+	ctx.LoadBuiltins()
+
+	ctx.Unlock()
+	_, err = ctx.Eval(file)
+	ctx.Lock()
+	if err != nil {
+		if runtimeErr, ok := err.(*runtimeError); ok {
+			return nil, runtimeErr
+		} else {
+			return nil, &runtimeError{
+				reason: fmt.Sprintf("Error importing %s: %s", pathStr, err.Error()),
+			}
+		}
+	}
+
+	return ObjectValue(ctx.scope.vars), nil
 }
 
 func (c *Context) oakInt(args []Value) (Value, *runtimeError) {
@@ -223,6 +265,19 @@ func (c *Context) oakAtom(args []Value) (Value, *runtimeError) {
 		return arg, nil
 	default:
 		return AtomValue(arg.String()), nil
+	}
+}
+
+func (c *Context) oakString(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("string", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		return arg, nil
+	default:
+		return MakeString(arg.String()), nil
 	}
 }
 
@@ -291,62 +346,7 @@ func (c *Context) oakType(args []Value) (Value, *runtimeError) {
 		return AtomValue("function"), nil
 	}
 
-	panic("Unreachable!")
-}
-
-func (c *Context) oakImport(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("import", args, 1); err != nil {
-		return nil, err
-	}
-
-	pathBytes, ok := args[0].(*StringValue)
-	if !ok {
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("path to import() must be a string, got %s", args[0]),
-		}
-	}
-	pathStr := pathBytes.stringContent()
-
-	// if a stdlib, just import the library from binary
-	if isStdLib(pathStr) {
-		return c.LoadLib(pathStr)
-	}
-
-	filePath := pathStr + ".oak"
-	if !filepath.IsAbs(filePath) {
-		filePath = filepath.Join(c.rootPath, filePath)
-	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("Could not open %s, %s", filePath, err.Error()),
-		}
-	}
-	defer file.Close()
-
-	if imported, ok := c.eng.importMap[filePath]; ok {
-		return ObjectValue(imported.vars), nil
-	}
-
-	ctx := c.ChildContext(path.Dir(filePath))
-	c.eng.importMap[filePath] = ctx.scope
-	ctx.LoadBuiltins()
-
-	ctx.Unlock()
-	_, err = ctx.Eval(file)
-	ctx.Lock()
-	if err != nil {
-		if runtimeErr, ok := err.(*runtimeError); ok {
-			return nil, runtimeErr
-		} else {
-			return nil, &runtimeError{
-				reason: fmt.Sprintf("Error importing %s: %s", pathStr, err.Error()),
-			}
-		}
-	}
-
-	return ObjectValue(ctx.scope.vars), nil
+	panic("Unreachable: unknown runtime value")
 }
 
 func (c *Context) oakLen(args []Value) (Value, *runtimeError) {
@@ -364,6 +364,104 @@ func (c *Context) oakLen(args []Value) (Value, *runtimeError) {
 	default:
 		return nil, &runtimeError{
 			reason: fmt.Sprintf("%s does not support a len() call", arg),
+		}
+	}
+}
+
+func makeIntListUpTo(max int) Value {
+	list := make(ListValue, max)
+	for i := 0; i < max; i++ {
+		list[i] = IntValue(i)
+	}
+	return &list
+}
+
+func (c *Context) oakKeys(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("print", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case *StringValue:
+		return makeIntListUpTo(len(*arg)), nil
+	case *ListValue:
+		return makeIntListUpTo(len(*arg)), nil
+	case ObjectValue:
+		keys := make(ListValue, len(arg))
+		i := 0
+		for key := range arg {
+			keys[i] = MakeString(key)
+			i++
+		}
+		return &keys, nil
+	default:
+		return MakeList(), nil
+	}
+}
+
+func (c *Context) oakArgs(_ []Value) (Value, *runtimeError) {
+	goArgs := os.Args
+	args := make(ListValue, len(goArgs))
+	for i, arg := range goArgs {
+		args[i] = MakeString(arg)
+	}
+	return &args, nil
+}
+
+func (c *Context) oakEnv(_ []Value) (Value, *runtimeError) {
+	envVars := ObjectValue{}
+	for _, e := range os.Environ() {
+		kv := strings.SplitN(e, "=", 2)
+		envVars[kv[0]] = MakeString(kv[1])
+	}
+	return envVars, nil
+}
+
+func (c *Context) oakTime(_ []Value) (Value, *runtimeError) {
+	unixSeconds := float64(time.Now().UnixNano()) / 1e9
+	return FloatValue(unixSeconds), nil
+}
+
+func (c *Context) oakNanotime(_ []Value) (Value, *runtimeError) {
+	return IntValue(time.Now().UnixNano()), nil
+}
+
+func (c *Context) oakRand(args []Value) (Value, *runtimeError) {
+	return FloatValue(rand.Float64()), nil
+}
+
+func (c *Context) oakWait(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("wait", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
+	case FloatValue:
+		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
+	default:
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call wait(%s)", args[0]),
+		}
+	}
+
+	return null, nil
+}
+
+func (c *Context) oakExit(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("exit", args, 1); err != nil {
+		return nil, err
+	}
+
+	switch arg := args[0].(type) {
+	case IntValue:
+		os.Exit(int(arg))
+		// unreachable
+		return null, nil
+	default:
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call exit(%s)", args[0]),
 		}
 	}
 }
@@ -503,126 +601,6 @@ func (c *Context) oakLs(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
-func (c *Context) oakMkdir(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("mkdir", args, 1); err != nil {
-		return nil, err
-	}
-
-	dirPath, ok1 := args[0].(*StringValue)
-	if !ok1 {
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("Mismatched types in call mkdir(%s)", args[0]),
-		}
-	}
-
-	err := os.MkdirAll(dirPath.stringContent(), 0755)
-	if err != nil {
-		return errObj(fmt.Sprintf("Could not make a new directory %s: %s", dirPath.stringContent(), err.Error())), nil
-	}
-
-	return ObjectValue{
-		"type": AtomValue("end"),
-	}, nil
-}
-
-func makeIntListUpTo(max int) Value {
-	list := make(ListValue, max)
-	for i := 0; i < max; i++ {
-		list[i] = IntValue(i)
-	}
-	return &list
-}
-
-func (c *Context) oakKeys(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("print", args, 1); err != nil {
-		return nil, err
-	}
-
-	switch arg := args[0].(type) {
-	case *StringValue:
-		return makeIntListUpTo(len(*arg)), nil
-	case *ListValue:
-		return makeIntListUpTo(len(*arg)), nil
-	case ObjectValue:
-		keys := make(ListValue, len(arg))
-		i := 0
-		for key := range arg {
-			keys[i] = MakeString(key)
-			i++
-		}
-		return &keys, nil
-	default:
-		return MakeList(), nil
-	}
-}
-
-func (c *Context) oakArgs(_ []Value) (Value, *runtimeError) {
-	goArgs := os.Args
-	args := make(ListValue, len(goArgs))
-	for i, arg := range goArgs {
-		args[i] = MakeString(arg)
-	}
-	return &args, nil
-}
-
-func (c *Context) oakEnv(_ []Value) (Value, *runtimeError) {
-	envVars := ObjectValue{}
-	for _, e := range os.Environ() {
-		kv := strings.SplitN(e, "=", 2)
-		envVars[kv[0]] = MakeString(kv[1])
-	}
-	return envVars, nil
-}
-
-func (c *Context) oakTime(_ []Value) (Value, *runtimeError) {
-	unixSeconds := float64(time.Now().UnixNano()) / 1e9
-	return FloatValue(unixSeconds), nil
-}
-
-func (c *Context) oakNanotime(_ []Value) (Value, *runtimeError) {
-	return IntValue(time.Now().UnixNano()), nil
-}
-
-func (c *Context) oakExit(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("exit", args, 1); err != nil {
-		return nil, err
-	}
-
-	switch arg := args[0].(type) {
-	case IntValue:
-		os.Exit(int(arg))
-		// unreachable
-		return null, nil
-	default:
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("Mismatched types in call exit(%s)", args[0]),
-		}
-	}
-}
-
-func (c *Context) oakRand(args []Value) (Value, *runtimeError) {
-	return FloatValue(rand.Float64()), nil
-}
-
-func (c *Context) oakWait(args []Value) (Value, *runtimeError) {
-	if err := c.requireArgLen("wait", args, 1); err != nil {
-		return nil, err
-	}
-
-	switch arg := args[0].(type) {
-	case IntValue:
-		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
-	case FloatValue:
-		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
-	default:
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("Mismatched types in call wait(%s)", args[0]),
-		}
-	}
-
-	return null, nil
-}
-
 func (c *Context) oakRm(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("rm", args, 1); err != nil {
 		return nil, err
@@ -638,6 +616,28 @@ func (c *Context) oakRm(args []Value) (Value, *runtimeError) {
 	err := os.RemoveAll(rmPath.stringContent())
 	if err != nil {
 		return errObj(fmt.Sprintf("Could not remove %s: %s", rmPath.stringContent(), err.Error())), nil
+	}
+
+	return ObjectValue{
+		"type": AtomValue("end"),
+	}, nil
+}
+
+func (c *Context) oakMkdir(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("mkdir", args, 1); err != nil {
+		return nil, err
+	}
+
+	dirPath, ok1 := args[0].(*StringValue)
+	if !ok1 {
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call mkdir(%s)", args[0]),
+		}
+	}
+
+	err := os.MkdirAll(dirPath.stringContent(), 0755)
+	if err != nil {
+		return errObj(fmt.Sprintf("Could not make a new directory %s: %s", dirPath.stringContent(), err.Error())), nil
 	}
 
 	return ObjectValue{

@@ -684,6 +684,7 @@ addImportsFromPath(AbsoluteEntry, postImport)
 
 // constants and runtime
 OakJSRuntime := '
+// module system
 const __Oak_Modules = {};
 function __oak_js_import(name) {
 	if (typeof __Oak_Modules[name] === \'object\') return __Oak_Modules[name];
@@ -697,6 +698,8 @@ function __oak_js_import(name) {
 function __oak_modularize(name, fn) {
 	__Oak_Modules[name] = fn;
 }
+
+// language primitives
 function __oak_eq(a, b) {
 	a = __as_oak_string(a);
 	b = __as_oak_string(b);
@@ -728,6 +731,58 @@ function __oak_push(a, b) {
 	a.push(b);
 	return a;
 }
+function __oak_divide(a, b) {
+	if (Number.isInteger(a) && Number.isInteger(b)) return Math.floor(a / b);
+	return a / b;
+}
+function __oak_and(a, b) {
+	if (typeof a === \'boolean\' && typeof b === \'boolean\') {
+		return a && b;
+	}
+	if (__is_oak_string(a) && __is_oak_string(b)) {
+		const max = Math.max(a.length, b.length);
+		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
+
+		let res = '';
+		for (let i = 0; i < max; i ++) {
+			res += String.fromCharCode(get(a, i) & get(b, i));
+		}
+		return res;
+	}
+	return a & b;
+}
+function __oak_or(a, b) {
+	if (typeof a === \'boolean\' && typeof b === \'boolean\') {
+		return a || b;
+	}
+	if (__is_oak_string(a) && __is_oak_string(b)) {
+		const max = Math.max(a.length, b.length);
+		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
+
+		let res = '';
+		for (let i = 0; i < max; i ++) {
+			res += String.fromCharCode(get(a, i) | get(b, i));
+		}
+		return res;
+	}
+	return a | b;
+}
+function __oak_xor(a, b) {
+	if (typeof a === \'boolean\' && typeof b === \'boolean\') {
+		return (a && !b) || (!a && b);
+	}
+	if (__is_oak_string(a) && __is_oak_string(b)) {
+		const max = Math.max(a.length, b.length);
+		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
+
+		let res = '';
+		for (let i = 0; i < max; i ++) {
+			res += String.fromCharCode(get(a, i) ^ get(b, i));
+		}
+		return res;
+	}
+	return a ^ b;
+}
 function __oak_if(cond, branches) {
 	for (const [target, body] of branches) {
 		if (__oak_eq(cond, target())) return body();
@@ -735,6 +790,8 @@ function __oak_if(cond, branches) {
 	return null;
 }
 const __Oak_Empty = Symbol(\'__Oak_Empty\');
+
+// mutable string type
 function __is_oak_string(x) {
 	if (x == null) return false;
 	return x.__mark_oak_string;
@@ -766,6 +823,8 @@ const __Oak_String = s => {
 		},
 	}
 }
+
+// tail recursion trampoline helpers
 function __oak_resolve_trampoline(fn, ...args) {
 	let rv = fn(...args);
 	while (rv && rv.__is_oak_trampoline) {
@@ -780,69 +839,25 @@ function __oak_trampoline(fn, ...args) {
 		args: args,
 	}
 }
-function jsNew(Constructor, ...args) {
-	return new Constructor(...args);
-}
 
-// env
-const __Oak_Node__oak_qm = typeof process === \'object\';
-function args() {
-	if (__Oak_Node__oak_qm) return process.argv;
-	return [];
-}
-function print(s) {
-	s = __as_oak_string(s);
-	if (__Oak_Node__oak_qm) {
-		process.stdout.write(string(s).toString());
-	} else {
-		console.log(string(s).toString());
-	}
-	return s.length;
-}
-function rand() {
-	return Math.random();
-}
-function time() {
-	return Date.now() / 1000;
-}
-function nanotime() {
-	return Date.now() * 1000000;
-}
-function wait(duration, cb) {
-	setTimeout(cb, duration * 1000);
+// env (builtin) functions
+
+// reflection and types
+const __Is_Oak_Node = typeof process === \'object\';
+function int(x) {
+	if (typeof x === \'number\') return Math.floor(x);
+	if (typeof x === \'string\') return parseInt(x) || null;
 	return null;
 }
-function env() {
-	if (__Oak_Node__oak_qm) return process.env;
-	return {};
-}
-function exit(code) {
-	if (__Oak_Node__oak_qm) process.exit(code);
+function float(x) {
+	if (typeof x === \'number\') return x;
+	if (typeof x === \'string\') return parseFloat(x) || null;
 	return null;
 }
-function sin(n) {
-	return Math.sin(n);
-}
-function cos(n) {
-	return Math.cos(n);
-}
-function tan(n) {
-	return Math.tan(n);
-}
-function asin(n) {
-	return Math.asin(n);
-}
-function acos(n) {
-	return Math.acos(n);
-}
-function atan(n) {
-	return Math.atan(n);
-}
-function pow(b, n) {
-	return Math.pow(b, n);
-}
-function log(b, n) {
-	return Math.log(n) / Math.log(b);
+function atom(x) {
+	if (typeof x === \'string\') return Symbol.for(x);
+	if (typeof x === \'symbol\') return x;
+	return Symbol.for(string(x));
 }
 function string(x) {
 	x = __as_oak_string(x);
@@ -924,5 +939,118 @@ function keys(x) {
 		return Object.getOwnPropertyNames(x);
 	}
 	throw new Error(\'keys() takes a composite value, but got \' + string(x).valueOf());
+}
+
+// OS interfaces
+function args() {
+	if (__Is_Oak_Node) return process.argv;
+	return [];
+}
+function env() {
+	if (__Is_Oak_Node) return process.env;
+	return {};
+}
+function time() {
+	return Date.now() / 1000;
+}
+function nanotime() {
+	return int(Date.now() * 1000000);
+}
+function rand() {
+	return Math.random();
+}
+function wait(duration, cb) {
+	setTimeout(cb, duration * 1000);
+	return null;
+}
+function exit(code) {
+	if (__Is_Oak_Node) process.exit(code);
+	return null;
+}
+function exec() {
+	throw new Error(\'exec() not implemented\');
+}
+
+// I/O
+function input() {
+	throw new Error(\'input() not implemented\');
+}
+function print(s) {
+	s = __as_oak_string(s);
+	if (__Is_Oak_Node) {
+		process.stdout.write(string(s).toString());
+	} else {
+		console.log(string(s).toString());
+	}
+	return s.length;
+}
+function ls() {
+	throw new Error(\'ls() not implemented\');
+}
+function rm() {
+	throw new Error(\'rm() not implemented\');
+}
+function mkdir() {
+	throw new Error(\'mkdir() not implemented\');
+}
+function stat() {
+	throw new Error(\'stat() not implemented\');
+}
+function open() {
+	throw new Error(\'open() not implemented\');
+}
+function close() {
+	throw new Error(\'close() not implemented\');
+}
+function read() {
+	throw new Error(\'read() not implemented\');
+}
+function write() {
+	throw new Error(\'write() not implemented\');
+}
+function listen() {
+	throw new Error(\'listen() not implemented\');
+}
+function req() {
+	throw new Error(\'req() not implemented\');
+}
+
+// math
+function sin(n) {
+	return Math.sin(n);
+}
+function cos(n) {
+	return Math.cos(n);
+}
+function tan(n) {
+	return Math.tan(n);
+}
+function asin(n) {
+	return Math.asin(n);
+}
+function acos(n) {
+	return Math.acos(n);
+}
+function atan(n) {
+	return Math.atan(n);
+}
+function pow(b, n) {
+	return Math.pow(b, n);
+}
+function log(b, n) {
+	return Math.log(n) / Math.log(b);
+}
+
+// runtime
+function ___runtime_lib() {
+	throw new Error(\'___runtime_lib() not implemented\');
+}
+function ___runtime_lib__oak_qm() {
+	throw new Error(\'___runtime_lib?() not implemented\');
+}
+
+// JavaScript interop
+function jsNew(Constructor, ...args) {
+	return new Constructor(...args);
 }
 '
