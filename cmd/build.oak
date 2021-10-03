@@ -743,7 +743,7 @@ function __oak_and(a, b) {
 		const max = Math.max(a.length, b.length);
 		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
 
-		let res = '';
+		let res = \'\';
 		for (let i = 0; i < max; i ++) {
 			res += String.fromCharCode(get(a, i) & get(b, i));
 		}
@@ -759,7 +759,7 @@ function __oak_or(a, b) {
 		const max = Math.max(a.length, b.length);
 		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
 
-		let res = '';
+		let res = \'\';
 		for (let i = 0; i < max; i ++) {
 			res += String.fromCharCode(get(a, i) | get(b, i));
 		}
@@ -775,7 +775,7 @@ function __oak_xor(a, b) {
 		const max = Math.max(a.length, b.length);
 		const get = (s, i) => s.valueOf().charCodeAt(i) || 0;
 
-		let res = '';
+		let res = \'\';
 		for (let i = 0; i < max; i ++) {
 			res += String.fromCharCode(get(a, i) ^ get(b, i));
 		}
