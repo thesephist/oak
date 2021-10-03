@@ -875,6 +875,11 @@ function type(x) {
 	if (x === null) {
 		return Symbol.for(\'null\');
 	} else if (typeof x === \'number\') {
+		// Many discrete APIs check for :int, so we consider all integer
+		// numbers :int and fall back to :float. This is not an airtight
+		// solution, but works well enough and the alternative (tagged number
+		// values/types) have poor perf tradeoffs.
+		if (Number.isInteger(x)) return Symbol.for(\'int\');
 		return Symbol.for(\'float\');
 	} else if (__is_oak_string(x)) {
 		return Symbol.for(\'string\');
