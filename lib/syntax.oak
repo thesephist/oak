@@ -404,10 +404,10 @@ fn Parser(tokens) {
 	fn expect(type) if eof?() {
 		true -> error(format('Unexpected end of input, expected {{0}}', type))
 		_ -> {
-			next := next()
-			if next.type {
-				type -> next
-				_ -> error(format('Unexpected token {{0}}, expected {{1}}', next, type), next.pos)
+			nextTok := next()
+			if nextTok.type {
+				type -> nextTok
+				_ -> error(format('Unexpected token {{0}}, expected {{1}}', nextTok, type), nextTok.pos)
 			}
 		}
 	}
