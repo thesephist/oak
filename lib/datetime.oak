@@ -66,7 +66,7 @@ fn leap?(year) year % 4 = 0 & (year % 100 != 0 | year % 400 = 0)
 
 fn _describeDate(t) {
 	// only dealing with full days since zero time
-	d := int(t / SecondsPerDay) + DaysFrom1To1970
+	d := int((t - t % SecondsPerDay) / SecondsPerDay) + DaysFrom1To1970
 	if {
 		// when going negative, we should truncate times into dates in the
 		// other direction
