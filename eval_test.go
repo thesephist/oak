@@ -286,17 +286,21 @@ func TestBasicBinaryExpr(t *testing.T) {
 	expectProgramToReturn(t, `1 + 2 * 3`, IntValue(7))
 }
 
+func TestFloatDivide(t *testing.T) {
+	expectProgramToReturn(t, "10 / 4", FloatValue(2.5))
+}
+
 func TestOrderedBinaryExpr(t *testing.T) {
 	expectProgramToReturn(t, `-1.5 + -3.5 - 5 / 5 * 2`, FloatValue(-7))
 	expectProgramToReturn(t, `(-1.5 + -3.5 - 5) / 5 * 2`, FloatValue(-4))
 }
 
 func TestBinaryExprWithParens(t *testing.T) {
-	expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, IntValue(2))
+	expectProgramToReturn(t, `(1 + 2) / 3 - 1 + (10 + (20 / 5)) % 3`, FloatValue(2))
 }
 
 func TestLongBinaryExprWithPrecedence(t *testing.T) {
-	expectProgramToReturn(t, `x := 1 + 2 * 3 + 4 / 2 + 10 % 4, x % 5 + x`, IntValue(12))
+	expectProgramToReturn(t, `x := 1 + 2 * 3 + 4 / 2 + 10 % 4, x % 5 + x`, FloatValue(12))
 }
 
 func TestBinaryExprWithComplexTerms(t *testing.T) {

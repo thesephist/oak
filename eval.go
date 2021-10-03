@@ -108,7 +108,10 @@ func (v IntValue) Eq(u Value) bool {
 
 	if w, ok := u.(IntValue); ok {
 		return v == w
+	} else if w, ok := u.(FloatValue); ok {
+		return FloatValue(v) == w
 	}
+
 	return false
 }
 
@@ -124,6 +127,8 @@ func (v FloatValue) Eq(u Value) bool {
 
 	if w, ok := u.(FloatValue); ok {
 		return v == w
+	} else if w, ok := u.(IntValue); ok {
+		return v == FloatValue(w)
 	}
 
 	return false
@@ -542,7 +547,7 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 				reason: fmt.Sprintf("Division by zero"),
 			}
 		}
-		return IntValue(left / right), nil
+		return FloatValue(FloatValue(left) / FloatValue(right)), nil
 	case modulus:
 		return IntValue(left % right), nil
 	case xor:

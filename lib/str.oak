@@ -155,7 +155,7 @@ fn split(s, delim) if delim {
 
 // helper: repeat the string `pad` until it reaches exactly `n` characters.
 fn _extend(pad, n) {
-	times := n / len(pad)
+	times := int(n / len(pad))
 	part := n % len(pad)
 
 	fn sub(base, i) if i {

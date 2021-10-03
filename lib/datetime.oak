@@ -66,27 +66,27 @@ fn leap?(year) year % 4 = 0 & (year % 100 != 0 | year % 400 = 0)
 
 fn _describeDate(t) {
 	// only dealing with full days since zero time
-	d := (t - t % SecondsPerDay) / SecondsPerDay + DaysFrom1To1970
+	d := int(t / SecondsPerDay) + DaysFrom1To1970
 	if {
 		// when going negative, we should truncate times into dates in the
 		// other direction
 		t < 0 & t % 86400 != 0 -> d <- d - 1
 	}
 
-	n400 := d / DaysPer400Years
+	n400 := int(d / DaysPer400Years)
 	d := d - DaysPer400Years * n400
 
-	n100 := d / DaysPer100Years
+	n100 := int(d / DaysPer100Years)
 	// 100-year cycles overshoot every 400 years, so we round down
-	n100 := n100 - n100 / 4
+	n100 := n100 - int(n100 / 4)
 	d := d - DaysPer100Years * n100
 
-	n4 := d / DaysPer4Years
+	n4 := int(d / DaysPer4Years)
 	d := d - DaysPer4Years * n4
 
-	n := d / 365
+	n := int(d / 365)
 	// 4-year cycles overshoot every 4 years, so we round down
-	n := n - n / 4
+	n := n - int(n / 4)
 	d := d - 365 * n
 
 	year := ZeroYear +
@@ -130,9 +130,9 @@ fn _describeClock(t) {
 	if {
 		rem < 0 -> rem <- rem + SecondsPerDay
 	}
-	hour := rem / 3600
+	hour := int(rem / 3600)
 	rem := rem % 3600
-	minute := rem / 60
+	minute := int(rem / 60)
 	{
 		hour: hour
 		minute: minute
@@ -162,9 +162,9 @@ fn timestamp(desc) {
 	leapYear? := leap?(year)
 
 	year := year - ZeroYear
-	n400 := year / 400, year := year % 400
-	n100 := year / 100, year := year % 100
-	n4 := year / 4, year := year % 4
+	n400 := int(year / 400), year := year % 400
+	n100 := int(year / 100), year := year % 100
+	n4 := int(year / 4), year := year % 4
 
 	daysYearToDate := if leapYear? {
 		true -> if {
@@ -220,11 +220,11 @@ fn format(t, tzOffset) {
 		if {
 			tzOffset = 0 -> 'Z'
 			tzOffset > 0 -> '+' << '{{0}}:{{1}}' |> fmtFormat(
-				string(tzOffset / 60) |> padStart(2, '0')
+				string(int(tzOffset / 60)) |> padStart(2, '0')
 				string(tzOffset % 60) |> padStart(2, '0')
 			)
 			_ -> '-' << '{{0}}:{{1}}' |> fmtFormat(
-				string(-tzOffset / 60) |> padStart(2, '0')
+				string(int(-tzOffset / 60)) |> padStart(2, '0')
 				string(-tzOffset % 60) |> padStart(2, '0')
 			)
 		}
