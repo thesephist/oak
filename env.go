@@ -220,7 +220,7 @@ func (c *Context) oakInt(args []Value) (Value, *runtimeError) {
 	case IntValue:
 		return arg, nil
 	case FloatValue:
-		return IntValue(math.Trunc(float64(arg))), nil
+		return IntValue(math.Floor(float64(arg))), nil
 	case *StringValue:
 		n, err := strconv.ParseInt(arg.stringContent(), 10, 64)
 		if err != nil {

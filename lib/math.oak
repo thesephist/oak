@@ -49,7 +49,7 @@ fn round(n, decimals) {
 			order := pow(10, decimals)
 			if n >= 0 {
 				true -> int(n * order + 0.5) / order
-				_ -> int(n * order - 0.5) / order
+				_ -> -int(-n * order + 0.5) / order
 			}
 		}
 	}
