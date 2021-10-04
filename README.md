@@ -159,6 +159,24 @@ readFile('./path', fn(file) {
 
 For a more detailed description of the language, see the [work-in-progress language spec](docs/spec.md).
 
+### Builds and deployment
+
+While the Oak interpreter can run programs and modules directly from source code on the file system, Oak also offers a build tool, `oak build`, which can _bundle_ an Oak program distributed across many files into a single "bundle" source file. `oak build` can also cross-compile Oak bundles into JavaScript bundles, to run in the browser or in JavaScript environments like Node.js and Deno. This allows Oak programs to be deployed and distributed as single-file programs, both on the server and in the browser.
+
+To build a new bundle, we can simply pass an "entrypoint" to the program.
+
+```sh
+oak build --entry src/main.oak --output dist/bundle.oak
+```
+
+Compiling to JavaScript works similarly, but with the `--web` flag, which turns on JavaScript cross-compilation.
+
+```sh
+oak build --entry src/app.js.oak --output dist/bundle.js --web
+```
+
+The bundler and compiler are built on top of my past work with the [September](https://github.com/thesephist/september) toolchain for Ink, but slightly re-architected to support bundling and multiple compilation targets. In the future, the goal of `oak build` is to become a lightly optimizing compiler and potentially help yield an `oak compile` command that could package the interpreter and an Oak bundle into a single executable binary. For more information on `oak build`, see `oak help build`.
+
 ### Performance
 
 As of September 2021, Oak is about 5-6x slower than Python 3.9 on pure function call and number-crunching overhead (assessed by a basic `fib(30)` benchmark). These figures are worst-case estimates -- because Oak's data structures are far simpler than Python's, the ratios start to go down on more realistic complex programs. But nonetheless, this gives a good estimate of the kind of performance (or, currently, the lack thereof) you can expect from Oak programs. It's not fast, though anecdotally it's fast enough for me to have few complaints for most of my use cases.
@@ -180,6 +198,7 @@ Oak (ab)uses GNU Make to run development workflows and tasks.
 - `make fmt` or `make f` runs the `oak fmt` code formatter over any _files with unstaged changes in the git repository_. This is equivalent to running `oak fmt --changes --fix`.
 - `make tests` or `make t` runs the Go tes suite for the Oak language and interpreter
 - `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
+- `make test-bundle` runs the Oak test suite, bundled using `oak build`
 - `make test-js` runs the Oak test suite on the system's Node.js, compiled using `oak build --web`
 - `make install` installs the Oak interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
 
