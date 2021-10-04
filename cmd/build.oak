@@ -170,6 +170,28 @@ fn wrapBlock(nodes) {
 	exprs: nodes
 }
 
+// When translating between incompatible identifier names or symbols, Oak
+// names will be appended to "__oak_js_" to produce a valid JS name, e.g.
+// Oak identifier "const" (a JS reserve word) becomes "__oak_js_const".
+if Web? {
+	false -> fn formatIdent(name) name |> clone()
+	_ -> fn formatIdent(name, key) if name {
+		// prevent shadowing of some meaningful global '_' variable
+		'_' -> '_oak_empty_ident' << string(key |> default(''))
+		// ECMAScript 2021 reserved words, cannot be used as identifiers
+		'await', 'break', 'case', 'catch', 'class', 'const', 'continue'
+		'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export'
+		'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in'
+		'instanceof', 'let', 'new', 'null', 'return', 'super', 'switch'
+		'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while'
+		'with', 'yield' -> '__oak_js_' << name
+		_ -> name |>
+			clone() |>
+			replace('?', '__oak_qm') |>
+			replace('!', '__oak_exclam')
+	}
+}
+
 // wrapModule takes the body of a module and wraps it in a closure that returns
 // a global `module` object. It returns a single AST node object representing
 // this closure, to be wrapped further into a bundle AST.
@@ -209,14 +231,14 @@ fn wrapModule(block) {
 				}
 				right: {
 					type: :identifier
-					tok: { pos: [1, 8], type: :identifier, val: exportedName }
-					val: exportedName
+					tok: { pos: [1, 8], type: :identifier, val: formatIdent(exportedName) }
+					val: formatIdent(exportedName)
 				}
 			}
 			right: {
 				type: :identifier
-				tok: { pos: [1, 13], type: :identifier, val: exportedName }
-				val: exportedName
+				tok: { pos: [1, 13], type: :identifier, val: formatIdent(exportedName) }
+				val: formatIdent(exportedName)
 			}
 		}) << {
 			tok: { pos: [1, 20], type: :identifier, val: 'module' }
@@ -298,8 +320,6 @@ fn wrapBundle(modules, entryModuleName) {
 // rather returns a transformed, completely new syntax tree containing
 // transformations and annotations necessary for codegen.
 fn analyzeNode(node) {
-	fn decl?(expr) expr.type = :assignment & expr.local? & default(expr.left, {}).type = :identifier
-
 	fn analyzeSubexpr(node, ctx, tail?) {
 		if node.type {
 			:block -> {
@@ -453,8 +473,16 @@ fn analyzeNode(node) {
 				node.left := analyzeSubexpr(node.left, ctx, false)
 				node.right := analyzeSubexpr(node.right, ctx, false)
 
-				if decl?(node) {
-					true -> ctx.decls.(node.left.val) := true
+				if node.local? {
+					true -> if node.left.type {
+						:identifier -> ctx.decls.(node.left.val) := true
+						:list -> node.left.elems |> with each() fn(el) if el.type {
+							:identifier -> ctx.decls.(el.val) := true
+						}
+						:object -> node.left.entries |> with each() fn(entry) if entry.key.type {
+							:identifier -> ctx.decls.(entry.key.val) := true
+						}
+					}
 				}
 
 				node
@@ -487,37 +515,17 @@ fn renderOakBundle(bundleNode) {
 // renderJSNodes renders Oak AST nodes to JavaScript program text.
 // renderJSNodes is also responsible for adding the JavaScript Oak runtime,
 // which provides language compatibility features.
-//
-// When translating between incompatible identifier names or symbols, Oak names
-// will be appended to "__oak_js_" to produce a valid JS name, e.g. Oak
-// identifier "const" (a JS reserve word) becomes "__oak_js_const".
 fn renderJSBundle(bundleNode) {
-	fn formatIdent(name, key) if name {
-		// prevent shadowing of some meaningful global '_' variable
-		'_' -> '_oak_empty_ident' << string(key |> default(''))
-		// ECMAScript 2021 reserved words, cannot be used as identifiers
-		'await', 'break', 'case', 'catch', 'class', 'const', 'continue'
-		'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export'
-		'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in'
-		'instanceof', 'new', 'null', 'return', 'super', 'switch', 'this'
-		'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with'
-		'yield' -> '__oak_js_' << name
-		_ -> name |>
-			clone() |>
-			replace('?', '__oak_qm') |>
-			replace('!', '__oak_exclam')
-	}
-
 	fn renderErr(msg) 'throw new Error(\'' << replace(msg, '\'', '\\\'') << '\')'
 
 	fn renderAssignTarget(node) if node.type {
+		// not a bare '_' to avoid common conflicts with global '_' name
+		:empty -> '__oak_empty_assgn_trgt'
+		:identifier -> formatIdent(node.val)
 		:propertyAccess -> if node.right.type {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderNode(node.right))
 		}
-		// not a bare '_' to avoid common conflicts with global '_' name
-		:empty -> '__oak_empty_assgn_trgt'
-		:identifier -> renderNode(node)
 		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << ']'
 		:object -> '{' << {
 			node.entries |> map(fn(entry) {
