@@ -19,7 +19,14 @@ test-oak:
 	go run -race . test/main.oak
 tk: test-oak
 
-# run Oak build --web tests
+# run oak build tests
+test-bundle:
+	go run . build --entry test/main.oak \
+		-o /tmp/oak-test.oak \
+		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,cli.test:test/cli.test,md.test:test/md.test,syntax.test:test/syntax.test
+	go run . /tmp/oak-test.oak
+
+# run oak build --web tests
 test-js:
 	go run . build --entry test/main.oak \
 		-o /tmp/oak-test.js \
