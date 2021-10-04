@@ -154,15 +154,15 @@ fn range(start, end, step) {
 		_ -> {
 			list := []
 
-			sub := if step > 0 {
-				true -> fn(n) if n < end {
+			if step > 0 {
+				true -> fn sub(n) if n < end {
 					true -> {
 						list << n
 						sub(n + step)
 					}
 					_ -> list
 				}
-				_ -> fn(n) if n > end {
+				_ -> fn sub(n) if n > end {
 					true -> {
 						list << n
 						sub(n + step)
