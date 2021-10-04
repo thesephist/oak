@@ -877,7 +877,7 @@ function int(x) {
 		return rounded;
 	}
 	if (__is_oak_string(x)) {
-		const i = parseInt(x.valueOf());
+		const i = parseInt(x.valueOf(), 10);
 		if (isNaN(i)) return null;
 		return i;
 	}
