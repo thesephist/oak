@@ -76,8 +76,6 @@ AbsoluteEntry := resolve(Entry)
 // fully parsed AST. We cache it here because we need to potentially astgen
 // modules multiple times in the compilation process. This also serves as the
 // source of truth for which modules the bundle must include.
-// TODO: a way to force-include a module in case it's lazy-imported. This will
-// enable us to run --web on stdlib test suite unmodified.
 ModuleNodes := {}
 
 // cachedParse is a wrapper around syntax.parse that lazily caches the computed
@@ -114,45 +112,51 @@ fn importCallNode?(node) node = {
 startedImport := 0
 // number of modules done processing
 finishedImport := 0
-// addImportsFromPath reads and parses a file at a given path, and potentially
-// dispatches further addImportsFromPath calls to modules imported by the given
+// addImportsFromFile reads and parses a file at a given path, and potentially
+// dispatches further addImportsFromFile calls to modules imported by the given
 // module. Calling this on an entrypoint module will eventually reach all of
 // the modules it imports recursively.
 //
 // Takes a callback, next, that runs when the dependency tree is fully covered.
-fn addImportsFromPath(path, next) {
+fn addImportsFromFile(path, next) {
 	startedImport <- startedImport + 1
 
 	with readFile(path) fn(file) if file {
 		? -> printf('[oak build] Import {{0}} does not exist.', path)
 		_ -> {
-			nodes := cachedParse(path, file)
-			finishedImport <- finishedImport + 1
-
-			// find static, top-level imports from this file and queue jobs to
-			// analyze their imports.
-			nodes |> with each() fn(node) if {
-				importCallNode?(node) -> if ___runtime_lib?(importName := node.right.args.(0).val) {
-					// for Oak bundles, importing stdlib is a no-op
-					true -> if Web? {
-						// for JS bundles, bundle the stdlib
-						true -> cachedParse(importName, ___runtime_lib(importName))
-					}
-					_ -> {
-						importPath := resolve(importName, dir(path)) + '.oak'
-						// TODO: move this to analysis phase
-						node.right.args.(0).val := importPath
-						// kick off job if we haven't seen this module before
-						if ModuleNodes.(importPath) {
-							? -> addImportsFromPath(importPath, next)
-						}
-					}
-				}
-			}
+			addImportsFromSource(path, file, next)
 
 			// if there are no more queued jobs, invoke callback
-			if finishedImport {
+			if finishedImport <- finishedImport + 1 {
 				startedImport -> next()
+			}
+		}
+	}
+}
+// addImportsFromSource takes an Oak source file and recursively imports
+// modules included from that entrypoint. It is dual to addImportsFromFile, but
+// takes a source file rather than a path to a file on disk.
+//
+// Takes a callback, next, that runs when the dependency tree is fully covered.
+fn addImportsFromSource(path, file, next) {
+	// find static, top-level imports from this file and queue jobs to analyze
+	// their imports.
+	cachedParse(path, file) |> with each() fn(node) if {
+		importCallNode?(node) -> if ___runtime_lib?(importName := node.right.args.(0).val) {
+			// for Oak bundles, importing stdlib is a no-op
+			true -> if Web? {
+				// for JS bundles, bundle the stdlib
+				true -> addImportsFromSource(importName, ___runtime_lib(importName), next)
+			}
+			_ -> {
+				importPath := resolve(importName, dir(path)) + '.oak'
+				// TODO: move this to analysis phase, so we don't depend on
+				// mutating cached AST in-place
+				node.right.args.(0).val := importPath
+				// kick off job if we haven't seen this module before
+				if ModuleNodes.(importPath) {
+					? -> addImportsFromFile(importPath, next)
+				}
 			}
 		}
 	}
@@ -488,7 +492,9 @@ fn renderOakBundle(bundleNode) {
 // will be appended to "__oak_js_" to produce a valid JS name, e.g. Oak
 // identifier "const" (a JS reserve word) becomes "__oak_js_const".
 fn renderJSBundle(bundleNode) {
-	fn formatIdent(name) if name {
+	fn formatIdent(name, key) if name {
+		// prevent shadowing of some meaningful global '_' variable
+		'_' -> '_oak_empty_ident' << string(key |> default(''))
 		// ECMAScript 2021 reserved words, cannot be used as identifiers
 		'await', 'break', 'case', 'catch', 'class', 'const', 'continue'
 		'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export'
@@ -509,7 +515,19 @@ fn renderJSBundle(bundleNode) {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderNode(node.right))
 		}
-		_ -> renderNode(node)
+		// not a bare '_' to avoid common conflicts with global '_' name
+		:empty -> '__oak_empty_assgn_trgt'
+		:identifier -> renderNode(node)
+		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << ']'
+		:object -> '{' << {
+			node.entries |> map(fn(entry) {
+				{ key: k, val: v } := entry
+				if k.type {
+					:identifier, :empty, :number -> renderNode(k)
+					_ -> '[' << renderNode(k) << ']'
+				} << ':' << renderAssignTarget(v)
+			}) |> join(',')
+		} << '}'
 	}
 
 	fn renderNode(node) {
@@ -539,7 +557,7 @@ fn renderJSBundle(bundleNode) {
 				:plus -> '__as_oak_string({{0}}+{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 				:minus -> '({{0}}-{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 				:times -> '({{0}}*{{1}})' |> format(renderNode(node.left), renderNode(node.right))
-				:divide -> '__oak_divide({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
+				:divide -> '({{0}}/{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 				:modulus -> '({{0}}%{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 
 				:and -> '__oak_and({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
@@ -619,8 +637,9 @@ fn renderJSBundle(bundleNode) {
 			}
 			:function -> {
 				args := '(' << if node.restArg {
-					'' -> node.args |> map(formatIdent) |> join(',')
-					_ -> node.args |> map(formatIdent) |> append(['...' << formatIdent(node.restArg)]) |> join(',')
+					'' -> node.args |> map(fn(a, i) formatIdent(a, i) << '=null') |> join(',')
+					_ -> node.args |> map(fn(a, i) formatIdent(a, i) << '=null') |>
+						append(['...' << formatIdent(node.restArg)]) |> join(',')
 				} << ')'
 				if node.name {
 					'' -> 'function' << args << '{return ' << renderNode(node.body) << '}'
@@ -673,13 +692,13 @@ postImport := with once() fn {
 }
 Includes |> with each() fn(spec) if ___runtime_lib?(spec.name) {
 	true -> if Web? {
-		true -> cachedParse(spec.name, ___runtime_lib(spec.name))
+		true -> addImportsFromSource(spec.name, ___runtime_lib(spec.name))
 	}
 	_ -> if ModuleNodes.(spec.path) {
-		? -> addImportsFromPath(spec.path, postImport)
+		? -> addImportsFromFile(spec.path, postImport)
 	}
 }
-addImportsFromPath(AbsoluteEntry, postImport)
+addImportsFromFile(AbsoluteEntry, postImport)
 
 
 // constants and runtime
@@ -700,6 +719,7 @@ function __oak_modularize(name, fn) {
 }
 
 // language primitives
+let __oak_empty_assgn_trgt;
 function __oak_eq(a, b) {
 	a = __as_oak_string(a);
 	b = __as_oak_string(b);
@@ -720,7 +740,7 @@ function __oak_eq(a, b) {
 	}
 
 	// deep equality check for composite values
-	if (!Array.isArray(a) || typeof a !== \'object\') return false;
+	if (!Array.isArray(a) && typeof a !== \'object\') return false;
 	if (len(a) !== len(b)) return false;
 	for (const key of keys(a)) {
 		if (!__oak_eq(a[key], b[key])) return false;
@@ -728,12 +748,9 @@ function __oak_eq(a, b) {
 	return true;
 }
 function __oak_push(a, b) {
+	a = __as_oak_string(a);
 	a.push(b);
 	return a;
-}
-function __oak_divide(a, b) {
-	if (Number.isInteger(a) && Number.isInteger(b)) return Math.floor(a / b);
-	return a / b;
 }
 function __oak_and(a, b) {
 	if (typeof a === \'boolean\' && typeof b === \'boolean\') {
@@ -802,7 +819,6 @@ function __as_oak_string(x) {
 }
 const __Oak_String = s => {
 	if (__is_oak_string(s)) return s;
-
 	return {
 		__mark_oak_string: true,
 		assign(i, slice) {
@@ -845,18 +861,32 @@ function __oak_trampoline(fn, ...args) {
 // reflection and types
 const __Is_Oak_Node = typeof process === \'object\';
 function int(x) {
-	if (typeof x === \'number\') return Math.floor(x);
-	if (typeof x === \'string\') return parseInt(x) || null;
+	if (typeof x === \'number\') {
+		// JS rounds towards higher magnitude, Oak rounds towards higher value
+		const rounded = Math.floor(x);
+		const diff = x - rounded;
+		if (x < 0 && diff === 0.5) return rounded + 1;
+		return rounded;
+	}
+	if (__is_oak_string(x)) {
+		const i = parseInt(x.valueOf());
+		if (isNaN(i)) return null;
+		return i;
+	}
 	return null;
 }
 function float(x) {
 	if (typeof x === \'number\') return x;
-	if (typeof x === \'string\') return parseFloat(x) || null;
+	if (__is_oak_string(x)) {
+		const f = parseFloat(x.valueOf());
+		if (isNaN(f)) return null;
+		return f;
+	}
 	return null;
 }
 function atom(x) {
-	if (typeof x === \'string\') return Symbol.for(x);
-	if (typeof x === \'symbol\') return x;
+	if (typeof x === \'symbol\' && x !== __Oak_Empty) return x;
+	if (__is_oak_string(x)) return Symbol.for(x.valueOf());
 	return Symbol.for(string(x));
 }
 function string(x) {
@@ -878,6 +908,7 @@ function string(x) {
 	} else if (typeof x === \'function\') {
 		return x.toString();
 	} else if (typeof x === \'symbol\') {
+		if (x === __Oak_Empty) return \'_\';
 		return \':\' + Symbol.keyFor(x);
 	} else if (Array.isArray(x)) {
 		return \'[\' + x.map(display).join(\', \') + \']\';
@@ -888,7 +919,7 @@ function string(x) {
 		}
 		return \'{\' + entries.join(\', \') + \'}\';
 	}
-	throw new Error(\'string() called on unknown type \' + x);
+	throw new Error(\'string() called on unknown type \' + x.toString());
 }
 function codepoint(c) {
 	c = __as_oak_string(c);
@@ -912,6 +943,9 @@ function type(x) {
 		return Symbol.for(\'string\');
 	} else if (typeof x === \'boolean\') {
 		return Symbol.for(\'boolean\');
+	} else if (typeof x === \'symbol\') {
+		if (x === __Oak_Empty) return Symbol.for(\'empty\');
+		return Symbol.for(\'atom\');
 	} else if (typeof x === \'function\') {
 		return Symbol.for(\'function\');
 	} else if (Array.isArray(x)) {
@@ -919,11 +953,13 @@ function type(x) {
 	} else if (typeof x === \'object\') {
 		return Symbol.for(\'object\');
 	}
-	throw new Error(\'type() called on unknown type \' + x);
+	throw new Error(\'type() called on unknown type \' + x.toString());
 }
 function len(x) {
 	x = __as_oak_string(x);
-	if (Array.isArray(x)) {
+	if (__is_oak_string(x)) {
+		return x.length;
+	} else if (Array.isArray(x)) {
 		return x.length;
 	} else if (typeof x === \'object\' && x !== null) {
 		return Object.getOwnPropertyNames(x).length;

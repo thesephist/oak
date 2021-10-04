@@ -4,6 +4,7 @@
 std := import('std')
 test := import('test')
 
+// when adding a stdlib here, also add to Makefile/test-js to get JS coverage
 TestRunners := [
 	'std'
 	'str'

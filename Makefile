@@ -22,10 +22,10 @@ tk: test-oak
 # run Oak build --web tests
 test-js:
 	go run . build --entry test/main.oak \
-		-o /tmp/oak-test-main.js \
+		-o /tmp/oak-test.js \
 		--web \
-		--include std.test:test/std.test;
-	node /tmp/oak-test-main.js
+		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,cli.test:test/cli.test,md.test:test/md.test,syntax.test:test/syntax.test
+	node /tmp/oak-test.js
 
 # install as "oak" binary
 install:
