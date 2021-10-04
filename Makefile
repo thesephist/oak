@@ -40,4 +40,4 @@ install:
 	go build -o ${GOPATH}/bin/oak
 
 # ci in travis
-ci: tests test-oak
+ci: tests test-oak test-bundle

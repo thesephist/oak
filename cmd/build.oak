@@ -150,8 +150,12 @@ fn addImportsFromSource(path, file, next) {
 			}
 			_ -> {
 				importPath := resolve(importName, dir(path)) + '.oak'
-				// TODO: move this to analysis phase, so we don't depend on
-				// mutating cached AST in-place
+				// NOTE: we currently mutate the cached AST to add normalized
+				// import paths in place of the original relative path. This
+				// makes this import-scanning step a _mutating_ pass over the
+				// AST nodes, which might be surprising. It's not ideal, but at
+				// time of writing, this is cleaner than having a separate
+				// dependency-rewriting pass.
 				node.right.args.(0).val := importPath
 				// kick off job if we haven't seen this module before
 				if ModuleNodes.(importPath) {
@@ -173,17 +177,18 @@ fn wrapBlock(nodes) {
 // When translating between incompatible identifier names or symbols, Oak
 // names will be appended to "__oak_js_" to produce a valid JS name, e.g.
 // Oak identifier "const" (a JS reserve word) becomes "__oak_js_const".
+//
+// Notably, the identifier "import" is always translated to the bundler builtin
+// "__oak_module_import", which in every runtime runs custom logic to search
+// bundled modules before falling back to native import().
 if Web? {
 	false -> fn formatIdent(name) if name {
-		// TODO: explain why?
 		'import' -> '__oak_module_import'
 		_ -> name |> clone()
 	}
 	_ -> fn formatIdent(name, key) if name {
 		// prevent shadowing of some meaningful global '_' variable
 		'_' -> '_oak_empty_ident' << string(key |> default(''))
-		// TODO: explain why?
-		'import' -> '__oak_module_import'
 		// ECMAScript 2021 reserved words, cannot be used as identifiers
 		'await', 'break', 'case', 'catch', 'class', 'const', 'continue'
 		'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export'
@@ -191,6 +196,8 @@ if Web? {
 		'instanceof', 'let', 'new', 'null', 'return', 'super', 'switch'
 		'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while'
 		'with', 'yield' -> '__oak_js_' << name
+		// note that "import" is also an ECMAScript reserved word
+		'import' -> '__oak_module_import'
 		_ -> name |>
 			clone() |>
 			replace('?', '__oak_qm') |>
@@ -519,7 +526,9 @@ fn renderOakBundle(bundleNode) {
 		:null -> '?'
 		:empty -> '_'
 		:string -> '\'' << (node.val |> replace('\\', '\\\\') |> replace('\'', '\\\'')) << '\''
-		// TODO: note that this assumes correct token information
+		// NOTE: though not unexpected, it's worth noting that this is the only
+		// instance in codegen where the generated code depends on token
+		// information rather than AST node information.
 		:number -> node.tok.val
 		:boolean -> string(node.val)
 		:identifier -> formatIdent(node.val)
@@ -580,7 +589,10 @@ fn renderOakBundle(bundleNode) {
 				_ -> node.args |> map(renderNode) |> append([renderNode(node.restArg) << '...']) |> join(',')
 			}
 		)
-		_ -> string(node) // TODO: spit out a compile-time error
+		_ -> {
+			printf('[oak build] Unexpected AST node type ' << string(node.type))
+			exit(1)
+		}
 	}
 
 	'// oak build' << OakNativeRuntime << renderNode(bundleNode)
