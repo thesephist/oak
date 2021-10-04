@@ -415,11 +415,9 @@ fn loop(max, f) {
 
 // println prints every value passed to it, in its default string
 // representation, separated by a space.
-fn println(xs...) {
-	xs |> each(fn(x, i) if i {
-		0 -> print(string(x))
-		_ -> print(' ' + string(x))
-	})
-	print('\n')
-}
+fn println(xs...) xs |> each(fn(x, i) if i {
+	len(xs) - 1 -> print(string(x) + '\n')
+	0 -> print(string(x))
+	_ -> print(' ' + string(x))
+})
 

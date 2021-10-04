@@ -96,7 +96,7 @@ func TestListStringify(t *testing.T) {
 			string(2.51)
 		]
 	`, MakeList(
-		MakeString(":atomValue"),
+		MakeString("atomValue"),
 		MakeString("3"),
 		MakeString("2.51"),
 	))

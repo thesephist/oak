@@ -65,7 +65,7 @@ fn run(t) {
 		)
 		'ordinary list' |> t.eq(
 			ser([10, 20, 1, 0, 'hi', :zero])
-			'[10,20,1,0,"hi",":zero"]'
+			'[10,20,1,0,"hi","zero"]'
 		)
 		'nested list' |> t.eq(
 			ser([10, [20, 30], [?, _], []])

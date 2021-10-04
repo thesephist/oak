@@ -625,7 +625,7 @@ fn compileNode(node) if type(node) {
 	_ -> if node.tag {
 		:p, :em, :strong, :strike
 		:h1, :h2, :h3, :h4, :h5, :h6
-		:pre, :ul, :ol, :li, :blockquote -> wrap(node.tag |> string() |> slice(1), node)
+		:pre, :ul, :ol, :li, :blockquote -> wrap(node.tag |> string(), node)
 		:a -> '<a href="{{0}}">{{1}}</a>' |> format(node.href, compile(node.children))
 		:img -> '<img alt="{{0}}" src="{{1}}"/>' |> format(node.alt, node.src)
 		:code -> if node.lang {

@@ -276,6 +276,8 @@ func (c *Context) oakString(args []Value) (Value, *runtimeError) {
 	switch arg := args[0].(type) {
 	case *StringValue:
 		return arg, nil
+	case AtomValue:
+		return MakeString(string(arg)), nil
 	default:
 		return MakeString(arg.String()), nil
 	}

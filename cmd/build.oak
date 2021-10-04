@@ -1020,6 +1020,9 @@ function string(x) {
 		x = __as_oak_string(x);
 		if (__is_oak_string(x)) {
 			return \'\\\'\' + x.valueOf().replace(\'\\\\\', \'\\\\\\\\\').replace(\'\\\'\', \'\\\\\\\'\') + \'\\\'\';
+		} else if (typeof x === \'symbol\') {
+			if (x === __Oak_Empty) return \'_\';
+			return \':\' + Symbol.keyFor(x);
 		}
 		return string(x);
 	}
@@ -1035,7 +1038,7 @@ function string(x) {
 		return x.toString();
 	} else if (typeof x === \'symbol\') {
 		if (x === __Oak_Empty) return \'_\';
-		return \':\' + Symbol.keyFor(x);
+		return Symbol.keyFor(x);
 	} else if (Array.isArray(x)) {
 		return \'[\' + x.map(display).join(\', \') + \']\';
 	} else if (typeof x === \'object\') {
@@ -1212,6 +1215,10 @@ function ___runtime_lib__oak_qm() {
 }
 
 // JavaScript interop
+function bind(target, fn) {
+	const fnName = Symbol.keyFor(fn);
+	return target[fnName].bind(target);
+}
 function __oak_js_new(Constructor, ...args) {
 	return new Constructor(...args);
 }

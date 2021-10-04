@@ -24,7 +24,7 @@ fn run(t) {
 		)
 		'Non-string interpolated variables' |> t.eq(
 			'abc {{ 0 }} xyz {{ 1 }}' |> f(:atoms, 100)
-			'abc :atoms xyz 100'
+			'abc atoms xyz 100'
 		)
 		'Non-given variables show as ?' |> t.eq(
 			'Hello, {{ 0 }}!' |> f()
