@@ -901,6 +901,7 @@ function atom(x) {
 function string(x) {
 	x = __as_oak_string(x);
 	function display(x) {
+		x = __as_oak_string(x);
 		if (__is_oak_string(x)) {
 			return \'\\\'\' + x.valueOf().replace(\'\\\\\', \'\\\\\\\\\').replace(\'\\\'\', \'\\\\\\\'\') + \'\\\'\';
 		}
