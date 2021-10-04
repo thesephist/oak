@@ -11,6 +11,10 @@ fn run(t) {
 			ser(?)
 			'null'
 		)
+		'empty' |> t.eq(
+			ser(_)
+			'null'
+		)
 		'empty string' |> t.eq(
 			ser('')
 			'""'
