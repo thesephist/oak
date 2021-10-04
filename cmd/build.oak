@@ -617,11 +617,11 @@ fn renderJSBundle(bundleNode) {
 			:propertyAccess -> if node.right.type {
 				:identifier -> [
 					'(()=>{let __oak_acc_trgt=__as_oak_string({{0}})'
-					'return __is_oak_string(__oak_acc_trgt)?__oak_acc_trgt.valueOf()[{{1}}]||null:(__oak_acc_trgt.{{1}}!==undefined?__oak_acc_trgt.{{1}}:null)})()'
+					'return __is_oak_string(__oak_acc_trgt)?__as_oak_string(__oak_acc_trgt.valueOf()[{{1}}])||null:(__oak_acc_trgt.{{1}}!==undefined?__oak_acc_trgt.{{1}}:null)})()'
 				] |> join(';') |> format(renderNode(node.left), renderNode(node.right))
 				_ -> [
 					'(()=>{let __oak_acc_trgt=__as_oak_string({{0}})'
-					'return __is_oak_string(__oak_acc_trgt)?__oak_acc_trgt.valueOf()[{{1}}]||null:(__oak_acc_trgt[{{1}}]!==undefined?__oak_acc_trgt[{{1}}]:null)})()'
+					'return __is_oak_string(__oak_acc_trgt)?__as_oak_string(__oak_acc_trgt.valueOf()[{{1}}])||null:(__oak_acc_trgt[{{1}}]!==undefined?__oak_acc_trgt[{{1}}]:null)})()'
 				] |> join(';') |> format(renderNode(node.left), renderNode(node.right))
 			}
 			:ifExpr -> '__oak_if(' << renderNode(node.cond) << ',[' << {
@@ -756,7 +756,6 @@ function __oak_eq(a, b) {
 	return true;
 }
 function __oak_push(a, b) {
-	a = __as_oak_string(a);
 	a.push(b);
 	return a;
 }
