@@ -1,5 +1,5 @@
 std := import('std')
-sort := import('sort')
+libsort := import('sort')
 
 fn run(t) {
 	id := std.identity
@@ -7,7 +7,7 @@ fn run(t) {
 	{
 		sort!: sort!
 		sort: sort
-	} := sort
+	} := libsort
 
 	// without predicates
 	'sort! empty list' |> t.eq(
