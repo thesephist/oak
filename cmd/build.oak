@@ -526,14 +526,14 @@ fn renderJSBundle(bundleNode) {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderNode(node.right))
 		}
-		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << ']'
+		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << '=null]'
 		:object -> '{' << {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
 				if k.type {
 					:identifier, :empty, :number -> renderNode(k)
 					_ -> '[' << renderNode(k) << ']'
-				} << ':' << renderAssignTarget(v)
+				} << ':' << renderAssignTarget(v) << '=null'
 			}) |> join(',')
 		} << '}'
 	}
