@@ -207,6 +207,7 @@ fn wrapModule(block) {
 	tok: { pos: [1, 1], type: :fnKeyword, val: ? }
 	args: []
 	restArg: ''
+	decls: []
 	body: {
 		type: :block
 		tok: { pos: [1, 4], type: :leftBrace, val: ? }
@@ -415,6 +416,7 @@ fn analyzeNode(node) {
 					_ -> ctx.decls.(node.name) := true
 				}
 
+				node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
 				node
 			}
 			:ifExpr -> {
@@ -649,13 +651,14 @@ fn renderJSBundle(bundleNode) {
 					_ -> node.args |> map(fn(a, i) formatIdent(a, i) << '=null') |>
 						append(['...' << formatIdent(node.restArg)]) |> join(',')
 				} << ')'
+				decls := node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
 				if node.name {
-					'' -> 'function' << args << '{return ' << renderNode(node.body) << '}'
+					'' -> 'function' << args << '{' << decls << 'return ' << renderNode(node.body) << '}'
 					// use function keyword for named functions, for legible stack traces
 					_ -> formatIdent(node.name) <<
 						'=function ' <<
 						formatIdent(node.name) <<
-						args << '{return ' << renderNode(node.body) << '}'
+						args << '{' << decls << 'return ' << renderNode(node.body) << '}'
 				}
 			}
 			:fnCall -> '{{0}}({{1}})' |> format(
