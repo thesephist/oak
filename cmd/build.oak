@@ -1098,7 +1098,7 @@ function ___runtime_lib__oak_qm() {
 }
 
 // JavaScript interop
-function jsNew(Constructor, ...args) {
+function __oak_js_new(Constructor, ...args) {
 	return new Constructor(...args);
 }
 '
