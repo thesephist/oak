@@ -868,6 +868,7 @@ function __oak_trampoline(fn, ...args) {
 
 // reflection and types
 const __Is_Oak_Node = typeof process === \'object\';
+const __Oak_Int_RE = /^[+-]?\\d+$/;
 function int(x) {
 	if (typeof x === \'number\') {
 		// JS rounds towards higher magnitude, Oak rounds towards higher value
@@ -876,8 +877,8 @@ function int(x) {
 		if (x < 0 && diff === 0.5) return rounded + 1;
 		return rounded;
 	}
-	if (__is_oak_string(x)) {
-		const i = parseInt(x.valueOf(), 10);
+	if (__is_oak_string(x) && __Oak_Int_RE.test(x.valueOf())) {
+		const i = Number(x.valueOf());
 		if (isNaN(i)) return null;
 		return i;
 	}
