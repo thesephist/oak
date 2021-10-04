@@ -374,8 +374,19 @@ fn analyzeNode(node) {
 				// do not re-declare function parameters
 				node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
 
+				// here, we transform self-tail-recursive functions into
+				// non-recursive, trampolined functions that the JS runtime can
+				// unroll into a loop that won't blow the stack.
+				//
+				// NOTE: tail call unrolling as implemented here _only_ unrolls
+				// when the self-tail-calling function:
+				//   1. has a name, and
+				//   2. self-calls it in its body _with the same name_
+				// Aliased calls of any kind are not detected and not
+				// optimized, and will cause stack overflows in environments
+				// not natively supporting proper tail calls.
 				trampolinedFnName := '__oak_trampolined_' << fnCtx.enclosingFn.name
-				if fnCtx.enclosingFn.recurred? {
+				if Web? & fnCtx.enclosingFn.recurred? = true {
 					true -> node <- {
 						type: :function
 						name: node.name
@@ -460,7 +471,7 @@ fn analyzeNode(node) {
 					_ -> node.function.val = ctx.enclosingFn.name
 				}
 
-				if simpleName? & recursiveCall? & tail? {
+				if Web? & simpleName? & recursiveCall? & tail? {
 					true -> {
 						ctx.enclosingFn.recurred? := true
 						{
