@@ -1,0 +1,31 @@
+// libcrypto provides utilities for working with cryptographic primitives and
+// cryptographically safe sources of randomness.
+
+{
+	toHex: toHex
+	map: map
+} := import('std')
+{
+	split: split
+} := import('str')
+
+fn uuid {
+	ns := srand(16) |> split() |> map(codepoint)
+
+	// uuid v4 version bits
+	ns.6 := (ns.6 & 15) | 64
+	ns.8 := (ns.8 & 63) | 128
+
+	// helper
+	fn x(b) if len(s := toHex(ns.(b))) {
+		1 -> '0' << s
+		_ -> s
+	}
+
+	x(0) << x(1) << x(2) << x(3) << '-' <<
+		x(4) << x(5) << '-' <<
+		x(6) << x(7) << '-' <<
+		x(8) << x(9) << '-' <<
+		x(10) << x(11) << x(12) << x(13) << x(14) << x(15)
+}
+

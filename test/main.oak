@@ -10,12 +10,14 @@ TestRunners := [
 	'str'
 	'math'
 	'sort'
+	'random'
 	'fmt'
 	'json'
 	'datetime'
 	'path'
 	'cli'
 	'md'
+	'crypto'
 	'syntax'
 ]
 

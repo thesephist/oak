@@ -1,0 +1,27 @@
+// librandom implements utilities for working with pseudorandom sources of
+// randomness.
+//
+// librandom functions source rand() for randomness and are not suitable for
+// security-sensitive work. For such code, use srand() for secure randomness or
+// the 'crypto' standard library.
+
+{
+	toHex: toHex
+	map: map
+} := import('std')
+{
+	split: split
+} := import('str')
+
+fn boolean rand() > 0.5
+
+fn integer(min, max) number(int(min), int(max)) |> int()
+
+fn number(min, max) {
+	if max {
+		? -> [min, max] <- [0, min]
+	}
+	min + rand() * (max - min)
+}
+
+

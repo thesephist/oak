@@ -1,0 +1,85 @@
+// Generative tests for uniformity of randomness sources, rand() and srand()
+//
+// Also tests some derived randomness sources like random.(boolean, integer, number)
+
+{
+	println: println
+	range: range
+	map: map
+	filter: filter
+} := import('std')
+{
+	split: split
+} := import('str')
+{
+	round: round
+} := import('math')
+random := import('random')
+{
+	printf: printf
+} := import('fmt')
+
+N := 100000
+
+'Generative tests on random.(boolean, integer, number) and srand()
+\tchecking distribution uniformity' |> printf()
+
+fn printPcts(counts) {
+	counts |>
+		map(fn(xs) round(len(xs) / N * 100, 4)) |>
+		with map() fn(pct) printf('{{0}}%\t', pct)
+}
+
+{
+	println('# boolean()')
+	bools := range(N) |> map(random.boolean)
+	[
+		bools |> filter(fn(b) b)
+		bools |> filter(fn(b) !b)
+	] |> printPcts()
+}
+
+{
+	println('# integer(100, 200)')
+	ints := range(N) |> map(fn() random.integer(100, 200))
+	[
+		ints |> filter(fn(i) i < 120)
+		ints |> filter(fn(i) i >= 120 & i < 140)
+		ints |> filter(fn(i) i >= 140 & i < 160)
+		ints |> filter(fn(i) i >= 160 & i < 180)
+		ints |> filter(fn(i) i >= 180)
+	] |> printPcts()
+}
+
+{
+	println('# number(-0.5, 0.5)')
+	floats := range(N) |> map(fn() random.number(-0.5, 0.5))
+	[
+		floats |> filter(fn(i) i < -0.3)
+		floats |> filter(fn(i) i >= -0.3 & i < -0.1)
+		floats |> filter(fn(i) i >= -0.1 & i < 0.1)
+		floats |> filter(fn(i) i >= 0.1 & i < 0.3)
+		floats |> filter(fn(i) i >= 0.3)
+	] |> printPcts()
+}
+
+{
+	println('# srand(N)')
+	// not using N because N may be too large to generate N bytes of securely
+	// random data
+	SN := 10000
+	bytes := srand(SN) |> split() |> map(codepoint)
+	[
+		bytes |> filter(fn(b) b < 32)
+		bytes |> filter(fn(b) b >= 32 & b < 64)
+		bytes |> filter(fn(b) b >= 64 & b < 96)
+		bytes |> filter(fn(b) b >= 96 & b < 128)
+		bytes |> filter(fn(b) b >= 128 & b < 160)
+		bytes |> filter(fn(b) b >= 160 & b < 192)
+		bytes |> filter(fn(b) b >= 192 & b < 224)
+		bytes |> filter(fn(b) b >= 224)
+	] |>
+		map(fn(xs) round(len(xs) / SN * 100, 4)) |>
+		with map() fn(pct) printf('{{0}}%\t', pct)
+}
+

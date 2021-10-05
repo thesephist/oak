@@ -1139,6 +1139,17 @@ function nanotime() {
 function rand() {
 	return Math.random();
 }
+let randomBytes;
+function srand(length) {
+	if (__Is_Oak_Node) {
+		// lazily import dependency
+		if (!randomBytes) randomBytes = require(\'crypto\').randomBytes;
+		return randomBytes(length).toString(\'latin1\');
+	}
+
+	const bytes = crypto.getRandomValues(new Uint8Array(length));
+	return Array.from(bytes).map(b => String.fromCharCode(b)).join(\'\');
+}
 function wait(duration, cb) {
 	setTimeout(cb, duration * 1000);
 	return null;

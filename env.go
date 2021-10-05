@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	crand "crypto/rand"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -80,6 +81,7 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("time", c.oakTime)
 	c.LoadFunc("nanotime", c.oakNanotime)
 	c.LoadFunc("rand", c.oakRand)
+	c.LoadFunc("srand", c.oakSrand)
 	c.LoadFunc("wait", c.callbackify(c.oakWait))
 	c.LoadFunc("exit", c.oakExit)
 	c.LoadFunc("exec", c.callbackify(c.oakExec))
@@ -428,8 +430,30 @@ func (c *Context) oakNanotime(_ []Value) (Value, *runtimeError) {
 	return IntValue(time.Now().UnixNano()), nil
 }
 
-func (c *Context) oakRand(args []Value) (Value, *runtimeError) {
+func (c *Context) oakRand(_ []Value) (Value, *runtimeError) {
 	return FloatValue(rand.Float64()), nil
+}
+
+func (c *Context) oakSrand(args []Value) (Value, *runtimeError) {
+	if err := c.requireArgLen("srand", args, 1); err != nil {
+		return nil, err
+	}
+
+	bufLen, ok1 := args[0].(IntValue)
+	if !ok1 {
+		return nil, &runtimeError{
+			reason: fmt.Sprintf("Mismatched types in call srand(%s)", args[0]),
+		}
+	}
+
+	buf := make([]byte, bufLen)
+	_, err := crand.Read(buf)
+	if err != nil {
+		return null, nil
+	}
+
+	bytes := StringValue(buf)
+	return &bytes, nil
 }
 
 func (c *Context) oakWait(args []Value) (Value, *runtimeError) {

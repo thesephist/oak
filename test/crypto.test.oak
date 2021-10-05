@@ -1,0 +1,40 @@
+std := import('std')
+str := import('str')
+crypto := import('crypto')
+
+fn run(t) {
+	// uuid
+	{
+		{ uuid: uuid } := crypto
+
+		// behavior tests
+		uuids := std.range(200) |> std.map(uuid)
+
+		// every char should be a hex character or '-'
+		'uuid() validity, hexadecimal char set' |> t.assert(
+			uuids |> with std.every() fn(u) {
+				u |> str.split() |> with std.every() fn(c) if c {
+					'a', 'b', 'c', 'd', 'e', 'f', '-' -> true
+					_ -> str.digit?(c)
+				}
+			}
+		)
+
+		// (sort-of) test for uniqueness
+		'uuid() validity, rare collisions' |> t.assert(
+			uuids |> with std.every() fn(u) !(crypto.uuid() |> std.contains?(u))
+		)
+
+		// correct length and formatting
+		'uuid() validity, correct string formatting' |> t.assert(
+			uuids |> with std.every() fn(u) str.split(u) = [
+				_, _, _, _, _, _, _, _, '-'
+				_, _, _, _, '-'
+				_, _, _, _, '-'
+				_, _, _, _, '-'
+				_, _, _, _, _, _, _, _, _, _, _, _
+			]
+		)
+	}
+}
+

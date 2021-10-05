@@ -1,0 +1,49 @@
+std := import('std')
+random := import('random')
+
+fn run(t) {
+	// bool, int, float
+	// int, float take either (max) with default min = 0 or (min, max)
+	{
+		N := 200
+
+		'boolean() returns either true or false' |> t.assert(
+			std.range(N) |> std.map(random.boolean) |>
+				with std.every() fn(x) type(x) = :bool
+		)
+
+		'integer() returns an int' |> t.assert(
+			std.range(N) |> std.map(fn() random.integer(10)) |>
+				with std.every() fn(x) type(x) = :int
+		)
+		'all integer() are in range of (_, max)' |> t.assert(
+			std.range(N) |> std.map(fn() random.integer(10)) |>
+				with std.every() fn(i) i >= 0 & i < 10
+		)
+		'all integer() are in range of (min, max)' |> t.assert(
+			std.range(N) |> std.map(fn() random.integer(5, 10)) |>
+				with std.every() fn(i) i >= 5 & i < 10
+		)
+		'all integer() are in range of (min, max), min < 0' |> t.assert(
+			std.range(N) |> std.map(fn() random.integer(-10, 10)) |>
+				with std.every() fn(i) i >= -10 & i < 10
+		)
+
+		'number() returns a float' |> t.assert(
+			std.range(N) |> std.map(fn() random.number(10)) |>
+				with std.every() fn(x) type(x) = :float
+		)
+		'all number() are in range of (_, max)' |> t.assert(
+			std.range(N) |> std.map(fn() random.number(2.5)) |>
+				with std.every() fn(i) i >= 0 & i < 2.5
+		)
+		'all number() are in range of (min, max)' |> t.assert(
+			std.range(N) |> std.map(fn() random.number(1, 1.5)) |>
+				with std.every() fn(i) i >= 1 & i < 1.5
+		)
+		'all number() are in range of (min, max), min < 0' |> t.assert(
+			std.range(N) |> std.map(fn() random.number(-0.5, 0.5)) |>
+				with std.every() fn(i) i >= -0.5 & i < 0.5
+		)
+	}
+}

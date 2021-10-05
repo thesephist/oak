@@ -11,6 +11,7 @@
 	map: map
 	each: each
 } := import('std')
+random := import('random')
 {
 	printf: printf
 } := import('fmt')
@@ -24,13 +25,11 @@
 Start := -30610224000
 End := 16725225600
 
-fn randRange(min, max) int(min + rand() * (max - min))
-
 'Generative tests on datetime.(describe, timestamp, format)
 \tfrom {{0}} to {{1}}' |> printf(format(Start), format(End))
 
 range(500000) |>
-	map(fn() randRange(Start, End)) |>
+	map(fn() random.integer(Start, End)) |>
 	with each() fn(stamp, i) if timestamp(describe(stamp)) {
 	stamp -> ?
 	_ -> {

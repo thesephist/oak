@@ -98,6 +98,7 @@ time() // returns float
 nanotime() // returns int
 exit(code)
 rand()
+srand(length)
 wait(duration)
 exec(path, args, stdin) // returns stdout, stderr, end events
 

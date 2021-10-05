@@ -18,6 +18,9 @@ var libmath string
 //go:embed lib/sort.oak
 var libsort string
 
+//go:embed lib/random.oak
+var librandom string
+
 //go:embed lib/fs.oak
 var libfs string
 
@@ -45,6 +48,9 @@ var libcli string
 //go:embed lib/md.oak
 var libmd string
 
+//go:embed lib/crypto.oak
+var libcrypto string
+
 //go:embed lib/syntax.oak
 var libsyntax string
 
@@ -53,6 +59,7 @@ var stdlibs = map[string]string{
 	"str":      libstr,
 	"math":     libmath,
 	"sort":     libsort,
+	"random":   librandom,
 	"fs":       libfs,
 	"fmt":      libfmt,
 	"json":     libjson,
@@ -62,6 +69,7 @@ var stdlibs = map[string]string{
 	"test":     libtest,
 	"cli":      libcli,
 	"md":       libmd,
+	"crypto":   libcrypto,
 	"syntax":   libsyntax,
 }
 
