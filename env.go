@@ -335,7 +335,7 @@ func (c *Context) oakType(args []Value) (Value, *runtimeError) {
 	case FloatValue:
 		return AtomValue("float"), nil
 	case BoolValue:
-		return AtomValue("boolean"), nil
+		return AtomValue("bool"), nil
 	case AtomValue:
 		return AtomValue("atom"), nil
 	case *StringValue:

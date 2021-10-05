@@ -556,7 +556,7 @@ fn renderOakBundle(bundleNode) {
 		// instance in codegen where the generated code depends on token
 		// information rather than AST node information.
 		:number -> node.tok.val
-		:boolean -> string(node.val)
+		:bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> ':' << node.val
 		:list -> '[' << (node.elems |> map(renderNode)) |> join(',') << ']'
@@ -654,7 +654,7 @@ fn renderJSBundle(bundleNode) {
 		:null -> 'null'
 		:empty -> '__Oak_Empty'
 		:string -> '__Oak_String(`' + (node.val |> replace('\\', '\\\\') |> replace('`', '\\`')) + '`)'
-		:number, :boolean -> string(node.val)
+		:number, :bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> 'Symbol.for(\'' << node.val << '\')'
 		:list -> '[' << (node.elems |> map(renderNode) |> join(',')) << ']'
@@ -1086,7 +1086,7 @@ function type(x) {
 	} else if (__is_oak_string(x)) {
 		return Symbol.for(\'string\');
 	} else if (typeof x === \'boolean\') {
-		return Symbol.for(\'boolean\');
+		return Symbol.for(\'bool\');
 	} else if (typeof x === \'symbol\') {
 		if (x === __Oak_Empty) return Symbol.for(\'empty\');
 		return Symbol.for(\'atom\');

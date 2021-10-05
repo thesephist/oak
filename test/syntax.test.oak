@@ -325,11 +325,11 @@ fn run(t) {
 			[]
 		)
 
-		'boolean literals' |> t.eq(
+		'bool literals' |> t.eq(
 			parse('true, false')
 			[
-				{ type: :boolean, val: true, tok: at(1, 1) }
-				{ type: :boolean, val: false, tok: at(1, 7) }
+				{ type: :bool, val: true, tok: at(1, 1) }
+				{ type: :bool, val: false, tok: at(1, 7) }
 			]
 		)
 
@@ -684,7 +684,7 @@ fn run(t) {
 				type: :ifExpr
 				tok: at(1, 1)
 				cond: {
-					type: :boolean
+					type: :bool
 					tok: at(1, 1)
 					val: true
 				}

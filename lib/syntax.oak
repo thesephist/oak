@@ -493,12 +493,12 @@ fn Parser(tokens) {
 				}
 			}
 			:trueLiteral -> {
-				type: :boolean
+				type: :bool
 				tok: tok
 				val: true
 			}
 			:falseLiteral -> {
-				type: :boolean
+				type: :bool
 				tok: tok
 				val: false
 			}
@@ -732,7 +732,7 @@ fn Parser(tokens) {
 				// allow for the useful `if { case, case ... }` pattern.
 				condNode := if peek().type {
 					:leftBrace -> {
-						type: :boolean
+						type: :bool
 						val: true
 						tok: tok
 					}

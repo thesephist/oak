@@ -18,7 +18,7 @@ expr := literal | identifier |
     block
 
 literal := nullLiteral |
-    numberLiteral | stringLiteral | atomLiteral | booleanLiteral |
+    numberLiteral | stringLiteral | atomLiteral | boolLiteral |
     listLiteral | objectLiteral |
     fnLiterael
 
@@ -26,7 +26,7 @@ nullLiteral := '?'
 numberLiteral := \d+ | \d* '.' \d+
 stringLiteral := // single quoted string with standard escape sequences + \x00 syntax
 atomLiteral := ':' + identifier
-booleanLiteral := 'true' | 'false'
+boolLiteral := 'true' | 'false'
 listLiteral := '[' ( expr ',' )* ']' // last comma optional
 objectLiteral := '{' ( expr ':' expr ',' )* '}' // last comma optional
 fnLiteral := 'fn' '(' ( identifier ',' )* (identifier '...')? ')' expr
@@ -61,7 +61,7 @@ block := '{' expr+ '}' | '(' expr* ')'
 nullLiteral
 stringLiteral
 numberLiteral
-booleanLiteral
+boolLiteral
 atomLiteral
 listLiteral
 objectLiteral

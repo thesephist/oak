@@ -39,7 +39,7 @@ fn serialize(c) if type(c) {
 	:null, :empty, :function -> 'null'
 	:string -> '"' << escape(c) << '"'
 	:atom -> '"' << string(c) << '"'
-	:int, :float, :boolean -> string(c)
+	:int, :float, :bool -> string(c)
 	// composite types
 	:list -> '[' << c |> map(serialize) |> join(',') << ']'
 	:object -> '{' << keys(c) |> map(fn(k) '"' << escape(k) << '":' << serialize(c.(k))) |> join(',') << '}'

@@ -46,9 +46,9 @@ syntax keyword oakFunction with
 syntax match oakFunction "\v\|\>"
 highlight link oakFunction Type
 
-" booleans
-syntax keyword oakBoolean true false
-highlight link oakBoolean Boolean
+" bools
+syntax keyword oakBool true false
+highlight link oakBool Boolean
 
 " constants
 syntax keyword oakConst _

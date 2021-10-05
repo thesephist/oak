@@ -62,18 +62,18 @@ func (n numberNode) pos() pos {
 	return n.tok.pos
 }
 
-type booleanNode struct {
+type boolNode struct {
 	payload bool
 	tok     *token
 }
 
-func (n booleanNode) String() string {
+func (n boolNode) String() string {
 	if n.payload {
 		return "true"
 	}
 	return "false"
 }
-func (n booleanNode) pos() pos {
+func (n boolNode) pos() pos {
 	return n.tok.pos
 }
 
@@ -446,9 +446,9 @@ func (p *parser) parseUnit() (astNode, error) {
 			tok:        &tok,
 		}, nil
 	case trueLiteral:
-		return booleanNode{payload: true, tok: &tok}, nil
+		return boolNode{payload: true, tok: &tok}, nil
 	case falseLiteral:
-		return booleanNode{payload: false, tok: &tok}, nil
+		return boolNode{payload: false, tok: &tok}, nil
 	case colon:
 		if p.peek().kind == identifier {
 			return atomNode{payload: p.next().payload, tok: &tok}, nil
@@ -666,7 +666,7 @@ func (p *parser) parseUnit() (astNode, error) {
 		var condNode astNode
 		var err error
 		if p.peek().kind == leftBrace {
-			condNode = booleanNode{
+			condNode = boolNode{
 				payload: true,
 				tok:     &tok,
 			}

@@ -136,7 +136,7 @@ func (v FloatValue) Eq(u Value) bool {
 
 type BoolValue bool
 
-// interned booleans
+// interned bools
 const oakTrue = BoolValue(true)
 const oakFalse = BoolValue(false)
 
@@ -634,7 +634,7 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return IntValue(n.intPayload), nil
 		}
 		return FloatValue(n.floatPayload), nil
-	case booleanNode:
+	case boolNode:
 		return BoolValue(n.payload), nil
 	case atomNode:
 		return AtomValue(n.payload), nil
