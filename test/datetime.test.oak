@@ -61,11 +61,10 @@ fn run(t) {
 
 		// round-trip tests on 2k generated times, spaced 71 days and 161
 		// seconds apart, starting from Jan 1, 1871 (arbitrary picks).
-		'random round-trip describe/timestamp' |> t.eq(
+		'random round-trip describe/timestamp' |> t.assert(
 			std.range(2000) |>
 				std.map(fn(i) - 3124137600 + 71 * 86400 * i + 161 * i) |>
 				std.every(fn(secs) secs |> describe() |> timestamp() = secs)
-			true
 		)
 	}
 
@@ -170,11 +169,10 @@ fn run(t) {
 
 		// round-trip tests on 200 generated times, spaced 701 days and 2161
 		// seconds apart, starting from Jan 1, 1871 (arbitrary picks).
-		'random round-trip format/parse' |> t.eq(
+		'random round-trip format/parse' |> t.assert(
 			std.range(200) |>
 				std.map(fn(i) - 3124137600 + 701 * 86400 * i + 2161 * i) |>
 				std.every(fn(secs) secs |> format() |> parse() |> datetime.timestamp() = secs)
-			true
 		)
 	}
 

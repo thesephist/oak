@@ -71,16 +71,15 @@ fn run(t) {
 			ser([10, [20, 30], [?, _], []])
 			'[10,[20,30],[null,null],[]]'
 		)
-		'ordinary object' |> t.eq(
+		'ordinary object' |> t.assert(
 			[
 				// object keys, and hence serialized JSON keys, are not
 				// guaranteed to be in a deterministic order
 				'{"cd":-4.251,"a":"b"}'
 				'{"a":"b","cd":-4.251}'
 			] |> std.contains?(ser({ a: 'b', cd: -4.251 }))
-			true
 		)
-		'nested object' |> t.eq(
+		'nested object' |> t.assert(
 			{
 				serialized := ser([
 					'a'
@@ -93,7 +92,6 @@ fn run(t) {
 					'["a",true,{"e\\"":32.14,"c":"d"},["f",{},null,-42]]'
 				] |> std.contains?(serialized)
 			}
-			true
 		)
 	}
 

@@ -66,13 +66,14 @@ fn new(title) {
 		}
 	}
 
-	{
+	self := {
 		eq: fn(name, result, expect) Tests << {
 			name: name
 			passed?: result = expect
 			result: result
 			expect: expect
 		}
+		assert: fn(name, result) self.eq(name, result, true)
 		skip: fn(name, result, expect) Skipped << {
 			name: name
 		}
