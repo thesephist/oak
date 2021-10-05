@@ -526,7 +526,22 @@ fn analyzeNode(node) {
 		}
 	}
 	analyzeSubexpr(node, {
-		decls: {}
+		decls: {
+			import: true, int: true, float: true, atom: true, string: true
+			codepoint: true, char: true, type: true, len: true, keys: true
+
+			args: true, env: true, time: true, nanotime: true, rand: true
+			srand: true, wait: true, exit: true, exec: true
+
+			input: true, print: true, ls: true, rm: true, mkdir: true
+			stat: true, open: true, close: true, read: true, write: true
+			listen: true, req: true
+
+			sin: true, cos: true, tan: true, asin: true, acos: true
+			atan: true, pow: true, log: true
+
+			__runtime_lib: true, __runtime_lib?: true
+		}
 		args: {}
 	}, false)
 }
