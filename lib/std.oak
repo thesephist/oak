@@ -415,9 +415,17 @@ fn loop(max, f) {
 
 // println prints every value passed to it, in its default string
 // representation, separated by a space.
-fn println(xs...) xs |> each(fn(x, i) if i {
-	len(xs) - 1 -> print(string(x) + '\n')
-	0 -> print(string(x))
-	_ -> print(' ' + string(x))
-})
+//
+// this implementation tries to use a single call to print() unnecessarily, in
+// the hopes that in a browser environment, when writing output without a
+// trailing '\n' is impossible, println will still behave as expected.
+fn println(xs...) if len(xs) {
+	0 -> print('\n')
+	_ -> {
+		out := xs |> slice(1) |> with reduce(string(xs.0)) fn(acc, x) {
+			acc + ' ' + string(x)
+		}
+		print(out + '\n')
+	}
+}
 
