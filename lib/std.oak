@@ -411,6 +411,59 @@ fn loop(max, f) {
 	sub(0)
 }
 
+// debounce takes a function f, and returns a new function g that wraps f so
+// that calling g one or more times within some given duration is guaranteed to
+// only call f once per duration, with the most final arguments passed to it.
+//
+// if firstCall = :leading, the first call of g after a quiet period will also
+// call f. If firstCall = :trailing, this "leading edge call" will be a no-op,
+// but the following debounced calls will occur as normal. firstCall is
+// :leading by default, and may be omitted.
+fn debounce(duration, firstCall, f) {
+	if f {
+		? -> [firstCall, f] <- [:trailing, firstCall]
+	}
+
+	dargs := ? // debounced args, should never be used uninitialized to [...]
+	waiting? := false
+	target := time() - duration
+	fn debounced(args...) {
+		// to ensure that the duration is honored as closely to real wall time
+		// as possible, we measure time() at this point in execution and re-use
+		// it later to set timers.
+		tcall := time()
+		dargs <- args
+		if waiting? {
+			false -> if target <= tcall {
+				// leading edge call
+				true -> {
+					target <- tcall + duration
+					if firstCall {
+						:leading -> f(dargs...)
+						:trailing -> {
+							waiting? <- true
+							with wait(target - time()) fn {
+								waiting? <- false
+								f(dargs...)
+							}
+						}
+					}
+				}
+				// trailing debounced call
+				_ -> {
+					waiting? <- true
+					timeout := target - tcall
+					target <- target + duration
+					with wait(timeout) fn {
+						waiting? <- false
+						f(dargs...)
+					}
+				}
+			}
+		}
+	}
+}
+
 // OS interfaces
 
 // println prints every value passed to it, in its default string

@@ -461,6 +461,7 @@ func (c *Context) oakWait(args []Value) (Value, *runtimeError) {
 		return nil, err
 	}
 
+	// in both Oak & Go, duration <= 0 results in immediate completion
 	switch arg := args[0].(type) {
 	case IntValue:
 		time.Sleep(time.Duration(float64(arg) * float64(time.Second)))
