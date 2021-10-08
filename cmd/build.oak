@@ -211,9 +211,10 @@ if Web? {
 fn wrapModule(block) {
 	// wrap nodes in AST of
 	// fn {
-	//     module := {}
-	//     { ... (module code) }
-	//     module
+	//     __module := {}
+	//     { ... module code }
+	//     { ... __module.exportedName := exportedName }
+	//     __module
 	// }
 	type: :function
 	name: ''
@@ -224,16 +225,16 @@ fn wrapModule(block) {
 	body: {
 		type: :block
 		tok: { pos: [1, 4], type: :leftBrace, val: ? }
-		decls: block.decls << 'module'
+		decls: block.decls << '__module'
 		exprs: [{
-			left: { tok: { pos: [1, 6], type: :identifier, val: 'module' }, type: :identifier, val: 'module' }
+			left: { tok: { pos: [1, 6], type: :identifier, val: '__module' }, type: :identifier, val: '__module' }
 			local?: true
 			right: { entries: [], tok: { pos: [1, 16], type: :leftBrace, val: ? }, type: :object }
 			tok: { pos: [1, 13], type: :assign, val: ? }
 			type: :assignment
 		}] |> append(block.exprs) |> append(
 			block.decls |>
-				filter(fn(decl) decl != 'module') |>
+				filter(fn(decl) decl != '__module') |>
 				map(fn(exportedName) {
 					type: :assignment
 					tok: { pos: [1, 10], type: :assign, val: ? }
@@ -243,8 +244,8 @@ fn wrapModule(block) {
 						tok: { pos: [1, 7], type: :dot, val: ? }
 						left: {
 							type: :identifier
-							tok: { pos: [1, 1], type: :identifier, val: 'module' }
-							val: 'module'
+							tok: { pos: [1, 1], type: :identifier, val: '__module' }
+							val: '__module'
 						}
 						right: {
 							type: :identifier
@@ -258,9 +259,9 @@ fn wrapModule(block) {
 						val: formatIdent(exportedName)
 					}
 			}) << {
-				tok: { pos: [1, 20], type: :identifier, val: 'module' }
+				tok: { pos: [1, 20], type: :identifier, val: '__module' }
 				type: :identifier
-				val: 'module'
+				val: '__module'
 			}
 		)
 	}
