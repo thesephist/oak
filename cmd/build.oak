@@ -339,192 +339,190 @@ fn wrapBundle(modules, entryModuleName) {
 // rather returns a transformed, completely new syntax tree containing
 // transformations and annotations necessary for codegen.
 fn analyzeNode(node) {
-	fn analyzeSubexpr(node, ctx, tail?) {
-		if node.type {
-			:block -> {
-				ctx := clone(ctx)
+	fn analyzeSubexpr(node, ctx, tail?) if node.type {
+		:block -> {
+			ctx := clone(ctx)
 
-				ctx.decls := {}
-				node.exprs := node.exprs |> map(fn(n, i) analyzeSubexpr(n, ctx, i + 1 = len(node.exprs)))
+			ctx.decls := {}
+			node.exprs := node.exprs |> map(fn(n, i) analyzeSubexpr(n, ctx, i + 1 = len(node.exprs)))
 
-				// do not re-declare function parameters
-				node.decls := ctx.decls |> keys() |> with filter() fn(decl) ctx.args.(decl) = ?
-				node
+			// do not re-declare function parameters
+			node.decls := ctx.decls |> keys() |> with filter() fn(decl) ctx.args.(decl) = ?
+			node
+		}
+		:function -> {
+			// we ought only count as "recursion" when a function directly
+			// calls itself -- we do not count references to itself in
+			// other callbacks, which may be called asynchronously
+			if ctx.enclosingFnLit {
+				node -> ?
+				_ -> ctx.enclosingFnLit := _
 			}
-			:function -> {
-				// we ought only count as "recursion" when a function directly
-				// calls itself -- we do not count references to itself in
-				// other callbacks, which may be called asynchronously
-				if ctx.enclosingFnLit {
-					node -> ?
-					_ -> ctx.enclosingFnLit := _
-				}
 
-				fnCtx := clone(ctx)
+			fnCtx := clone(ctx)
 
-				if node.name {
-					? -> ?
-					_ -> fnCtx.enclosingFn := node
-				}
+			if node.name {
+				? -> ?
+				_ -> fnCtx.enclosingFn := node
+			}
 
-				fnCtx.decls := {}
-				fnCtx.args := {}
-				node.args |> with each() fn(arg) fnCtx.args.(arg) := true
-				node.body := analyzeSubexpr(node.body, fnCtx, true)
+			fnCtx.decls := {}
+			fnCtx.args := {}
+			node.args |> with each() fn(arg) fnCtx.args.(arg) := true
+			node.body := analyzeSubexpr(node.body, fnCtx, true)
 
-				// do not re-declare function parameters
-				node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
+			// do not re-declare function parameters
+			node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
 
-				// here, we transform self-tail-recursive functions into
-				// non-recursive, trampolined functions that the JS runtime can
-				// unroll into a loop that won't blow the stack.
-				//
-				// NOTE: tail call unrolling as implemented here _only_ unrolls
-				// when the self-tail-calling function:
-				//   1. has a name, and
-				//   2. self-calls it in its body _with the same name_
-				// Aliased calls of any kind are not detected and not
-				// optimized, and will cause stack overflows in environments
-				// not natively supporting proper tail calls.
-				trampolinedFnName := '__oak_trampolined_' << fnCtx.enclosingFn.name
-				if Web? & fnCtx.enclosingFn.recurred? = true {
-					true -> node <- {
-						type: :function
-						name: node.name
+			// here, we transform self-tail-recursive functions into
+			// non-recursive, trampolined functions that the JS runtime can
+			// unroll into a loop that won't blow the stack.
+			//
+			// NOTE: tail call unrolling as implemented here _only_ unrolls
+			// when the self-tail-calling function:
+			//   1. has a name, and
+			//   2. self-calls it in its body _with the same name_
+			// Aliased calls of any kind are not detected and not
+			// optimized, and will cause stack overflows in environments
+			// not natively supporting proper tail calls.
+			trampolinedFnName := '__oak_trampolined_' << fnCtx.enclosingFn.name
+			if Web? & fnCtx.enclosingFn.recurred? = true {
+				true -> node <- {
+					type: :function
+					name: node.name
+					tok: node.tok
+					args: node.args |> clone()
+					restArg: node.restArg
+					decls: []
+					body: {
+						type: :block
 						tok: node.tok
-						args: node.args |> clone()
-						restArg: node.restArg
-						decls: []
-						body: {
-							type: :block
+						decls: [trampolinedFnName]
+						exprs: [{
+							type: :assignment
 							tok: node.tok
-							decls: [trampolinedFnName]
-							exprs: [{
-								type: :assignment
+							local?: true
+							left: {
+								type: :identifier
 								tok: node.tok
-								local?: true
-								left: {
-									type: :identifier
-									tok: node.tok
-									val: trampolinedFnName
-								}
-								right: merge({}, node, { name: '' })
-							}, {
-								type: :fnCall
-								tok: node.tok
-								function: {
-									type: :identifier
-									tok: node.tok
-									val: '__oak_resolve_trampoline'
-								}
-								args: [{
-									type: :identifier
-									tok: node.tok
-									val: trampolinedFnName
-								}] |> append(node.args |> with map() fn(arg) {
-									type: :identifier
-									tok: node.tok
-									val: arg
-								})
-								restArg: if node.restArg {
-									'' -> ?
-									_ -> {
-										type: :identifier
-										tok: node.tok
-										val: node.restArg
-									}
-								}
-							}]
-						}
-					}
-				}
-
-				// a function with a name also assigns
-				if node.name {
-					'' -> ?
-					_ -> ctx.decls.(node.name) := true
-				}
-
-				node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
-				node
-			}
-			:ifExpr -> {
-				node.cond := analyzeSubexpr(node.cond, ctx, false)
-				node.branches := node.branches |> with map() fn(br) analyzeSubexpr(br, ctx, true)
-				node
-			}
-			:ifBranch -> {
-				node.target := analyzeSubexpr(node.target, ctx, false)
-				node.body := analyzeSubexpr(node.body, ctx, true)
-				node
-			}
-			:fnCall -> {
-				node.function := analyzeSubexpr(node.function, ctx, false)
-				node.args := node.args |> with map() fn(a) analyzeSubexpr(a, ctx, false)
-				if node.restArg {
-					? -> ?
-					_ -> node.restArg := analyzeSubexpr(node.restArg, ctx, false)
-				}
-
-				simpleName? := node.function.type = :identifier
-				recursiveCall? := if ctx.enclosingFn {
-					? -> false
-					_ -> node.function.val = ctx.enclosingFn.name
-				}
-
-				if Web? & simpleName? & recursiveCall? & tail? {
-					true -> {
-						ctx.enclosingFn.recurred? := true
-						{
+								val: trampolinedFnName
+							}
+							right: merge({}, node, { name: '' })
+						}, {
 							type: :fnCall
 							tok: node.tok
 							function: {
 								type: :identifier
 								tok: node.tok
-								val: '__oak_trampoline'
+								val: '__oak_resolve_trampoline'
 							}
 							args: [{
 								type: :identifier
 								tok: node.tok
-								val: '__oak_trampolined_' << node.function.val
-							}] |> append(node.args)
-							restArg: node.restArg
-						}
-					}
-					_ -> node
-				}
-			}
-			:unary -> node.right := analyzeSubexpr(node.right, ctx, false)
-			:binary, :propertyAccess -> {
-				node.left := analyzeSubexpr(node.left, ctx, false)
-				node.right := analyzeSubexpr(node.right, ctx, false)
-				node
-			}
-			:assignment -> {
-				node.left := analyzeSubexpr(node.left, ctx, false)
-				node.right := analyzeSubexpr(node.right, ctx, false)
-
-				if node.local? {
-					true -> if node.left.type {
-						:identifier -> ctx.decls.(node.left.val) := true
-						:list -> node.left.elems |> with each() fn(el) if el.type {
-							:identifier -> ctx.decls.(el.val) := true
-						}
-						:object -> node.left.entries |> with each() fn(entry) if entry.key.type {
-							:identifier -> ctx.decls.(entry.key.val) := true
-						}
+								val: trampolinedFnName
+							}] |> append(node.args |> with map() fn(arg) {
+								type: :identifier
+								tok: node.tok
+								val: arg
+							})
+							restArg: if node.restArg {
+								'' -> ?
+								_ -> {
+									type: :identifier
+									tok: node.tok
+									val: node.restArg
+								}
+							}
+						}]
 					}
 				}
+			}
 
-				node
+			// a function with a name also assigns
+			if node.name {
+				'' -> ?
+				_ -> ctx.decls.(node.name) := true
 			}
-			:list -> node.elems := node.elems |> with map() fn(el) analyzeSubexpr(el, ctx, false)
-			:object -> node.entries := node.entries |> with map() fn(entry) {
-				key: analyzeSubexpr(entry.key, ctx, false)
-				val: analyzeSubexpr(entry.val, ctx, false)
-			}
-			_ -> node
+
+			node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
+			node
 		}
+		:ifExpr -> {
+			node.cond := analyzeSubexpr(node.cond, ctx, false)
+			node.branches := node.branches |> with map() fn(br) analyzeSubexpr(br, ctx, true)
+			node
+		}
+		:ifBranch -> {
+			node.target := analyzeSubexpr(node.target, ctx, false)
+			node.body := analyzeSubexpr(node.body, ctx, true)
+			node
+		}
+		:fnCall -> {
+			node.function := analyzeSubexpr(node.function, ctx, false)
+			node.args := node.args |> with map() fn(a) analyzeSubexpr(a, ctx, false)
+			if node.restArg {
+				? -> ?
+				_ -> node.restArg := analyzeSubexpr(node.restArg, ctx, false)
+			}
+
+			simpleName? := node.function.type = :identifier
+			recursiveCall? := if ctx.enclosingFn {
+				? -> false
+				_ -> node.function.val = ctx.enclosingFn.name
+			}
+
+			if Web? & simpleName? & recursiveCall? & tail? {
+				true -> {
+					ctx.enclosingFn.recurred? := true
+					{
+						type: :fnCall
+						tok: node.tok
+						function: {
+							type: :identifier
+							tok: node.tok
+							val: '__oak_trampoline'
+						}
+						args: [{
+							type: :identifier
+							tok: node.tok
+							val: '__oak_trampolined_' << node.function.val
+						}] |> append(node.args)
+						restArg: node.restArg
+					}
+				}
+				_ -> node
+			}
+		}
+		:unary -> node.right := analyzeSubexpr(node.right, ctx, false)
+		:binary, :propertyAccess -> {
+			node.left := analyzeSubexpr(node.left, ctx, false)
+			node.right := analyzeSubexpr(node.right, ctx, false)
+			node
+		}
+		:assignment -> {
+			node.left := analyzeSubexpr(node.left, ctx, false)
+			node.right := analyzeSubexpr(node.right, ctx, false)
+
+			if node.local? {
+				true -> if node.left.type {
+					:identifier -> ctx.decls.(node.left.val) := true
+					:list -> node.left.elems |> with each() fn(el) if el.type {
+						:identifier -> ctx.decls.(el.val) := true
+					}
+					:object -> node.left.entries |> with each() fn(entry) if entry.key.type {
+						:identifier -> ctx.decls.(entry.key.val) := true
+					}
+				}
+			}
+
+			node
+		}
+		:list -> node.elems := node.elems |> with map() fn(el) analyzeSubexpr(el, ctx, false)
+		:object -> node.entries := node.entries |> with map() fn(entry) {
+			key: analyzeSubexpr(entry.key, ctx, false)
+			val: analyzeSubexpr(entry.val, ctx, false)
+		}
+		_ -> node
 	}
 	analyzeSubexpr(node, {
 		decls: {
