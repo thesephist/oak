@@ -836,7 +836,11 @@ fn __oak_module_import(name) if ___runtime_lib?(name) {
 				mod
 			}
 		}
-		:function -> __Oak_Modules.(name) := module()
+		:function -> {
+			m := module()
+			__Oak_Modules.(name) := m
+			m
+		}
 		_ -> module
 	}
 }
