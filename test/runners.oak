@@ -1,0 +1,36 @@
+// test runners run by test/main
+//
+// this file is split from test/main in part so that when standard library
+// tests are run with `oak build`, it also exercises the bundler's static
+// import analysis logic properly (in all three cases: standard library
+// modules, statically imported modules, and dynamically included modules).
+
+{
+	slice: slice
+	filter: filter
+	contains?: contains?
+} := import('std')
+
+// allow selection of tests to run with CLI arguments
+UserSpecifiedRunners := if len(args()) > 2 {
+	true -> args() |> slice(2)
+	_ -> [_] // matches any runner
+}
+
+// when adding a stdlib here, also add to Makefile/test-js to get JS coverage
+Runners := [
+	'std'
+	'str'
+	'math'
+	'sort'
+	'random'
+	'fmt'
+	'json'
+	'datetime'
+	'path'
+	'cli'
+	'md'
+	'crypto'
+	'syntax'
+] |> with filter() fn(name) UserSpecifiedRunners |> contains?(name)
+

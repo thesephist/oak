@@ -10,6 +10,7 @@
 	filter: filter
 	append: append
 	entries: entries
+	contains?: contains?
 	merge: merge
 	once: once
 } := import('std')
@@ -78,6 +79,28 @@ AbsoluteEntry := resolve(Entry)
 // source of truth for which modules the bundle must include.
 ModuleNodes := {}
 
+// ImportCallNode is a template node of the form `import(<string literal>)`,
+// which is a static import that the bundler must handle specially and
+// transform on output.
+ImportCallNode := {
+	type: :fnCall
+	function: { type: :identifier, val: 'import', tok: _ }
+	args: [{ type: :string, val: _, tok: _ }]
+	restArg: ?
+	tok: _
+}
+
+// ImportAssignmentNode is a template node of the form `_ := import(<string
+// literal>)`, which is a top-level static import that the bundler must handle
+// specially and transform on output.
+ImportAssignmentNode := {
+	type: :assignment
+	tok: _
+	local?: true
+	left: _
+	right: ImportCallNode
+}
+
 // cachedParse is a wrapper around syntax.parse that lazily caches the computed
 // AST, so we can minimize redundant work.
 // The path must be absolute, but the text is optional if the path is
@@ -89,23 +112,6 @@ fn cachedParse(path, text) if cached := ModuleNodes.(path) {
 		ModuleNodes.(path)
 	}
 	_ -> cached
-}
-
-// importCallNode? reports whether a given AST node represents an expression of
-// the form _ := import(_), which signals that it's an import that the compiler
-// must handle specially.
-fn importCallNode?(node) node = {
-	type: :assignment
-	tok: _
-	local?: true
-	left: _
-	right: {
-		type: :fnCall
-		function: { type: :identifier, val: 'import', tok: _ }
-		args: [{ type: :string, val: _, tok: _ }]
-		restArg: ?
-		tok: _
-	}
 }
 
 // number of modules we started processing
@@ -141,8 +147,8 @@ fn addImportsFromFile(path, next) {
 fn addImportsFromSource(path, file, next) {
 	// find static, top-level imports from this file and queue jobs to analyze
 	// their imports.
-	cachedParse(path, file) |> with each() fn(node) if {
-		importCallNode?(node) -> if ___runtime_lib?(importName := node.right.args.(0).val) {
+	cachedParse(path, file) |> with each() fn(node) if node {
+		ImportAssignmentNode -> if ___runtime_lib?(importName := node.right.args.(0).val) {
 			// for Oak bundles, importing stdlib is a no-op
 			true -> if Web? {
 				// for JS bundles, bundle the stdlib
@@ -150,14 +156,7 @@ fn addImportsFromSource(path, file, next) {
 			}
 			_ -> {
 				importPath := resolve(importName, dir(path)) + '.oak'
-				// NOTE: we currently mutate the cached AST to add normalized
-				// import paths in place of the original relative path. This
-				// makes this import-scanning step a _mutating_ pass over the
-				// AST nodes, which might be surprising. It's not ideal, but at
-				// time of writing, this is cleaner than having a separate
-				// dependency-rewriting pass.
-				node.right.args.(0).val := importPath
-				// kick off job if we haven't seen this module before
+				// kick off import job if we haven't seen this module before
 				if ModuleNodes.(importPath) {
 					? -> addImportsFromFile(importPath, next)
 				}
@@ -267,6 +266,26 @@ fn wrapModule(block) {
 	}
 }
 
+// commonPrefix computes the "longest common prefix" (substring from start of
+// path that's shared between all paths) of all given paths. If there is only
+// one path or if there is no common prefix, it returns ''.
+//
+// commonPrefix is used to ensure that module paths in the bundle do not leak
+// information about the build environment unnecessarily.
+fn commonPrefix(paths) {
+	sortedPaths := paths |> sort!()
+	first := sortedPaths.0
+	last := sortedPaths.(len(sortedPaths) - 1)
+	fn sub(i) if i {
+		len(first) -> first
+		_ -> if first.(i) {
+			last.(i) -> sub(i + 1)
+			_ -> first |> slice(0, i)
+		}
+	}
+	sub(0)
+}
+
 // wrapBundle takes a list of module AST nodes (closures) and wraps it into a
 // single bundle AST node with an entrypoint. The bundle AST then gets
 // serialized into Oak or JS code to be written to disk.
@@ -283,9 +302,81 @@ fn wrapBundle(modules, entryModuleName) {
 	tok: { pos: [1, 1], type: :leftBrace, val: ? }
 	decls: []
 	exprs: {
+		// Internally, the bundler represents each module by its full path on
+		// disk. However, we don't want that module identifier to leak to the
+		// final bundle, because (1) it makes the bundle non-reproducible, and
+		// (2) it leaks build environment information to the artifact.
+		//
+		// We prevent this by finding the _longest common prefix_ between all
+		// module paths, and stripping all module paths of this prefix. This
+		// way, module paths remain meaningful and unique, but do not contain
+		// build env information.
+		bundledPaths := append(
+			modules |> map(fn(module) module.0)
+			Includes |> map(fn(spec) spec.path)
+		) |> filter(fn(path) !___runtime_lib?(path))
+		bundlePrefixLen := commonPrefix(bundledPaths) |> len()
+
+		fn normalizeModulePath(path) if {
+			___runtime_lib?(path) -> path
+			_ -> path |> slice(bundlePrefixLen)
+		}
+
+		// recursively iterates through all composite expressions (non-literal,
+		// non-identifier, etc.) of a module body, and _in-place updates_ any
+		// calls to `import(<string literal>)` so that it calls import by the
+		// right normalized module name.
+		fn normalizeModuleImports!(node, modulePath) if node.type {
+			// for blocks and functions (which create new scopes), if the
+			// "import" name is shadowed in that scope, no need to delve deeper
+			:block -> if node.decls |> contains?('import') {
+				false -> node.exprs |> each(fn(n) normalizeModuleImports!(n, modulePath))
+			}
+			:function -> if node.decls |> contains?('import') {
+				false -> normalizeModuleImports!(node.body, modulePath)
+			}
+			:ifExpr -> {
+				normalizeModuleImports!(node.cond, modulePath)
+				node.branches |> each(fn(br) normalizeModuleImports!(br, modulePath))
+			}
+			:ifBranch -> {
+				normalizeModuleImports!(node.target, modulePath)
+				normalizeModuleImports!(node.body, modulePath)
+			}
+			:fnCall -> if node {
+				ImportCallNode -> if ___runtime_lib?(importName := node.args.(0).val) {
+					true -> ?
+					_ -> {
+						importPath := resolve(importName, dir(modulePath)) + '.oak'
+						node.args.(0).val := normalizeModulePath(importPath)
+					}
+				}
+				_ -> {
+					normalizeModuleImports!(node.function, modulePath)
+					node.args |> each(fn(a) normalizeModuleImports!(a, modulePath))
+					if node.restArg {
+						? -> ?
+						_ -> normalizeModuleImports!(node.restArg, modulePath)
+					}
+				}
+			}
+			:unary -> normalizeModuleImports!(node.right, modulePath)
+			:binary, :propertyAccess, :assignment -> {
+				normalizeModuleImports!(node.left, modulePath)
+				normalizeModuleImports!(node.right, modulePath)
+			}
+			:list -> node.elems |> each(fn(el) normalizeModuleImports!(el, modulePath))
+			:object -> node.entries |> with each() fn(entry) {
+				normalizeModuleImports!(entry.key, modulePath)
+				normalizeModuleImports!(entry.val, modulePath)
+			}
+			_ -> node
+		}
+
 		// declare all modules with __oak_modularize
 		moduleDefns := modules |> with map() fn(module) {
-			[moduleName, moduleBody] := module
+			[modulePath, moduleBody] := module
+			moduleName := normalizeModulePath(modulePath)
 			{
 				type: :fnCall
 				tok: { pos: [1, 17], type: :leftParen, val: ? }
@@ -295,8 +386,15 @@ fn wrapBundle(modules, entryModuleName) {
 					val: '__oak_modularize'
 				}
 				args: [
-					{ type: :string, val: moduleName, tok: { type: :stringLiteral, pos: [1, 18], val: moduleName } }
-					moduleBody
+					{
+						type: :string
+						val: moduleName
+						tok: { type: :stringLiteral, pos: [1, 18], val: moduleName }
+					}
+					{
+						normalizeModuleImports!(moduleBody, modulePath)
+						moduleBody
+					}
 				]
 				restArg: ?
 			}
@@ -312,8 +410,16 @@ fn wrapBundle(modules, entryModuleName) {
 				type: :object
 				tok: { pos: [1, 0], type: :leftBrace, val: ? }
 				entries: Includes |> with map() fn(spec) {
-					key: { type: :string, val: spec.name, tok: { pos: [1, 0], type: :stringLiteral, val: spec.name } }
-					val: { type: :string, val: spec.path, tok: { pos: [1, 0], type: :stringLiteral, val: spec.path } }
+					key: {
+						type: :string
+						val: spec.name
+						tok: { pos: [1, 0], type: :stringLiteral, val: spec.name }
+					}
+					val: {
+						type: :string
+						val: normalizeModulePath(spec.path)
+						tok: { pos: [1, 0], type: :stringLiteral, val: normalizeModulePath(spec.path) }
+					}
 				}
 			}
 		} << {
@@ -326,8 +432,8 @@ fn wrapBundle(modules, entryModuleName) {
 			}
 			args: [{
 				type: :string
-				val: entryModuleName
-				tok: { type: :stringLiteral, pos: [1, 0], val: entryModuleName }
+				val: normalizeModulePath(entryModuleName)
+				tok: { type: :stringLiteral, pos: [1, 0], val: normalizeModulePath(entryModuleName) }
 			}]
 			restArg: ?
 		}
