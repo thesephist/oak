@@ -234,6 +234,7 @@ fn wrapModule(block) {
 		}] |> append(block.exprs) |> append(
 			block.decls |>
 				filter(fn(decl) decl != '__module') |>
+				sort!() |>
 				map(fn(exportedName) {
 					type: :assignment
 					tok: { pos: [1, 10], type: :assign, val: ? }
