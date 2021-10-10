@@ -346,8 +346,7 @@ fn wrapBundle(modules, entryModuleName) {
 			}
 			:fnCall -> if node {
 				ImportCallNode -> if ___runtime_lib?(importName := node.args.(0).val) {
-					true -> ?
-					_ -> {
+					false -> {
 						importPath := resolve(importName, dir(modulePath)) + '.oak'
 						node.args.(0).val := normalizeModulePath(importPath)
 					}
@@ -371,7 +370,6 @@ fn wrapBundle(modules, entryModuleName) {
 				normalizeModuleImports!(entry.key, modulePath)
 				normalizeModuleImports!(entry.val, modulePath)
 			}
-			_ -> node
 		}
 
 		// declare all modules with __oak_modularize
