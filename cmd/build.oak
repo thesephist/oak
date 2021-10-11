@@ -1109,6 +1109,7 @@ function __oak_trampoline(fn, ...args) {
 const __Is_Oak_Node = typeof process === \'object\';
 const __Oak_Int_RE = /^[+-]?\\d+$/;
 function int(x) {
+	x = __as_oak_string(x);
 	if (typeof x === \'number\') {
 		// JS rounds towards higher magnitude, Oak rounds towards higher value
 		const rounded = Math.floor(x);
@@ -1124,6 +1125,7 @@ function int(x) {
 	return null;
 }
 function float(x) {
+	x = __as_oak_string(x);
 	if (typeof x === \'number\') return x;
 	if (__is_oak_string(x)) {
 		const f = parseFloat(x.valueOf());
@@ -1133,6 +1135,7 @@ function float(x) {
 	return null;
 }
 function atom(x) {
+	x = __as_oak_string(x);
 	if (typeof x === \'symbol\' && x !== __Oak_Empty) return x;
 	if (__is_oak_string(x)) return Symbol.for(x.valueOf());
 	return Symbol.for(string(x));
@@ -1224,18 +1227,24 @@ function keys(x) {
 		for (let i = 0; i < x.length; i ++) k.push(i);
 		return k;
 	} else if (typeof x === \'object\' && x !== null) {
-		return Object.getOwnPropertyNames(x);
+		return Object.getOwnPropertyNames(x).map(__as_oak_string);
 	}
 	throw new Error(\'keys() takes a composite value, but got \' + string(x).valueOf());
 }
 
 // OS interfaces
 function args() {
-	if (__Is_Oak_Node) return process.argv;
-	return [];
+	if (__Is_Oak_Node) return process.argv.map(__as_oak_string);
+	return [window.location.href];
 }
 function env() {
-	if (__Is_Oak_Node) return process.env;
+	if (__Is_Oak_Node) {
+		const e = Object.assign({}, process.env);
+		for (const key in e) {
+			e[key] = __as_oak_string(e[key]);
+		}
+		return e;
+	}
 	return {};
 }
 function time() {
@@ -1256,7 +1265,7 @@ function srand(length) {
 	}
 
 	const bytes = crypto.getRandomValues(new Uint8Array(length));
-	return Array.from(bytes).map(b => String.fromCharCode(b)).join(\'\');
+	return __as_oak_string(Array.from(bytes).map(b => String.fromCharCode(b)).join(\'\'));
 }
 function wait(duration, cb) {
 	setTimeout(cb, duration * 1000);
