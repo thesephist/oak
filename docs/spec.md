@@ -129,7 +129,7 @@ log(b, n)
 
 ## Code samples
 
-```
+```js
 // hello world
 std.println('Hello, World!')
 
@@ -146,43 +146,50 @@ fn { std.println('Hi!') }
 // factorial
 fn factorial(n) if n <= 1 {
 	true -> 1
-    _ -> n * factorial(n - 1)
+	_ -> n * factorial(n - 1)
 }
 ```
 
-```
+```js
 // methods are emulated by pipe notation
-n |> times(fn(i) std.println(i))
-names |> join(', ')
 scores |> sum()
-oakFiles := fileNames |> filter(fn(name) name |> endsWith?('.oak')) 
+names |> join(', ')
 fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
+oakFiles := fileNames |> filter(fn(name) name |> endsWith?('.oak'))
 ```
 
-```
+```js
 // "with" keyword just makes the last fn a callback as last arg
-with fetch('some.url.com')
-	fn(resp) with resp.json()
-    fn(json) console.log(json)
+with loop(10) fn(n) std.println(n)
+with wait(1) fn {
+	std.println('Done!')
+}
+with fetch('example.com') fn(resp) {
+	with resp.json() fn(json) {
+		std.println(json)
+	}
+}
 ```
 
-```
-// file read
+```js
+// raw file read
 with open('name.txt') fn(evt) if evt.type {
 	:error -> std.println(evt.message)
-	_ -> with read(evt.fd, 0, -1) fn(evt) {
+	_ -> with read(fd := evt.fd, 0, -1) fn(evt) {
 		if evt.type {
 			:error -> std.println(evt.message)
-			_ -> std.printf('file data: {0}\n', evt.data)
+			_ -> fmt.printf('file data: {{0}}', evt.data)
 		}
-		close(evt.fd)
+		close(fd)
 	}
 }
 
 // with stdlib
-with std.readFile('name.txt') fn(file) if file {
-    ? -> std.println('could not read file')
-    _ -> std.println(file |> slice(0))
+std := import('std')
+fs := import('fs')
+with fs.readFile('names.txt') fn(file) if file {
+	? -> std.println('[error] could not read file')
+	_ -> std.println(file)
 }
 ```
 
