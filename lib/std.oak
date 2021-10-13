@@ -320,6 +320,31 @@ fn partition(xs, by) if type(by) {
 	}
 }
 
+// uniq takes a list `xs`, and returns a similar list where no element of `xs`
+// occurs twice in a row. Elements may occur twice in the list if they are
+// separated by other elements. uniq takes an optional `pred` predicate, by
+// which elements' equality may be compared. uniq runs in O(n) time.
+//
+// To ensure that no element occurs more than once in the whole list, first
+// sort the list.
+fn uniq(xs, pred) {
+	pred := default(pred, identity)
+	ys := []
+	last := fn {} // empty fn is not equal to anything else
+	fn sub(i) if i {
+		len(xs) -> ys
+		_ -> if p := pred(x := xs.(i)) {
+			last -> sub(i + 1)
+			_ -> {
+				ys << x
+				last <- p
+				sub(i + 1)
+			}
+		}
+	}
+	sub(0)
+}
+
 // find returns the index of the first item in the iterable xs for which the
 // predicate returns true. If no match is found, find returns -1.
 fn find(xs, pred) {

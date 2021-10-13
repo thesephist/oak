@@ -214,7 +214,8 @@ fn run(t) {
 		'range(start, end, step) with off-step end' |> t.eq(range(2, 10, 3), [2, 5, 8])
 	}
 
-	// array functions -- reverse, map, each, filter, reduce, flatten, some, every, zip, partition
+	// array functions -- reverse, map, each, filter, reduce, flatten, some,
+	// every, zip, partition, uniq
 	{
 		{
 			clone: clone
@@ -229,6 +230,7 @@ fn run(t) {
 			every: every
 			zip: zip
 			partition: partition
+			uniq: uniq
 		} := std
 
 		arr := [1, 2, 3, 4, 10]
@@ -376,6 +378,24 @@ fn run(t) {
 
 		'partition empty list w/ pred' |> t.eq(partition([], even?), [])
 		'partition list w/ pred' |> t.eq(partition([1, 1, 2, 2, 2, 3, 4, 4], even?), [[1, 1], [2, 2, 2], [3], [4, 4]])
+
+		'uniq empty list' |> t.eq(uniq([]), [])
+		'uniq list of 1' |> t.eq(uniq([:a]), [:a])
+		'uniq list of unique numbers' |> t.eq(uniq([1, 2, 4, 8, 10]), [1, 2, 4, 8, 10])
+		'uniq list of non-unique numbers' |> t.eq(uniq([1, 2, 4, 2, 10, 8, 10]), [1, 2, 4, 2, 10, 8, 10])
+		'uniq list of consecutive numbers' |> t.eq(uniq([1, 4, 2, 2, 8, 8, 10]), [1, 4, 2, 8, 10])
+		'uniq list of non-consecutive numbers' |> t.eq(uniq([1, 3, 3, 4, 4, 4, 1, 3]), [1, 3, 4, 1, 3])
+		'uniq list of composite types' |> t.eq(
+			uniq([[1, 2], [2, 4], [1, 2], [1, 2], [1, 3]])
+			[[1, 2], [2, 4], [1, 2], [1, 3]]
+		)
+		'uniq by predicate' |> t.eq(
+			uniq(
+				[{ name: 'Linus' }, { name: 'Jan' }, { name: 'Al' }, { name: 'Al' }, { name: 'Linus' }]
+				fn(o) o.name
+			)
+			[{ name: 'Linus' }, { name: 'Jan' }, { name: 'Al' }, { name: 'Linus' }]
+		)
 	}
 
 	// find, indexOf, and contains?
