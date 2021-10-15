@@ -40,6 +40,16 @@ fn run(t) {
 		[1, 2, 20, 3, -3]
 	)
 
+	// various types
+	'sort numbers' |> t.eq(
+		sort([11, 0, 13, 7, 2, 3, 5])
+		[0, 2, 3, 5, 7, 11, 13]
+	)
+	'sort strings, incl. empty string' |> t.eq(
+		sort(['abc', '', 'xyz', '', 'linus'])
+		['', '', 'abc', 'linus', 'xyz']
+	)
+
 	// with predicates
 	fn o(n) { key: n }
 	fn get(o) o.key
