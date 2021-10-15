@@ -614,8 +614,8 @@ fn analyzeNode(node) {
 					:list -> node.left.elems |> with each() fn(el) if el.type {
 						:identifier -> ctx.decls.(el.val) := true
 					}
-					:object -> node.left.entries |> with each() fn(entry) if entry.key.type {
-						:identifier -> ctx.decls.(entry.key.val) := true
+					:object -> node.left.entries |> with each() fn(entry) if entry.val.type {
+						:identifier -> ctx.decls.(entry.val.val) := true
 					}
 				}
 			}
