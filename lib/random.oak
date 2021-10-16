@@ -13,10 +13,14 @@
 	split: split
 } := import('str')
 
+// boolean returns either true or false with equal probability
 fn boolean rand() > 0.5
 
+// integer returns an integer in the range [min, max) with uniform probability
 fn integer(min, max) number(int(min), int(max)) |> int()
 
+// number returns a floating point number in the range [min, max) with uniform
+// probability
 fn number(min, max) {
 	if max {
 		? -> [min, max] <- [0, min]
@@ -24,4 +28,7 @@ fn number(min, max) {
 	min + rand() * (max - min)
 }
 
+// choice returns an item from the given list, with each item having equal
+// probability of being selected on any given call
+fn choice(list) list.(integer(0, len(list)))
 

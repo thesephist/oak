@@ -2,11 +2,11 @@ std := import('std')
 random := import('random')
 
 fn run(t) {
+	N := 200
+
 	// bool, int, float
 	// int, float take either (max) with default min = 0 or (min, max)
 	{
-		N := 200
-
 		'boolean() returns either true or false' |> t.assert(
 			std.range(N) |> std.map(random.boolean) |>
 				with std.every() fn(x) type(x) = :bool
@@ -44,6 +44,21 @@ fn run(t) {
 		'all number() are in range of (min, max), min < 0' |> t.assert(
 			std.range(N) |> std.map(fn() random.number(-0.5, 0.5)) |>
 				with std.every() fn(i) i >= -0.5 & i < 0.5
+		)
+	}
+
+	// random choice
+	{
+		choice := random.choice
+
+		'choice empty list = ?' |> t.eq(choice([]), ?)
+		'choice list of 1' |> t.assert(
+			std.range(N) |> std.map(fn() choice([:abc])) |>
+				with std.every() fn(x) x = :abc
+		)
+		'choice list of many' |> t.assert(
+			std.range(N) |> std.map(fn() choice([1, 10, 100])) |>
+				with std.every() fn(x) x = 1 | x = 10 | x = 100
 		)
 	}
 }

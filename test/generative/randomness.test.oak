@@ -64,6 +64,15 @@ fn printPcts(counts) {
 }
 
 {
+	println('# choice([:a, :b, :b])')
+	choices := range(N) |> map(fn() random.choice([:a, :b, :b]))
+	[
+		choices |> filter(fn(x) x = :a)
+		choices |> filter(fn(x) x = :b)
+	] |> printPcts()
+}
+
+{
 	println('# srand(N)')
 	// not using N because N may be too large to generate N bytes of securely
 	// random data
