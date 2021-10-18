@@ -318,6 +318,23 @@ func TestBinaryExprWithinComplexTermsWithinBinaryExpr(t *testing.T) {
 	`, IntValue(16))
 }
 
+func TestStringCompare(t *testing.T) {
+	expectProgramToReturn(t, `
+	[
+		// empty string
+		'long string' > ''
+		// length comparison
+		'hi' < 'hiworld'
+		// lexicographical
+		'heels' < 'hi'
+		// space
+		'abc' > ' abc'
+		// equality
+		'abc' = 'abc'
+	]
+	`, MakeList(oakTrue, oakTrue, oakTrue, oakTrue, oakTrue))
+}
+
 func TestAndOperator(t *testing.T) {
 	expectProgramToReturn(t, `
 	[
