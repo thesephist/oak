@@ -472,14 +472,10 @@ func (c *Context) Eval(programReader io.Reader) (Value, error) {
 
 func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Value, *runtimeError) {
 	if fn, ok := maybeFn.(FnValue); ok {
-		if len(args) < len(fn.defn.args) {
-			// if not enough arguments, fill them with nulls
-			difference := len(fn.defn.args) - len(args)
-			extraArgs := make([]Value, difference)
-			for i := 0; i < difference; i++ {
-				extraArgs[i] = null
-			}
-			args = append(args, extraArgs...)
+		// if not enough arguments, fill them with nulls
+		difference := len(fn.defn.args) - len(args)
+		for i := 0; i < difference; i++ {
+			args = append(args, null)
 		}
 
 		fnScope := scope{
@@ -499,7 +495,6 @@ func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Val
 			} else {
 				restList = ListValue{}
 			}
-
 			fnScope.put(fn.defn.restArg, &restList)
 		}
 
@@ -514,10 +509,10 @@ func (c *Context) EvalFnValue(maybeFn Value, thunkable bool, args ...Value) (Val
 		return c.unwrapThunk(thunk)
 	} else if fn, ok := maybeFn.(BuiltinFnValue); ok {
 		return fn.fn(args)
-	} else {
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
-		}
+	}
+
+	return nil, &runtimeError{
+		reason: fmt.Sprintf("%s is not a function and cannot be called", maybeFn),
 	}
 }
 
