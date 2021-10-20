@@ -117,12 +117,17 @@ fn Tokenizer(source) {
 		sub('')
 	}
 	fn readValidNumeral {
+		sawDot? := false
 		fn sub(acc) if eof?() {
 			true -> acc
 			_ -> {
 				c := next()
-				if digit?(c) | c = '.' {
-					true -> sub(acc << c)
+				if {
+					digit?(c) -> sub(acc << c)
+					c = '.' & !sawDot? -> {
+						sawDot? <- true
+						sub(acc << c)
+					}
 					_ -> {
 						back()
 						acc

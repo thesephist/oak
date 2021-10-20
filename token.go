@@ -177,7 +177,6 @@ func (t token) String() string {
 	}
 }
 
-// TODO: refactor with io.RuneReader
 func newTokenizer(sourceString string) tokenizer {
 	return tokenizer{
 		source:   []rune(sourceString),
@@ -270,6 +269,7 @@ func (t *tokenizer) readValidIdentifier() string {
 }
 
 func (t *tokenizer) readValidNumeral() string {
+	sawDot := false
 	accumulator := []rune{}
 	for {
 		if t.isEOF() {
@@ -277,8 +277,10 @@ func (t *tokenizer) readValidNumeral() string {
 		}
 
 		c := t.next()
-		// TODO: make more robust, so 2.3.4 can't break it
-		if unicode.IsDigit(c) || c == '.' {
+		if unicode.IsDigit(c) {
+			accumulator = append(accumulator, c)
+		} else if c == '.' && !sawDot {
+			sawDot = true
 			accumulator = append(accumulator, c)
 		} else {
 			t.back()

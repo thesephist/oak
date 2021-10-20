@@ -342,6 +342,25 @@ fn run(t) {
 			]
 		)
 
+		'number with two decimals' |> t.eq(
+			parse('2.3.4.5.6')
+			[{
+				type: :propertyAccess
+				tok: at(1, 8)
+				left: {
+					type: :propertyAccess
+					tok: at(1, 4)
+					left: { type: :float, val: 2.3, tok: at(1, 1) }
+					right: { type: :float, val: 4.5, tok: at(1, 5) }
+				}
+				right: {
+					type: :int
+					tok: at(1, 9)
+					val: 6
+				}
+			}]
+		)
+
 		'string literals' |> t.eq(
 			parse('\'hello\', \'hi\', \'what\\\'s up\\n\\t\' ')
 			[
