@@ -659,7 +659,7 @@ fn renderOakBundle(bundleNode) {
 		// NOTE: though not unexpected, it's worth noting that this is the only
 		// instance in codegen where the generated code depends on token
 		// information rather than AST node information.
-		:number -> node.tok.val
+		:int, :float -> node.tok.val
 		:bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> ':' << node.val
@@ -747,7 +747,7 @@ fn renderJSBundle(bundleNode) {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
 				if k.type {
-					:identifier, :empty, :number -> renderNode(k)
+					:identifier, :empty, :int, :float -> renderNode(k)
 					_ -> '[' << renderNode(k) << ']'
 				} << ':' << renderAssignTarget(v) << '=null'
 			}) |> join(',')
@@ -758,7 +758,7 @@ fn renderJSBundle(bundleNode) {
 		:null -> 'null'
 		:empty -> '__Oak_Empty'
 		:string -> '__Oak_String(`' + (node.val |> replace('\\', '\\\\') |> replace('`', '\\`')) + '`)'
-		:number, :bool -> string(node.val)
+		:int, :float, :bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> 'Symbol.for(\'' << node.val << '\')'
 		:list -> '[' << (node.elems |> map(renderNode) |> join(',')) << ']'
@@ -766,7 +766,7 @@ fn renderJSBundle(bundleNode) {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
 				if k.type {
-					:identifier, :empty, :number -> renderNode(k)
+					:identifier, :empty, :int, :float -> renderNode(k)
 					_ -> '[' << renderNode(k) << ']'
 				} << ':' << renderNode(v)
 			}) |> join(',')

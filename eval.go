@@ -624,11 +624,10 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 		return null, nil
 	case stringNode:
 		return MakeString(n.payload), nil
-	case numberNode:
-		if n.isInteger {
-			return IntValue(n.intPayload), nil
-		}
-		return FloatValue(n.floatPayload), nil
+	case intNode:
+		return IntValue(n.payload), nil
+	case floatNode:
+		return FloatValue(n.payload), nil
 	case boolNode:
 		return BoolValue(n.payload), nil
 	case atomNode:

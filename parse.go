@@ -45,20 +45,27 @@ func (n stringNode) pos() pos {
 	return n.tok.pos
 }
 
-type numberNode struct {
-	isInteger    bool
-	intPayload   int64
-	floatPayload float64
-	tok          *token
+type intNode struct {
+	payload int64
+	tok     *token
 }
 
-func (n numberNode) String() string {
-	if n.isInteger {
-		return strconv.FormatInt(n.intPayload, 10)
-	}
-	return strconv.FormatFloat(n.floatPayload, 'g', -1, 64)
+func (n intNode) String() string {
+	return strconv.FormatInt(n.payload, 10)
 }
-func (n numberNode) pos() pos {
+func (n intNode) pos() pos {
+	return n.tok.pos
+}
+
+type floatNode struct {
+	payload float64
+	tok     *token
+}
+
+func (n floatNode) String() string {
+	return strconv.FormatFloat(n.payload, 'g', -1, 64)
+}
+func (n floatNode) pos() pos {
 	return n.tok.pos
 }
 
@@ -131,7 +138,7 @@ func (n objectNode) pos() pos {
 }
 
 type fnNode struct {
-	name    string // "" for anonymous fns
+	name    string
 	args    []string
 	restArg string
 	body    astNode
@@ -430,20 +437,18 @@ func (p *parser) parseUnit() (astNode, error) {
 			if err != nil {
 				return nil, parseError{reason: err.Error(), pos: tok.pos}
 			}
-			return numberNode{
-				isInteger:    false,
-				floatPayload: f,
-				tok:          &tok,
+			return floatNode{
+				payload: f,
+				tok:     &tok,
 			}, nil
 		}
 		n, err := strconv.ParseInt(tok.payload, 10, 64)
 		if err != nil {
 			return nil, parseError{reason: err.Error(), pos: tok.pos}
 		}
-		return numberNode{
-			isInteger:  true,
-			intPayload: n,
-			tok:        &tok,
+		return intNode{
+			payload: n,
+			tok:     &tok,
 		}, nil
 	case trueLiteral:
 		return boolNode{payload: true, tok: &tok}, nil

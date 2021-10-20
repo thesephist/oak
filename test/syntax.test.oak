@@ -336,9 +336,9 @@ fn run(t) {
 		'number literals' |> t.eq(
 			parse('12, 24.5, 0')
 			[
-				{ type: :number, int?: true, val: 12, tok: at(1, 1) }
-				{ type: :number, int?: false, val: 24.5, tok: at(1, 5) }
-				{ type: :number, int?: true, val: 0, tok: at(1, 11) }
+				{ type: :int, val: 12, tok: at(1, 1) }
+				{ type: :float, val: 24.5, tok: at(1, 5) }
+				{ type: :int, val: 0, tok: at(1, 11) }
 			]
 		)
 
@@ -366,8 +366,8 @@ fn run(t) {
 			[{
 				type: :binary
 				op: :plus
-				left: { type: :number, val: 10, int?: true, tok: at(1, 1) }
-				right: { type: :number, val: 20, int?: true, tok: at(1, 6) }
+				left: { type: :int, val: 10, tok: at(1, 1) }
+				right: { type: :int, val: 20, tok: at(1, 6) }
 				tok: at(1, 4)
 			}]
 		)
@@ -399,9 +399,8 @@ fn run(t) {
 						tok: at(1, 12)
 						op: :plus
 						left: {
-							type: :number
+							type: :int
 							tok: at(1, 10)
-							int?: true
 							val: 1
 						}
 						right: {
@@ -409,23 +408,20 @@ fn run(t) {
 							tok: at(1, 16)
 							op: :times
 							left: {
-								type: :number
+								type: :int
 								tok: at(1, 14)
-								int?: true
 								val: 2
 							}
 							right: {
-								type: :number
+								type: :int
 								tok: at(1, 18)
-								int?: true
 								val: 3
 							}
 						}
 					}
 					right: {
-						type: :number
+						type: :int
 						tok: at(1, 22)
-						int?: true
 						val: 4
 					}
 				}
@@ -442,22 +438,19 @@ fn run(t) {
 				type: :list
 				tok: at(1, 5)
 				elems: [{
-					type: :number
+					type: :int
 					tok: at(1, 6)
-					int?: true
 					val: 1
 				}, {
 					type: :list
 					tok: at(1, 9)
 					elems: [{
-						type: :number
+						type: :int
 						tok: at(1, 10)
-						int?: true
 						val: 2
 					}, {
-						type: :number
+						type: :int
 						tok: at(1, 13)
-						int?: true
 						val: 3
 					}]
 				}]
@@ -539,11 +532,10 @@ fn run(t) {
 						tok: at(1, 13)
 						local?: true
 						left: { type: :identifier, tok: at(1, 11), val: 'x' }
-						right: { type: :number, tok: at(1, 16), int?: true, val: 4 }
+						right: { type: :int, tok: at(1, 16), val: 4 }
 					}, {
-						type: :number
+						type: :int
 						tok: at(1, 19)
-						int?: true
 						val: 3
 					}]
 				}
@@ -556,14 +548,12 @@ fn run(t) {
 					val: 'get3'
 				}
 				args: [{
-					type: :number
+					type: :int
 					tok: at(2, 6)
-					int?: true
 					val: 1
 				}, {
-					type: :number
+					type: :int
 					tok: at(2, 9)
-					int?: true
 					val: 2
 				}]
 				restArg: {
@@ -584,15 +574,13 @@ fn run(t) {
 					tok: at(1, 6)
 					op: :plus
 					left: {
-						type: :number
+						type: :int
 						tok: at(1, 4)
-						int?: true
 						val: 1
 					}
 					right: {
-						type: :number
+						type: :int
 						tok: at(1, 8)
-						int?: true
 						val: 2
 					}
 				}
@@ -604,22 +592,19 @@ fn run(t) {
 							tok: at(2, 7)
 							op: :plus
 							left: {
-								type: :number
+								type: :int
 								tok: at(2, 5)
-								int?: true
 								val: 3
 							}
 							right: {
-								type: :number
+								type: :int
 								tok: at(2, 9)
-								int?: true
 								val: 4
 							}
 						}
 						body: {
-							type: :number
+							type: :int
 							tok: at(2, 14)
-							int?: true
 							val: 5
 						}
 					}
@@ -637,9 +622,8 @@ fn run(t) {
 							restArg: ?
 						}
 						body: {
-							type: :number
+							type: :int
 							tok: at(3, 17)
-							int?: true
 							val: 10
 						}
 					}
@@ -657,9 +641,8 @@ fn run(t) {
 							restArg: ?
 						}
 						body: {
-							type: :number
+							type: :int
 							tok: at(3, 17)
-							int?: true
 							val: 10
 						}
 					}
@@ -695,9 +678,8 @@ fn run(t) {
 						tok: at(2, 5)
 					}
 					body: {
-						type: :number
+						type: :int
 						tok: at(2, 10)
-						int?: true
 						val: 3
 					}
 				}]
@@ -735,9 +717,9 @@ fn run(t) {
 				tok: at(1, 7)
 				function: { type: :identifier, tok: at(1, 6), val: 'f' }
 				args: [
-					{ type: :number, tok: at(1, 8), int?: true, val: 1 }
-					{ type: :number, tok: at(1, 11), int?: true, val: 2 }
-					{ type: :number, tok: at(1, 14), int?: true, val: 100 }
+					{ type: :int, tok: at(1, 8), val: 1 }
+					{ type: :int, tok: at(1, 11), val: 2 }
+					{ type: :int, tok: at(1, 14), val: 100 }
 				]
 				restArg: ?
 			}]
@@ -763,14 +745,13 @@ fn run(t) {
 							val: 'double'
 						}
 						args: [{
-							type: :number
+							type: :int
 							tok: at(1, 1)
-							int?: true
 							val: 3
 						}]
 						restArg: ?
 					}
-					{ type: :number, tok: at(1, 29), int?: true, val: 10 }
+					{ type: :int, tok: at(1, 29), val: 10 }
 				]
 				restArg: ?
 			}]

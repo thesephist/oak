@@ -476,18 +476,16 @@ fn Parser(tokens) {
 				true -> if parsed := float(tok.val) {
 					? -> error(format('Could not parse floating point number {{0}}', tok.val), tok.pos)
 					_ -> {
-						type: :number
+						type: :float
 						tok: tok
-						int?: false
 						val: parsed
 					}
 				}
 				_ -> if parsed := int(tok.val) {
 					? -> error(format('Could not parse integer number {{0}}', tok.val), tok.pos)
 					_ -> {
-						type: :number
+						type: :int
 						tok: tok
-						int?: true
 						val: parsed
 					}
 				}
