@@ -799,7 +799,10 @@ fn renderJSBundle(bundleNode) {
 		}
 		:assignment -> if node.left.type {
 			:propertyAccess -> if node.right.type {
-				:empty -> 'delete ' << renderAssignTarget(node.left)
+				:empty -> '(delete {{0}}, {{1}})' |> format(
+					renderAssignTarget(node.left)
+					renderNode(node.left.left)
+				)
 				_ -> {
 					tmpDfn := clone(node.left)
 					tmpDfn.left := {
