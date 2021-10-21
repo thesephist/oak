@@ -49,19 +49,20 @@ _hToN := {
 	7: 7
 	8: 8
 	9: 9
-	a: 10
-	b: 11
-	c: 12
-	d: 13
-	e: 14
-	f: 15
+	a: 10, A: 10
+	b: 11, B: 11
+	c: 12, C: 12
+	d: 13, D: 13
+	e: 14, E: 14
+	f: 15, F: 15
 }
 // fromHex takes a hexadecimal representation of a number and parses it out to
-// an integer. It fails if the input string is not a valid hexadecimal number.
+// an integer. It returns ? if the input is not a valid hexadecimal number.
 fn fromHex(s) {
-	fn sub(i, acc) if i {
-		len(s) -> acc
-		_ -> sub(i + 1, acc * 16 + _hToN.(s.(i)))
+	fn sub(i, acc) if {
+		i = len(s) -> acc
+		? != next := _hToN.(s.(i)) -> sub(i + 1, acc * 16 + next)
+		_ -> ?
 	}
 	sub(0, 0)
 }
