@@ -204,8 +204,8 @@ func (t *tokenizer) peek() rune {
 }
 
 func (t *tokenizer) peekAhead(n int) rune {
-	if t.index+n > len(t.source) {
-		// In Oak, whitespace is insingificant, so we return it as the "nothing
+	if t.index+n >= len(t.source) {
+		// In Oak, whitespace is insignificant, so we return it as the "nothing
 		// is here" value.
 		return ' '
 	}
@@ -390,7 +390,6 @@ func (t *tokenizer) nextToken() token {
 	case '=':
 		return token{kind: eq, pos: t.currentPos()}
 	case '\'':
-		// TODO: support unicode escape sequences, like '\x10' = '\n' = char(10)
 		pos := t.currentPos()
 		payloadBuilder := strings.Builder{}
 		for !t.isEOF() && t.peek() != '\'' {
@@ -406,6 +405,15 @@ func (t *tokenizer) nextToken() token {
 					charInString = '\f'
 				case 't':
 					charInString = '\t'
+				case 'x':
+					charHexCode, err := strconv.ParseUint(string(t.peek())+string(t.peekAhead(1)), 16, 8)
+					if err == nil {
+						t.next() // 1st hex char
+						t.next() // 2nd hex char
+						charInString = rune(charHexCode)
+					} else {
+						charInString = 'x'
+					}
 				}
 			}
 			payloadBuilder.WriteRune(charInString)

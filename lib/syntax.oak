@@ -2,6 +2,7 @@
 
 {
 	default: default
+	fromHex: fromHex
 	range: range
 	slice: slice
 	append: append
@@ -64,7 +65,7 @@ fn Tokenizer(source) {
 	fn pos [line, col]
 	fn eof? index = len(source)
 	fn peek source.(index)
-	fn peekAhead(n) if index + n > len(source) {
+	fn peekAhead(n) if index + n >= len(source) {
 		true -> ' '
 		_ -> source.(index + n)
 	}
@@ -233,7 +234,6 @@ fn Tokenizer(source) {
 		}
 		'=' -> Token(:eq)
 		'\'' -> {
-			// TODO: support literal newlines, with extra tabs collapsed to newlines
 			pos := [line, col]
 			fn sub(payload) if charInString := next() {
 				? -> payload
@@ -470,6 +470,16 @@ fn Parser(tokens) {
 							'n' -> sub(parsed << '\n', i + 2)
 							'r' -> sub(parsed << '\r', i + 2)
 							'f' -> sub(parsed << '\f', i + 2)
+							'x' -> if c1 := verbatim.(i + 2) {
+								? -> sub(parsed << escapedChar, i + 2)
+								_ -> if c2 := verbatim.(i + 3) {
+									? -> sub(parsed << escapedChar << c1, i + 3)
+									_ -> if code := fromHex(c1 + c2) {
+										? -> sub(parsed << escapedChar << c1 << c2, i + 4)
+										_ -> sub(parsed << char(code), i + 4)
+									}
+								}
+							}
 							_ -> sub(parsed << escapedChar, i + 2)
 						}
 						_ -> sub(parsed << c, i + 1)

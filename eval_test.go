@@ -54,6 +54,14 @@ func TestStringLiteral(t *testing.T) {
 	expectProgramToReturn(t, "'Hello, World!\\n'", MakeString("Hello, World!\n"))
 }
 
+func TestHexStringLiteral(t *testing.T) {
+	expectProgramToReturn(t, "'a\\x!'", MakeString("ax!"))
+	expectProgramToReturn(t, "'a\\x1!'", MakeString("ax1!"))
+	expectProgramToReturn(t, "'a\\x0a!'", MakeString("a\n!"))
+	expectProgramToReturn(t, "'a\\x0A!'", MakeString("a\n!"))
+	expectProgramToReturn(t, "'a\\x1z!'", MakeString("ax1z!"))
+}
+
 func TestIntegerLiteral(t *testing.T) {
 	expectProgramToReturn(t, "64710", IntValue(64710))
 }
