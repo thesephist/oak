@@ -869,7 +869,7 @@ fn renderJSBundle(bundleNode) {
 			} << ')'
 			decls := node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
 			if node.name {
-				'' -> 'function' << args << '{' << decls << 'return ' << renderNode(node.body) << '}'
+				'' -> 'function _' << args << '{' << decls << 'return ' << renderNode(node.body) << '}'
 				// use function keyword for named functions, for legible stack traces
 				_ -> formatIdent(node.name) <<
 					'=function ' <<
