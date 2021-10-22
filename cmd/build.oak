@@ -549,7 +549,6 @@ fn analyzeNode(node) {
 				_ -> ctx.decls.(node.name) := true
 			}
 
-			node.decls := fnCtx.decls |> keys() |> with filter() fn(decl) fnCtx.args.(decl) = ?
 			node
 		}
 		:ifExpr -> {
