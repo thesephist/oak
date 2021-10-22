@@ -15,6 +15,15 @@ fn run(t) {
 			['ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
 		)
 
+		'list stringify' |> t.eq(
+			[
+				string(:atomValue)
+				string(3)
+				string(2.51)
+			]
+			['atomValue', '3', '2.51']
+		)
+
 		'function def with empty' |> t.eq(
 			{
 				fn getThird(_, _, third) third
@@ -31,6 +40,33 @@ fn run(t) {
 				x
 			}
 			3
+		)
+
+		'block creates scope' |> t.eq(
+			{
+				x := 3
+				{ x := 10 }
+				x
+			}
+			3
+		)
+
+		'empty function body' |> t.eq(
+			{
+				fn do {
+					a: :bee
+				}
+				do()
+			}
+			{ a: :bee }
+		)
+
+		'object literal function body' |> t.eq(
+			{
+				fn do {}
+				do()
+			}
+			?
 		)
 
 		'destructure list' |> t.eq(
@@ -52,6 +88,24 @@ fn run(t) {
 				[a, b, see]
 			}
 			['ay', 'bee', ?]
+		)
+
+		'destructure to reassign list' |> t.eq(
+			{
+				v := [:aa, :bbb]
+				[v, w] := v
+				v
+			}
+			:aa
+		)
+
+		'destructure to reassign object' |> t.eq(
+			{
+				a := { a: :aa, b: :bbb }
+				{ a: a } := a
+				a
+			}
+			:aa
 		)
 
 		'undescore var names' |> t.eq(
@@ -93,6 +147,15 @@ fn run(t) {
 				arr << x := 100
 			}
 			[2, 4, 10, 20, 100]
+		)
+
+		'binary expr with complex terms' |> t.eq(
+			{
+				fn double(n) 2 * n
+				fn decrement(n) n - 1
+				double(10) + if decrement(10) { 9 -> 2, _ -> 1 } + 8
+			}
+			30
 		)
 
 		'and operator' |> t.eq(
@@ -146,6 +209,39 @@ fn run(t) {
 			]
 		)
 
+		'if expr with multi target' |> t.eq(
+			[11, 12, 13] |> with std.map() fn(i) if i {
+				10 -> :wrong
+				11, 5 + 7, { 10 + 3 } -> :right
+				_ -> :wrong2
+			}
+			[:right, :right, :right]
+		)
+
+		'nested if expr' |> t.eq(
+			if 3 {
+				10, if true {
+					true -> 10
+					_ -> 3
+				} -> 'hi'
+				100, 3 -> 'hello'
+			}
+			'hello'
+		)
+
+		'complex if expr target' |> t.eq(
+			{
+				fn double(n) 2 * n
+				fn xyz(n) if n {
+					1 + 2 -> :abc
+					2 * double(3) -> :xyz
+					_ -> false
+				}
+				[xyz(3), xyz(12), xyz(24)]
+			}
+			[:abc, :xyz, false]
+		)
+
 		'recursive function on list' |> t.eq(
 			{
 				fn each(list, f) {
@@ -168,7 +264,6 @@ fn run(t) {
 			}
 			15
 		)
-
 
 		'string access' |> t.eq(
 			{
