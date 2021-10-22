@@ -869,6 +869,10 @@ fn renderJSBundle(bundleNode) {
 			} << ')'
 			decls := node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
 			if node.name {
+				// we don't use a completely anonymous function expression
+				// (instead naming this _) because in Oak, anonymous functions
+				// can appear anywhere; but in JavaScript, function expressions
+				// cannot appear in a statement position.
 				'' -> 'function _' << args << '{' << decls << 'return ' << renderNode(node.body) << '}'
 				// use function keyword for named functions, for legible stack traces
 				_ -> formatIdent(node.name) <<
