@@ -55,6 +55,7 @@ func TestStringLiteral(t *testing.T) {
 }
 
 func TestHexStringLiteral(t *testing.T) {
+	expectProgramToReturn(t, "'\\x'", MakeString("x")) // check for runtime overflow / underflow
 	expectProgramToReturn(t, "'a\\x!'", MakeString("ax!"))
 	expectProgramToReturn(t, "'a\\x1!'", MakeString("ax1!"))
 	expectProgramToReturn(t, "'a\\x0a!'", MakeString("a\n!"))

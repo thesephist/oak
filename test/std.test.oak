@@ -11,8 +11,8 @@ fn run(t) {
 	// when built with `oak build --web`.
 	{
 		'\\x??-escaped strings' |> t.eq(
-			['a\x!', 'a\x1!', 'a\x0a!', 'a\x0A!', 'a\x1z!']
-			['ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
+			['\x', 'a\x!', 'a\x1!', 'a\x0a!', 'a\x0A!', 'a\x1z!']
+			['x', 'ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
 		)
 
 		'list stringify' |> t.eq(
