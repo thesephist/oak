@@ -187,8 +187,8 @@ fn run(t) {
 				s := {
 					payload: 'Magnolia'
 				}
-				u := s.payload
-				[s.payload.3 := 'pie', u]
+				t := s.payload
+				[s.payload.3 := 'pie', t]
 			}
 			['Magpieia', 'Magpieia']
 		)

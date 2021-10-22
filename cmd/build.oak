@@ -446,13 +446,14 @@ fn wrapBundle(modules, entryModuleName) {
 fn analyzeNode(node) {
 	fn analyzeSubexpr(node, ctx, tail?) if node.type {
 		:block -> {
-			ctx := clone(ctx)
+			blCtx := clone(ctx)
 
-			ctx.decls := {}
-			node.exprs := node.exprs |> map(fn(n, i) analyzeSubexpr(n, ctx, i + 1 = len(node.exprs)))
+			blCtx.decls := {}
+			blCtx.args := {}
+			node.exprs := node.exprs |> map(fn(n, i) analyzeSubexpr(n, blCtx, i + 1 = len(node.exprs)))
 
 			// do not re-declare function parameters
-			node.decls := ctx.decls |> keys() |> with filter() fn(decl) ctx.args.(decl) = ?
+			node.decls := blCtx.decls |> keys() |> with filter() fn(decl) ctx.args.(decl) = ?
 			node
 		}
 		:function -> {
