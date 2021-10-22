@@ -2,6 +2,236 @@ std := import('std')
 fmt := import('fmt')
 
 fn run(t) {
+	// core language behavior tests
+	//
+	// For the native Oak interpreter, these test cases are included in the Go
+	// test suite, in eval_test.go. However, they are included here for (1)
+	// completeness's sake when this test is run by itself, and (2) more
+	// importantly, so that we get coverage for the more fragile of these tests
+	// when built with `oak build --web`.
+	{
+		'\\x??-escaped strings' |> t.eq(
+			['a\x!', 'a\x1!', 'a\x0a!', 'a\x0A!', 'a\x1z!']
+			['ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
+		)
+
+		'function def with empty' |> t.eq(
+			{
+				fn getThird(_, _, third) third
+				getThird(1, 2, 3)
+			}
+			3
+		)
+
+		'function creates scope' |> t.eq(
+			{
+				x := 3
+				fn defineX x := 10
+				defineX()
+				x
+			}
+			3
+		)
+
+		'destructure list' |> t.eq(
+			{
+				list := [1, 2, 3]
+				[a] := list
+				[_, _, b, c] := list
+				[a, b, c]
+			}
+			[1, 3, ?]
+		)
+
+		'destructure object' |> t.eq(
+			{
+				list := [1, 2, 3]
+				obj := { a: 'ay', b: 'bee' }
+				{ a: a } := obj
+				{ b: b, c: see } := obj
+				[a, b, see]
+			}
+			['ay', 'bee', ?]
+		)
+
+		'undescore var names' |> t.eq(
+			{
+				_a := 'A'
+				b_ := 'B'
+				c_d := 'CD'
+				_a + b_ + c_d
+			}
+			'ABCD'
+		)
+
+		'nonlocal assignment' |> t.eq(
+			{
+				x := 100
+				y := 200
+				fn do {
+					x <- x + 100
+					y := y + 100
+				}
+				do()
+				x + y
+			}
+			400
+		)
+
+		'push to string' |> t.eq(
+			{
+				s := 'hi'
+				[s << 'world', s]
+			}
+			['hiworld', 'hiworld']
+		)
+
+		'push arrow precedence' |> t.eq(
+			{
+				arr := [2] << 1 + 3
+				arr << 10 << 20
+				arr << x := 100
+			}
+			[2, 4, 10, 20, 100]
+		)
+
+		'and operator' |> t.eq(
+			[
+				true & true
+				true & false
+				false & true
+				false & false
+				'abcd' & '    '
+				'    ' & 'wxyz'
+				'abcdef' & '   '
+				'   ' & 'abcdef'
+			]
+			[
+				true, false, false, false
+				'    ', '    ', '   \x00\x00\x00', '   \x00\x00\x00'
+			]
+		)
+
+		'xor operator' |> t.eq(
+			[
+				true ^ true
+				true ^ false
+				false ^ true
+				false ^ false
+				'ABCD' ^ '    '
+				'    ' ^ 'WXYZ'
+				'ABCDEF' ^ '   '
+				'   ' ^ 'ABCDEF'
+			]
+			[
+				false, true, true, false
+				'abcd', 'wxyz', 'abcDEF', 'abcDEF'
+			]
+		)
+
+		'or operator' |> t.eq(
+			[
+				true | true
+				true | false
+				false | true
+				false | false
+				'ABCD' | '    '
+				'    ' | 'WXYZ'
+				'ABCDEF' | '   '
+				'   ' | 'ABCDEF'
+			]
+			[
+				true, true, true, false
+				'abcd', 'wxyz', 'abcDEF', 'abcDEF'
+			]
+		)
+
+		'recursive function on list' |> t.eq(
+			{
+				fn each(list, f) {
+					fn sub(i) if i {
+						len(list) -> ?
+						_ -> {
+							f(list.(i))
+							sub(i + 1)
+						}
+					}
+					sub(0)
+				}
+
+				sum := 0
+				list := [1, 2, 3, 4, 5]
+				with each(list) fn(it) {
+					sum <- sum + it
+				}
+				sum
+			}
+			15
+		)
+
+
+		'string access' |> t.eq(
+			{
+				s := 'Hello, World!'
+				[
+					s.0 + s.2
+					s.- 2
+					s.15
+				]
+			}
+			['Hl', ?, ?]
+		)
+
+		'string assign' |> t.eq(
+			{
+				s := {
+					payload: 'Magnolia'
+				}
+				u := s.payload
+				[s.payload.3 := 'pie', u]
+			}
+			['Magpieia', 'Magpieia']
+		)
+
+		'object delete' |> t.eq(
+			{
+				obj := {
+					a: 'ay'
+					b: 'bee'
+					c: {
+						d: 'dee'
+						e: 'ee'
+					}
+				}
+				[
+					obj.c.d := _
+					obj.c
+				]
+			}
+			[{ e: 'ee' }, { e: 'ee' }]
+		)
+
+		'extra args' |> t.eq(
+			{
+				fn getExtra(a, b, c) {
+					[b, c]
+				}
+				getExtra(1, ?)
+			}
+			[?, ?]
+		)
+
+		'rest args' |> t.eq(
+			{
+				fn getRest(first, rest...) {
+					rest
+				}
+				getRest(1, 2, 3, 4, 5)
+			}
+			[2, 3, 4, 5]
+		)
+	}
+
 	// default
 	{
 		default := std.default
