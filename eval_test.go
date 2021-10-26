@@ -88,11 +88,11 @@ func TestListLiteral(t *testing.T) {
 }
 
 func TestObjectLiteral(t *testing.T) {
-	expectProgramToReturn(t, `{a: 'ay', b: 200, c: {d: 'dee'}}`, ObjectValue{
+	expectProgramToReturn(t, `{a: 'ay', 'b': 200, 100: {d: :dee}}`, ObjectValue{
 		"a": MakeString("ay"),
 		"b": IntValue(200),
-		"c": ObjectValue{
-			"d": MakeString("dee"),
+		"100": ObjectValue{
+			"d": AtomValue("dee"),
 		},
 	})
 }

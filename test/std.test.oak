@@ -15,6 +15,11 @@ fn run(t) {
 			['x', 'ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
 		)
 
+		'object literal' |> t.eq(
+			{ a: 'ay', 'b': 200, 100: { d: :dee } }
+			{ 'a': 'ay', 'b': 200, '100': { d: :dee } }
+		)
+
 		'list stringify' |> t.eq(
 			[
 				string(:atomValue)
@@ -22,6 +27,14 @@ fn run(t) {
 				string(2.51)
 			]
 			['atomValue', '3', '2.51']
+		)
+
+		'function def and call' |> t.eq(
+			{
+				fn getThree() { x := 4, 3 }
+				getThree()
+			}
+			3
 		)
 
 		'function def with empty' |> t.eq(
