@@ -1003,6 +1003,7 @@ function __oak_eq(a, b) {
 	return true;
 }
 function __oak_push(a, b) {
+	a = __as_oak_string(a);
 	a.push(b);
 	return a;
 }
