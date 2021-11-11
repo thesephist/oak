@@ -86,7 +86,9 @@ fn clean(path) {
 
 // join joins multiple paths together into a single valid cleaned path
 fn join(parts...) parts |> reduce('', fn(base, path) if base {
-	'' -> path
+	// if we simply return `path`, path will be used as `base` next iteration
+	// which might mutate `path`.
+	'' -> '' << path
 	_ -> base << '/' << path
 }) |> clean()
 
