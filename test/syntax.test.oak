@@ -882,6 +882,10 @@ fn run(t) {
 			print('[1, 2, 3\n4, 5, 6]')
 			'[1, 2, 3\n\t4, 5, 6]'
 		)
+		'hanging indent inside delimited list after comment' |> t.eq(
+			print('[1, 2, 3\/\/ three more\n4, 5, 6]')
+			'[1, 2, 3 \/\/ three more\n\t4, 5, 6]'
+		)
 		'hanging indent inside delimited list inside parens' |> t.eq(
 			print('(\n[1, 2, 3\n4, 5, 6]\n)')
 			'(\n\t[1, 2, 3\n\t\t4, 5, 6]\n)'
@@ -889,6 +893,26 @@ fn run(t) {
 		'hanging indent inside binary expr' |> t.eq(
 			print('total := a + \nb+c')
 			'total := a +\n\tb + c'
+		)
+		'hanging indent after pipe arrow' |> t.eq(
+			print('result := graph|>\nsearch()  |>\nsort!()')
+			'result := graph |>\n\tsearch() |>\n\tsort!()'
+		)
+		'hanging indent inside binary expr with comment' |> t.eq(
+			print('total := a +\/\/ add\nb+c')
+			'total := a + \/\/ add\n\tb + c'
+		)
+		'hanging indent after pipe arrow with comment' |> t.eq(
+			print('result := graph|>\nsearch()  |>\/\/ tf-idf\nsort!()')
+			'result := graph |>\n\tsearch() |> \/\/ tf-idf\n\tsort!()'
+		)
+		'hanging indent inside binary expr with multiline comment' |> t.eq(
+			print('total := a + \n\/\/ adding b, c\nb+c')
+			'total := a +\n\t\/\/ adding b, c\n\tb + c'
+		)
+		'hanging indent after pipe arrow with multiline comment' |> t.eq(
+			print('result := graph|>\n\/\/ search\n\/\/ docs\nsearch()  |>\nsort!()')
+			'result := graph |>\n\t\/\/ search\n\t\/\/ docs\n\tsearch() |>\n\tsort!()'
 		)
 		'multiline hanging indent in delimited list' |> t.eq(
 			print('[ 1,2,3\n4, 5,6\n7, 8, 9 \n10 ]')

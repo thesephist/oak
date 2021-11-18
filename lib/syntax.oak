@@ -26,6 +26,7 @@
 } := import('str')
 {
 	min: min
+	max: max
 } := import('math')
 {
 	format: format
@@ -1054,7 +1055,7 @@ fn Printer(tokens) {
 		_ -> ''
 	}
 
-	// a single tone -> its printed value
+	// a single token -> its printed value
 	fn render(token) if token.type {
 		:comment -> '//' + token.val
 		:comma -> ','
@@ -1242,9 +1243,40 @@ fn Printer(tokens) {
 		// as a result: a token is only responsible for adding a space before
 		// it, not after it
 		tokens |> with each() fn(token, i) {
-			llastType := default(tokens.(i - 2), { type: :newline }).type
-			lastType := default(tokens.(i - 1), { type: :newline }).type
 			nextType := default(tokens.(i + 1), { type: :newline }).type
+
+			// indentation and token spacing are based on lastType, so it must
+			// ignore any comments and newlines in between comments that
+			// precede the current token. This algorithm traces back until it
+			// can reach a non-comment token to determine lastType(s).
+			[lastLastType, lastType] := if i {
+				0 -> [:newline, :newline]
+				1 -> [:newline, tokens.(i - 1).type]
+				_ -> {
+					fn sub(prev) if prev {
+						// -2 may appear in recursive cases
+						-2, -1, 0 -> prev
+						_ -> if [tokens.(prev).type, tokens.(prev - 1).type] {
+							// multiline comments
+							[:newline, :comment]
+							[:comment, :newline] -> sub(prev - 2)
+							// in-line comments, coming after tokens in the same line
+							[:comment, _] -> sub(prev - 1)
+							_ -> prev
+						}
+					}
+					prev := sub(i - 1) |> max(0)
+
+					[
+						if prev {
+							0 -> :newline
+							_ -> tokens.(prev - 1).type
+						}
+						tokens.(prev).type
+					]
+				}
+			}
+
 			if [lastType, token.type, nextType] {
 				// this match clause is responsible for computing the correct
 				// level of indentation for the line that comes before this
@@ -1313,7 +1345,7 @@ fn Printer(tokens) {
 				[:exclam, _, _] -> add(render(token), 0)
 
 				// unary exprs (which may also be used as binary infix)
-				[:minus, _, _] -> if llastType {
+				[:minus, _, _] -> if lastLastType {
 					:leftParen, :leftBracket, :leftBrace
 					:ifKeyword
 					:exclam
@@ -1321,14 +1353,14 @@ fn Printer(tokens) {
 					:newline
 					:comma
 					:colon -> add(render(token), 0)
-					_ -> if connectingToken?(llastType) {
+					_ -> if connectingToken?(lastLastType) {
 						true -> add(render(token), 0)
 						_ -> add(' ' << render(token), 0)
 					}
 				}
 
 				// atom special case
-				[:colon, :identifier, _] -> if llastType {
+				[:colon, :identifier, _] -> if lastLastType {
 					// if token before colon cannot be end of an object key,
 					// don't insert a space. This isn't a perfect rule but
 					// seems to be a good-enough algorithm.
@@ -1340,7 +1372,7 @@ fn Printer(tokens) {
 					:newline
 					:comma
 					:colon -> add(render(token), 0)
-					_ -> if connectingToken?(llastType) {
+					_ -> if connectingToken?(lastLastType) {
 						true -> add(render(token), 0)
 						_ -> add(' ' << render(token), 0)
 					}
