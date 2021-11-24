@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -113,6 +114,8 @@ func (c *Context) LoadBuiltins() {
 	// language and runtime APIs
 	c.LoadFunc("___runtime_lib", c.rtLib)
 	c.LoadFunc("___runtime_lib?", c.rtIsLib)
+	c.LoadFunc("___runtime_gc", c.rtGC)
+	c.LoadFunc("___runtime_mem", c.rtMem)
 }
 
 func errObj(message string) ObjectValue {
@@ -1419,7 +1422,7 @@ func (c *Context) oakLog(args []Value) (Value, *runtimeError) {
 	return FloatValue(math.Log2(exp) / math.Log2(base)), nil
 }
 
-// __runtime_lib returns the string content of the bundled standard library by
+// ___runtime_lib returns the string content of the bundled standard library by
 // the given name, or ? otherwise.
 func (c *Context) rtLib(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("__runtime_lib", args, 1); err != nil {
@@ -1435,12 +1438,12 @@ func (c *Context) rtLib(args []Value) (Value, *runtimeError) {
 		return null, nil
 	default:
 		return nil, &runtimeError{
-			reason: fmt.Sprintf("Mismatched types in call __runtime_lib(%s)", args[0]),
+			reason: fmt.Sprintf("Mismatched types in call ___runtime_lib(%s)", args[0]),
 		}
 	}
 }
 
-// __runtime_lib? reports whether a bundled standard library by the given name exists
+// ___runtime_lib? reports whether a bundled standard library by the given name exists
 func (c *Context) rtIsLib(args []Value) (Value, *runtimeError) {
 	if err := c.requireArgLen("__runtime_lib?", args, 1); err != nil {
 		return nil, err
@@ -1453,7 +1456,31 @@ func (c *Context) rtIsLib(args []Value) (Value, *runtimeError) {
 		return BoolValue(ok), nil
 	default:
 		return nil, &runtimeError{
-			reason: fmt.Sprintf("Mismatched types in call __runtime_lib?(%s)", args[0]),
+			reason: fmt.Sprintf("Mismatched types in call ___runtime_lib?(%s)", args[0]),
 		}
 	}
+}
+
+// ___runtime_gc runs a garbage collection cycle for both Oak and the
+// underlying Go runtime. It blocks until the GC cycle is complete.
+func (c *Context) rtGC(_ []Value) (Value, *runtimeError) {
+	runtime.GC()
+	return null, nil
+}
+
+// ___runtime_mem reports a dictionary of memory usage statistics for diagnostics
+func (c *Context) rtMem(_ []Value) (Value, *runtimeError) {
+	memStats := runtime.MemStats{}
+	runtime.ReadMemStats(&memStats)
+	return ObjectValue{
+		// number of allocations
+		"allocs": IntValue(memStats.Mallocs),
+		"frees":  IntValue(memStats.Frees),
+		"live":   IntValue(memStats.Mallocs - memStats.Frees),
+		// number of bytes
+		"heap": IntValue(memStats.HeapAlloc),
+		"virt": IntValue(memStats.HeapSys),
+		// total gc cycles count
+		"gcs": IntValue(memStats.NumGC),
+	}, nil
 }
