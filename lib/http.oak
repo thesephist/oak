@@ -250,27 +250,25 @@ fn _hdr(attrs) {
 fn Server {
 	router := Router()
 
-	fn start(port) with listen('0.0.0.0:' + string(port)) fn(evt) {
+	fn start(port) {
 		router.catch(fn(params) fn(req, end) end({
 			status: 404
 			body: 'service not found'
 		}))
 
-		if evt.type {
+		with listen('0.0.0.0:' + string(port)) fn(evt) if evt.type {
 			:error -> println('server start error:', evt.error)
 			_ -> {
 				{ method: method, url: url } := evt.req
 				printf('{{ 0 }}: {{ 1 }}', method, url)
 
-				fn handleWithHeaders(evt) {
-					router.match(url)(evt.req, fn(resp) {
-						resp.headers := _hdr(default(resp.headers, {}))
-						evt.end(resp)
-					})
-				}
-
 				if method {
-					'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' -> handleWithHeaders(evt)
+					'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' -> {
+						router.match(url)(evt.req, fn(resp) {
+							resp.headers := _hdr(default(resp.headers, {}))
+							evt.end(resp)
+						})
+					}
 					_ -> evt.end({
 						status: 405
 						headers: _hdr({})
