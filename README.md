@@ -196,7 +196,7 @@ Oak (ab)uses GNU Make to run development workflows and tasks.
 
 - `make run` compiles and runs the Oak binary, which opens an interactive REPL
 - `make fmt` or `make f` runs the `oak fmt` code formatter over any _files with unstaged changes in the git repository_. This is equivalent to running `oak fmt --changes --fix`.
-- `make tests` or `make t` runs the Go tes suite for the Oak language and interpreter
+- `make tests` or `make t` runs the Go test suite for the Oak language and interpreter
 - `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
 - `make test-bundle` runs the Oak test suite, bundled using `oak build`
 - `make test-js` runs the Oak test suite on the system's Node.js, compiled using `oak build --web`
