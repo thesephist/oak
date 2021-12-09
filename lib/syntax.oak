@@ -528,11 +528,15 @@ fn Parser(tokens) {
 				pushMinPrec(0)
 
 				itemNodes := []
-				fn sub if !eof?() & peek().type != :rightBracket {
-					true -> with notError(node := parseNode()) fn {
-						with notError(err := expect(:comma)) fn {
-							itemNodes << node
-							sub()
+				fn sub if eof?() {
+					true -> error('Unexpected end of input inside list', tok.pos)
+					_ -> if peek().type {
+						:rightBracket -> ?
+						_ -> with notError(node := parseNode()) fn {
+							with notError(err := expect(:comma)) fn {
+								itemNodes << node
+								sub()
+							}
 						}
 					}
 				}
@@ -606,11 +610,15 @@ fn Parser(tokens) {
 								// it's a block
 								exprs := [firstExpr]
 
-								fn sub if !eof?() & peek().type != :rightBrace {
-									true -> with notError(expr := parseNode()) fn {
-										with notError(expect(:comma)) fn {
-											exprs << expr
-											sub()
+								fn sub if eof?() {
+									true -> error('Unexpected end of block or object', tok.pos)
+									_ -> if peek().type {
+										:rightBrace -> ?
+										_ -> with notError(expr := parseNode()) fn {
+											with notError(expect(:comma)) fn {
+												exprs << expr
+												sub()
+											}
 										}
 									}
 								}
@@ -814,13 +822,16 @@ fn Parser(tokens) {
 			:leftParen -> {
 				pushMinPrec(0)
 
-				fn subExpr(exprs) if !eof?() & peek().type != :rightParen {
-					true -> with notError(expr := parseNode()) fn {
-						with notError(expect(:comma)) fn {
-							subExpr(exprs << expr)
+				fn subExpr(exprs) if eof?() {
+					true -> error('Unexpected end of input inside block', tok.pos)
+					_ -> if peek().type {
+						:rightParen -> exprs
+						_ -> with notError(expr := parseNode()) fn {
+							with notError(expect(:comma)) fn {
+								subExpr(exprs << expr)
+							}
 						}
 					}
-					_ -> exprs
 				}
 				with notError(exprs := subExpr([])) fn {
 					with notError(expect(:rightParen)) fn {

@@ -775,6 +775,33 @@ fn run(t) {
 				restArg: ?
 			}]
 		)
+
+		// parser robustness tests
+		[
+			'('
+			'['
+			'{'
+			')'
+			']'
+			'}'
+			'!'
+			'{+}'
+			'+100'
+			'1 +'
+			'1 + (s'
+			'1 + {s'
+			'1 + [s'
+			'first second'
+			'fn'
+			'fn (a, b)'
+			'if x'
+			'if { 100 }'
+			'{ a: }'
+		] |> with std.each() fn(prog) t.eq(
+			'parse does not crash: ' + prog
+			parse(prog)
+			{ type: :error, error: _, pos: _ }
+		)
 	}
 
 	// printer integration tests
