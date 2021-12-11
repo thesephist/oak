@@ -198,6 +198,8 @@ fn Router {
 }
 
 MimeTypes := {
+	blob: 'application/octet-stream'
+
 	html: 'text/html; charset=utf-8'
 	txt: 'text/plain; charset=utf-8'
 	md: 'text/plain; charset=utf-8'
@@ -222,7 +224,7 @@ MimeTypes := {
 fn mimeForPath(path) {
 	parts := path |> split('.')
 	ending := parts.(len(parts) - 1)
-	default(MimeTypes.(ending), 'application/octet-stream')
+	MimeTypes.(ending) |> default(MimeTypes.blob)
 }
 
 // NotFound represents a 404 Not Found response
