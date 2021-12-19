@@ -128,13 +128,13 @@ fn replace(s, old, new) if old {
 	_ -> _replaceNonEmpty(s, old, new)
 }
 
-fn _splitNonEmpty(s, delim) {
+fn _splitNonEmpty(s, sep) {
 	coll := []
-	ldelim := len(delim)
-	fn sub(acc, i, last) if _matchesAt?(acc, delim, i) {
+	lsep := len(sep)
+	fn sub(acc, i, last) if _matchesAt?(acc, sep, i) {
 		true -> {
 			coll << slice(acc, last, i)
-			sub(acc, i + ldelim, i + ldelim)
+			sub(acc, i + lsep, i + lsep)
 		}
 		_ -> if i < len(acc) {
 			true -> sub(acc, i + 1, last)
@@ -144,13 +144,13 @@ fn _splitNonEmpty(s, delim) {
 	sub(s, 0, 0)
 }
 
-// split splits the string `s` by every occurrence of the substring `delim` in
-// it, and returns the result as a list of strings. If `delim` is not
-// specified, split returns a list of every character in the string in order.
-fn split(s, delim) if delim {
+// split splits the string `s` by every occurrence of the substring `sep` in
+// it, and returns the result as a list of strings. If `sep` is not specified,
+// split returns a list of every character in the string in order.
+fn split(s, sep) if sep {
 	? -> s |> reduce([], fn(acc, c) acc << c)
 	'' -> s |> reduce([], fn(acc, c) acc << c)
-	_ -> _splitNonEmpty(s, delim)
+	_ -> _splitNonEmpty(s, sep)
 }
 
 // helper: repeat the string `pad` until it reaches exactly `n` characters.
