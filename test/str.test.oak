@@ -137,11 +137,12 @@ fn run(t) {
 		)
 	}
 
-	// indexOf, contains?
+	// indexOf, contains?, cut
 	{
 		{
 			indexOf: indexOf
 			contains?: contains?
+			cut: cut
 		} := str
 
 		'indexOf empty string' |> t.eq(indexOf('', 'a'), -1)
@@ -153,6 +154,39 @@ fn run(t) {
 		'contains? nonexistent part' |> t.eq(contains?('abc', 'x'), false)
 		'contains? existent part' |> t.eq(contains?('abc', 'b'), true)
 		'contains? duplicate part' |> t.eq(contains?('abcdc', 'c'), true)
+
+		'cut empty string' |> t.eq(
+			cut('', '=')
+			['', '']
+		)
+		'cut string with no separator' |> t.eq(
+			cut('param-value', '=')
+			['param-value', '']
+		)
+		'cut string by separator' |> t.eq(
+			cut('param=value', '=')
+			['param', 'value']
+		)
+		'cut string only by first separator' |> t.eq(
+			cut('param=value=answer', '=')
+			['param', 'value=answer']
+		)
+		'cut string by multi-char separator' |> t.eq(
+			cut('param%20value', '%20')
+			['param', 'value']
+		)
+		'cut string only by first multi-char separator' |> t.eq(
+			cut('param%20value%20answer', '%20')
+			['param', 'value%20answer']
+		)
+		'cut string by separator at start of string' |> t.eq(
+			cut('===back', '==')
+			['', '=back']
+		)
+		'cut string by separator at end of string' |> t.eq(
+			cut('front==', '==')
+			['front', '']
+		)
 	}
 
 	// replace, split

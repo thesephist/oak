@@ -93,6 +93,18 @@ fn indexOf(s, substr) {
 // contains? reports whether the string `s` contains the substring `substr`.
 fn contains?(s, substr) indexOf(s, substr) >= 0
 
+// cut splits the given string at most once by the given separator substring.
+// If the separator is found in s, it returns the substring before and after
+// the separator as the list [before, after]. If the separator is not found, it
+// returns [s, ''].
+fn cut(s, sep) if idx := indexOf(s, sep) {
+	-1 -> [s, '']
+	_ -> [
+		s |> slice(0, idx)
+		s |> slice(idx + len(sep))
+	]
+}
+
 // lower returns a string where any uppercase letter in `s` has been down-cased.
 fn lower(s) s |> reduce('', fn(acc, c, i) if upper?(c) {
 	true -> acc.(i) := char(codepoint(c) + 32)
