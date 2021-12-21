@@ -17,6 +17,7 @@
 
 {
 	checkRange: checkRange
+	cut: cut
 	join: join
 	contains?: contains?
 	digit?: digit?
@@ -124,14 +125,13 @@ fn Router {
 		params := {}
 
 		// process query params
-		[path, query] := split(path, '?')
+		[path, query] := cut(path, '?')
 		if query {
-			? -> ?
 			'' -> ?
 			_ -> query |>
 				split('&') |>
-				map(fn(pair) pair |> split('=')) |>
-				with each() fn(pair) params.(pair.0) := percentDecode(default(pair.1, ''))
+				map(fn(pair) pair |> cut('=')) |>
+				with each() fn(pair) params.(pair.0) := percentDecode(pair.1)
 		}
 
 		desired := splitPath(pattern)
