@@ -792,11 +792,16 @@ fn run(t) {
 			'1 + {s'
 			'1 + [s'
 			'first second'
+			'{ a: }'
 			'fn'
 			'fn (a, b)'
 			'if x'
 			'if { 100 }'
-			'{ a: }'
+			'if { 100 -> }'
+			'with'
+			'with a'
+			'with with'
+			'with run(a, b)'
 		] |> with std.each() fn(prog) t.eq(
 			'parse does not crash: ' + prog
 			parse(prog)
