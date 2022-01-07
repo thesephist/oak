@@ -108,8 +108,17 @@ ImportAssignmentNode := {
 fn cachedParse(path, text) if cached := ModuleNodes.(path) {
 	? -> {
 		printf('[oak build] Parsing {{0}}...', path)
-		ModuleNodes.(path) := text |> syntax.parse()
-		ModuleNodes.(path)
+		if nodes := text |> syntax.parse() {
+			{ type: :error, error: _, pos: _ } -> {
+				printf('[oak build] Parse error at {{0}}:{{1}}:{{2}}: {{3}}'
+					path, nodes.pos.0, nodes.pos.1, nodes.error)
+				exit(1)
+			}
+			_ -> {
+				ModuleNodes.(path) := nodes
+				nodes
+			}
+		}
 	}
 	_ -> cached
 }
