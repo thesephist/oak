@@ -47,8 +47,7 @@ fn sort!(xs, pred) {
 	}
 
 	fn quicksort(xs, lo, hi) if len(xs) {
-		0 -> xs
-		1 -> xs
+		0, 1 -> xs
 		_ -> if lo < hi {
 			false -> xs
 			_ -> {

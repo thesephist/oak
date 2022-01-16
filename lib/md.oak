@@ -574,9 +574,7 @@ fn parseList(lineReader, listType) {
 	children := sub([])
 
 	// remove the level annotations
-	children |> with each() fn(child) if child.tag {
-		:li -> child.level := _
-	}
+	children |> each(fn(child) if child.tag = :li -> child.level := _)
 
 	{
 		tag: listType

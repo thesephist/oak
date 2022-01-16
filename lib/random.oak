@@ -22,9 +22,7 @@ fn integer(min, max) number(int(min), int(max)) |> int()
 // number returns a floating point number in the range [min, max) with uniform
 // probability
 fn number(min, max) {
-	if max {
-		? -> [min, max] <- [0, min]
-	}
+	if max = ? -> [min, max] <- [0, min]
 	min + rand() * (max - min)
 }
 

@@ -146,9 +146,7 @@ fn join(xs, ys) clone(xs) |> append(ys)
 // start = 0 when those optional values are missing.
 fn range(start, end, step) {
 	step := default(step, 1)
-	if end {
-		? -> [start, end] <- [0, start]
-	}
+	if end = ? -> [start, end] <- [0, start]
 
 	if step = 0 {
 		true -> []
@@ -223,9 +221,7 @@ fn filter(xs, f) {
 	fn sub(acc, i) if i {
 		len(xs) -> acc
 		_ -> {
-			if f(x := xs.(i), i) {
-				true -> acc << x
-			}
+			if f(x := xs.(i), i) -> acc << x
 			sub(acc, i + 1)
 		}
 	}
@@ -414,11 +410,9 @@ fn once(f) {
 fn loop(max, f) {
 	// allow passing just a callback with no loop count, implying an infinite
 	// loop with max = -1
-	if f {
-		? -> {
-			f <- max
-			max <- -1
-		}
+	if f = ? -> {
+		f <- max
+		max <- -1
 	}
 
 	max := default(max, -1)
@@ -446,9 +440,7 @@ fn loop(max, f) {
 // but the following debounced calls will occur as normal. firstCall is
 // :leading by default, and may be omitted.
 fn debounce(duration, firstCall, f) {
-	if f {
-		? -> [firstCall, f] <- [:trailing, firstCall]
-	}
+	if f = ? -> [firstCall, f] <- [:trailing, firstCall]
 
 	dargs := ? // debounced args, should never be used uninitialized to [...]
 	waiting? := false
@@ -459,31 +451,29 @@ fn debounce(duration, firstCall, f) {
 		// it later to set timers.
 		tcall := time()
 		dargs <- args
-		if waiting? {
-			false -> if target <= tcall {
-				// leading edge call
-				true -> {
-					target <- tcall + duration
-					if firstCall {
-						:leading -> f(dargs...)
-						:trailing -> {
-							waiting? <- true
-							with wait(target - time()) fn {
-								waiting? <- false
-								f(dargs...)
-							}
+		if !waiting? -> if target <= tcall {
+			// leading edge call
+			true -> {
+				target <- tcall + duration
+				if firstCall {
+					:leading -> f(dargs...)
+					:trailing -> {
+						waiting? <- true
+						with wait(target - time()) fn {
+							waiting? <- false
+							f(dargs...)
 						}
 					}
 				}
-				// trailing debounced call
-				_ -> {
-					waiting? <- true
-					timeout := target - tcall
-					target <- target + duration
-					with wait(timeout) fn {
-						waiting? <- false
-						f(dargs...)
-					}
+			}
+			// trailing debounced call
+			_ -> {
+				waiting? <- true
+				timeout := target - tcall
+				target <- target + duration
+				with wait(timeout) fn {
+					waiting? <- false
+					f(dargs...)
 				}
 			}
 		}

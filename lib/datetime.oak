@@ -67,11 +67,9 @@ fn leap?(year) year % 4 = 0 & (year % 100 != 0 | year % 400 = 0)
 fn _describeDate(t) {
 	// only dealing with full days since zero time
 	d := int((t - t % SecondsPerDay) / SecondsPerDay) + DaysFrom1To1970
-	if {
-		// when going negative, we should truncate times into dates in the
-		// other direction
-		t < 0 & t % 86400 != 0 -> d <- d - 1
-	}
+	// when going negative, we should truncate times into dates in the other
+	// direction
+	if t < 0 & t % 86400 != 0 -> d <- d - 1
 
 	n400 := int(d / DaysPer400Years)
 	d := d - DaysPer400Years * n400
@@ -104,10 +102,8 @@ fn _describeDate(t) {
 			day <- 29
 		}
 		_ -> {
-			if {
-				// if after leap day, pull dates forward 1 day
-				leapYear? & day > LeapDay -> day <- day - 1
-			}
+			// if after leap day, pull dates forward 1 day
+			if leapYear? & day > LeapDay -> day <- day - 1
 
 			fn subMonth(m) if day < DaysBeforeMonth.(m + 1) {
 				true -> m
@@ -127,9 +123,8 @@ fn _describeDate(t) {
 
 fn _describeClock(t) {
 	rem := t % SecondsPerDay
-	if {
-		rem < 0 -> rem <- rem + SecondsPerDay
-	}
+	if rem < 0 -> rem <- rem + SecondsPerDay
+
 	hour := int(rem / 3600)
 	rem := rem % 3600
 	minute := int(rem / 60)
@@ -261,18 +256,15 @@ fn parse(s) if [date, clock] := s |> split('T') {
 					_ -> 0
 				}
 
-				if tzOffset {
-					? -> ?
-					_ -> {
-						year: year
-						month: month
-						day: day
-						hour: hour
-						minute: minute
-						second: second
-						millis: default(maybeMillis, 0)
-						tzOffset: tzOffset
-					}
+				if tzOffset != ? -> {
+					year: year
+					month: month
+					day: day
+					hour: hour
+					minute: minute
+					second: second
+					millis: default(maybeMillis, 0)
+					tzOffset: tzOffset
 				}
 			}
 		}

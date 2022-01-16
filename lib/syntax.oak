@@ -72,9 +72,7 @@ fn Tokenizer(source) {
 	}
 	fn next {
 		char := source.(index)
-		if index < len(source) {
-			true -> index <- index + 1
-		}
+		if index < len(source) -> index <- index + 1
 		if char {
 			'\n' -> {
 				line <- line + 1
@@ -85,9 +83,7 @@ fn Tokenizer(source) {
 		char
 	}
 	fn back {
-		if index > 0 {
-			true -> index <- index - 1
-		}
+		if index > 0 -> index <- index - 1
 		if source.(index) {
 			// TODO: reset col correctly on backtrack
 			'\n' -> line <- line - 1
@@ -207,9 +203,7 @@ fn Tokenizer(source) {
 				pos := [line, col]
 				next()
 				commentString := readUntilChar('\n') |> trimEnd(' ') |> trimEnd('\t')
-				if commentString |> trim() = '' {
-					true -> commentString <- ''
-				}
+				if commentString |> trim() = '' -> commentString <- ''
 				TokenAt(:comment, pos, commentString)
 			}
 			_ -> Token(:divide)
@@ -270,24 +264,20 @@ fn Tokenizer(source) {
 		// the tokenizer itself completely ignores shebang lines, as it is not
 		// a language concern -- it is the responsibility of the caller to
 		// process or ignore shebang lines as necessary
-		if peek() = '#' & peekAhead(1) = '!' {
-			true -> {
-				readUntilChar('\n')
-				if !eof?() {
-					true -> next()
-				}
+		if peek() = '#' & peekAhead(1) = '!' -> {
+			readUntilChar('\n')
+			if !eof?() {
+				true -> next()
 			}
 		}
 
 		// snip whitespace before
-		fn eatSpace if space?(sp := peek()) {
-			true -> {
-				if sp {
-					'\n' -> tokens << Token(:newline)
-				}
-				next()
-				eatSpace()
+		fn eatSpace if space?(sp := peek()) -> {
+			if sp {
+				'\n' -> tokens << Token(:newline)
 			}
+			next()
+			eatSpace()
 		}
 		eatSpace()
 
@@ -295,41 +285,36 @@ fn Tokenizer(source) {
 		fn sub {
 			nextTok := nextToken()
 
-			if !([:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type)) &
-				[:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) {
-				true -> tokens << Token(:comma)
-			}
+			if !(
+				[:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type)
+			) & [:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) -> tokens << Token(:comma)
 
 			tokens << nextTok
-			if nextTok.type {
-				:comment -> nextTok := lastTok
-			}
+			if nextTok.type = :comment -> nextTok := lastTok
 
 			// snip whitespace after
-			fn eatSpaceAutoInsertComma if space?(peek()) {
-				true -> {
-					if peek() {
-						'\n' -> {
-							if [
-								:comma, :leftParen, :leftBracket, :leftBrace
-								:plus, :minus, :times, :divide, :modulus, :xor
-								:and, :or, :exclam, :greater, :less, :eq, :geq
-								:leq, :assign, :nonlocalAssign, :dot, :colon
-								:fnKeyword, :ifKeyword, :withKeyword
-								:pipeArrow, :branchArrow, :pushArrow
-							] |> contains?(nextTok.type) {
-								true -> ? // do nothing
-								_ -> {
-									nextTok <- Token(:comma)
-									tokens << nextTok
-								}
+			fn eatSpaceAutoInsertComma if space?(peek()) -> {
+				if peek() {
+					'\n' -> {
+						if [
+							:comma, :leftParen, :leftBracket, :leftBrace
+							:plus, :minus, :times, :divide, :modulus, :xor
+							:and, :or, :exclam, :greater, :less, :eq, :geq
+							:leq, :assign, :nonlocalAssign, :dot, :colon
+							:fnKeyword, :ifKeyword, :withKeyword
+							:pipeArrow, :branchArrow, :pushArrow
+						] |> contains?(nextTok.type) {
+							true -> ? // do nothing
+							_ -> {
+								nextTok <- Token(:comma)
+								tokens << nextTok
 							}
-							tokens << Token(:newline)
 						}
+						tokens << Token(:newline)
 					}
-					next()
-					eatSpaceAutoInsertComma()
 				}
+				next()
+				eatSpaceAutoInsertComma()
 			}
 			eatSpaceAutoInsertComma()
 
@@ -338,15 +323,11 @@ fn Tokenizer(source) {
 				_ -> lastTok <- nextTok
 			}
 
-			if eof?() {
-				false -> sub()
-			}
+			if !eof?() -> sub()
 		}
 
 		// do not start tokenizing into empty file
-		if eof?() {
-			false -> sub()
-		}
+		if !eof?() -> sub()
 
 		if lastTok.type {
 			:comma -> ?
@@ -399,14 +380,10 @@ fn Parser(tokens) {
 	}
 	fn next {
 		tok := tokens.(index)
-		if index < len(tokens) {
-			true -> index <- index + 1
-		}
+		if index < len(tokens) -> index <- index + 1
 		tok
 	}
-	fn back if index > 0 {
-		true -> index <- index - 1
-	}
+	fn back if index > 0 -> index <- index - 1
 	fn expect(type) if eof?() {
 		true -> error(format('Unexpected end of input, expected {{0}}', type))
 		_ -> {
@@ -971,26 +948,24 @@ fn Parser(tokens) {
 							peeked := peek()
 							op := peeked.type
 							prec := infixOpPrecedence(op)
-							if prec <= minPrec {
-								false -> {
-									next() // eat the operator
+							if prec > minPrec -> {
+								next() // eat the operator
 
-									if eof?() {
-										true -> error(format('Incomplete binary expression with {{0}}', { type: op }), peek().pos)
-										_ -> {
-											pushMinPrec(prec)
-											with notError(right := parseNode()) fn {
-												popMinPrec()
+								if eof?() {
+									true -> error(format('Incomplete binary expression with {{0}}', { type: op }), peek().pos)
+									_ -> {
+										pushMinPrec(prec)
+										with notError(right := parseNode()) fn {
+											popMinPrec()
 
-												node <- {
-													type: :binary
-													tok: peeked
-													op: op
-													left: node
-													right: right
-												}
-												subBinary()
+											node <- {
+												type: :binary
+												tok: peeked
+												op: op
+												left: node
+												right: right
 											}
+											subBinary()
 										}
 									}
 								}
@@ -1027,12 +1002,10 @@ fn Parser(tokens) {
 		parse: fn {
 			// parse
 			nodes := []
-			fn sub if eof?() {
-				false -> with notError(node := parseNode()) fn {
-					with notError(expect(:comma)) fn {
-						nodes << node
-						sub()
-					}
+			fn sub if !eof?() -> with notError(node := parseNode()) fn {
+				with notError(expect(:comma)) fn {
+					nodes << node
+					sub()
 				}
 			}
 			with notError(sub()) fn {
@@ -1432,26 +1405,24 @@ fn Printer(tokens) {
 		// they're only indented one level.
 		indents |> with each() fn(n, i) if i {
 			0 -> ?
-			_ -> if n < indents.(i - 1) {
-				true -> {
-					// backtrack to the line immediately following the first
-					// line where indent > n
-					fn sub(j) {
-						if {
-							indents.(j) > n -> sub(j - 1)
-							_ -> j + 1
-						}
-					}
-					target := sub(i - 1)
-
-					// if the range from target to current line is indented by
-					// more than 1, de-dent them accordingly
+			_ -> if n < indents.(i - 1) -> {
+				// backtrack to the line immediately following the first line
+				// where indent > n
+				fn sub(j) {
 					if {
-						indents.(target) - n > 1 -> {
-							diff := indents.(target) - n
-							range(target, i) |> with each() fn(j) {
-								indents.(j) := indents.(j) - diff + 1
-							}
+						indents.(j) > n -> sub(j - 1)
+						_ -> j + 1
+					}
+				}
+				target := sub(i - 1)
+
+				// if the range from target to current line is indented by more
+				// than 1, de-dent them accordingly
+				if {
+					indents.(target) - n > 1 -> {
+						diff := indents.(target) - n
+						range(target, i) |> with each() fn(j) {
+							indents.(j) := indents.(j) - diff + 1
 						}
 					}
 				}

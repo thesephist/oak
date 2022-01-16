@@ -45,11 +45,9 @@ fn new(title) {
 				name
 			)
 
-			if p? {
-				false -> {
-					printf('\texpected: {{ 0 }}', expect)
-					printf('\t  result: {{ 0 }}', result)
-				}
+			if !p? -> {
+				printf('\texpected: {{ 0 }}', expect)
+				printf('\t  result: {{ 0 }}', result)
 			}
 		})
 	}

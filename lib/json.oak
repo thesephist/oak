@@ -69,11 +69,9 @@ fn Reader(s) {
 	}
 	// fast-forward through whitespace
 	fn forward {
-		fn sub if space?(peek()) {
-			true -> {
-				index <- index + 1
-				sub()
-			}
+		fn sub if space?(peek()) -> {
+			index <- index + 1
+			sub()
 		}
 		sub()
 	}
@@ -187,9 +185,8 @@ fn parseList(r) {
 			_ -> {
 				acc << _parseReader(r)
 				forward()
-				if peek() {
-					',' -> next()
-				}
+				if peek() = ',' -> next()
+
 				forward()
 				sub(acc)
 			}
@@ -217,25 +214,17 @@ fn parseObject(r) {
 			}
 			_ -> {
 				key := parseString(r)
-				if err?() {
-					false -> {
+				if !err?() -> {
+					forward()
+					if peek() = ':' -> next()
+
+					val := _parseReader(r)
+					if !err?() -> {
 						forward()
-						if peek() {
-							':' -> next()
-						}
+						if peek() = ',' -> next()
 
-						val := _parseReader(r)
-						if err?() {
-							false -> {
-								forward()
-								if peek() {
-									',' -> next()
-								}
-
-								forward()
-								sub(acc.(key) := val)
-							}
-						}
+						forward()
+						sub(acc.(key) := val)
 					}
 				}
 			}
