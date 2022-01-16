@@ -665,10 +665,12 @@ func (p *parser) parseUnit() (astNode, error) {
 		p.pushMinPrec(0)
 		defer p.popMinPrec()
 
+		var condNode astNode
+		branches := []ifBranch{}
+
 		// if no explicit condition is provided (i.e. if the keyword is
 		// followed by a { ... }), we assume the condition is "true" to allow
 		// for the useful `if { case, case ... }` pattern.
-		var condNode astNode
 		var err error
 		if p.peek().kind == leftBrace {
 			condNode = boolNode{
@@ -682,11 +684,38 @@ func (p *parser) parseUnit() (astNode, error) {
 			}
 		}
 
+		// `if cond -> body` desugars to `if cond { true -> body }`. Note that
+		// in this form, there can only be one condition expression; `if a, b,
+		// c -> body` is not legal. However, `if a | b | c -> body` is
+		// equivalent and valid.
+		if p.peek().kind == branchArrow {
+			arrowTok := p.next()
+
+			body, err := p.parseNode()
+			if err != nil {
+				return nil, err
+			}
+			// comma here marks end of the ifExpr, not end of branch, so we do
+			// not consume it here.
+
+			branches = append(branches, ifBranch{
+				target: boolNode{
+					payload: true,
+					tok:     &arrowTok,
+				},
+				body: body,
+			})
+			return ifExprNode{
+				cond:     condNode,
+				branches: branches,
+				tok:      &tok,
+			}, nil
+		}
+
 		if _, err = p.expect(leftBrace); err != nil {
 			return nil, err
 		}
 
-		branches := []ifBranch{}
 		for !p.isEOF() && p.peek().kind != rightBrace {
 			targets := []astNode{}
 			for !p.isEOF() && p.peek().kind != branchArrow {
