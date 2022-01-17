@@ -63,11 +63,9 @@ if Output {
 		exit(1)
 	}
 }
-if statFile(Entry) {
-	? -> {
-		printf('[oak build] {{0}} does not exist.', Entry)
-		exit(1)
-	}
+if statFile(Entry) = ? -> {
+	printf('[oak build] {{0}} does not exist.', Entry)
+	exit(1)
 }
 
 // absolute path to the entrypoint module
@@ -156,19 +154,17 @@ fn addImportsFromFile(path, next) {
 fn addImportsFromSource(path, file, next) {
 	// find static, top-level imports from this file and queue jobs to analyze
 	// their imports.
-	cachedParse(path, file) |> with each() fn(node) if node {
-		ImportAssignmentNode -> if ___runtime_lib?(importName := node.right.args.(0).val) {
-			// for Oak bundles, importing stdlib is a no-op
-			true -> if Web? {
+	cachedParse(path, file) |> with each() fn(node) if node = ImportAssignmentNode -> {
+		if ___runtime_lib?(importName := node.right.args.(0).val) {
+			true -> {
+				// for Oak bundles, importing stdlib is a no-op
 				// for JS bundles, bundle the stdlib
-				true -> addImportsFromSource(importName, ___runtime_lib(importName), next)
+				if Web? -> addImportsFromSource(importName, ___runtime_lib(importName), next)
 			}
 			_ -> {
 				importPath := resolve(importName, dir(path)) + '.oak'
 				// kick off import job if we haven't seen this module before
-				if ModuleNodes.(importPath) {
-					? -> addImportsFromFile(importPath, next)
-				}
+				if ModuleNodes.(importPath) = ? -> addImportsFromFile(importPath, next)
 			}
 		}
 	}
@@ -354,19 +350,14 @@ fn wrapBundle(modules, entryModuleName) {
 				normalizeModuleImports!(node.body, modulePath)
 			}
 			:fnCall -> if node {
-				ImportCallNode -> if ___runtime_lib?(importName := node.args.(0).val) {
-					false -> {
-						importPath := resolve(importName, dir(modulePath)) + '.oak'
-						node.args.(0).val := normalizeModulePath(importPath)
-					}
+				ImportCallNode -> if !___runtime_lib?(importName := node.args.(0).val) -> {
+					importPath := resolve(importName, dir(modulePath)) + '.oak'
+					node.args.(0).val := normalizeModulePath(importPath)
 				}
 				_ -> {
 					normalizeModuleImports!(node.function, modulePath)
 					node.args |> each(fn(a) normalizeModuleImports!(a, modulePath))
-					if node.restArg {
-						? -> ?
-						_ -> normalizeModuleImports!(node.restArg, modulePath)
-					}
+					if node.restArg != ? -> normalizeModuleImports!(node.restArg, modulePath)
 				}
 			}
 			:unary -> normalizeModuleImports!(node.right, modulePath)
@@ -469,17 +460,11 @@ fn analyzeNode(node) {
 			// we ought only count as "recursion" when a function directly
 			// calls itself -- we do not count references to itself in
 			// other callbacks, which may be called asynchronously
-			if ctx.enclosingFnLit {
-				node -> ?
-				_ -> ctx.enclosingFnLit := _
-			}
+			if ctx.enclosingFnLit != node -> ctx.enclosingFnLit := _
 
 			fnCtx := clone(ctx)
 
-			if node.name {
-				? -> ?
-				_ -> fnCtx.enclosingFn := node
-			}
+			if node.name != ? -> fnCtx.enclosingFn := node
 
 			fnCtx.decls := {}
 			fnCtx.args := {}
@@ -501,63 +486,58 @@ fn analyzeNode(node) {
 			// optimized, and will cause stack overflows in environments
 			// not natively supporting proper tail calls.
 			trampolinedFnName := '__oak_trampolined_' << fnCtx.enclosingFn.name
-			if Web? & fnCtx.enclosingFn.recurred? = true {
-				true -> node <- {
-					type: :function
-					name: node.name
+			if Web? & fnCtx.enclosingFn.recurred? = true -> node <- {
+				type: :function
+				name: node.name
+				tok: node.tok
+				args: node.args |> clone()
+				restArg: node.restArg
+				decls: []
+				body: {
+					type: :block
 					tok: node.tok
-					args: node.args |> clone()
-					restArg: node.restArg
-					decls: []
-					body: {
-						type: :block
+					decls: [trampolinedFnName]
+					exprs: [{
+						type: :assignment
 						tok: node.tok
-						decls: [trampolinedFnName]
-						exprs: [{
-							type: :assignment
+						local?: true
+						left: {
+							type: :identifier
 							tok: node.tok
-							local?: true
-							left: {
-								type: :identifier
-								tok: node.tok
-								val: trampolinedFnName
-							}
-							right: merge({}, node, { name: '' })
-						}, {
-							type: :fnCall
+							val: trampolinedFnName
+						}
+						right: merge({}, node, { name: '' })
+					}, {
+						type: :fnCall
+						tok: node.tok
+						function: {
+							type: :identifier
 							tok: node.tok
-							function: {
+							val: '__oak_resolve_trampoline'
+						}
+						args: [{
+							type: :identifier
+							tok: node.tok
+							val: trampolinedFnName
+						}] |> append(node.args |> with map() fn(arg) {
+							type: :identifier
+							tok: node.tok
+							val: arg
+						})
+						restArg: if node.restArg {
+							'' -> ?
+							_ -> {
 								type: :identifier
 								tok: node.tok
-								val: '__oak_resolve_trampoline'
+								val: node.restArg
 							}
-							args: [{
-								type: :identifier
-								tok: node.tok
-								val: trampolinedFnName
-							}] |> append(node.args |> with map() fn(arg) {
-								type: :identifier
-								tok: node.tok
-								val: arg
-							})
-							restArg: if node.restArg {
-								'' -> ?
-								_ -> {
-									type: :identifier
-									tok: node.tok
-									val: node.restArg
-								}
-							}
-						}]
-					}
+						}
+					}]
 				}
 			}
 
 			// a function with a name also assigns
-			if node.name {
-				'' -> ?
-				_ -> ctx.decls.(node.name) := true
-			}
+			if node.name != '' -> ctx.decls.(node.name) := true
 
 			node
 		}
@@ -574,10 +554,7 @@ fn analyzeNode(node) {
 		:fnCall -> {
 			node.function := analyzeSubexpr(node.function, ctx, false)
 			node.args := node.args |> with map() fn(a) analyzeSubexpr(a, ctx, false)
-			if node.restArg {
-				? -> ?
-				_ -> node.restArg := analyzeSubexpr(node.restArg, ctx, false)
-			}
+			if node.restArg != ? -> node.restArg := analyzeSubexpr(node.restArg, ctx, false)
 
 			simpleName? := node.function.type = :identifier
 			recursiveCall? := if ctx.enclosingFn {
@@ -617,15 +594,13 @@ fn analyzeNode(node) {
 			node.left := analyzeSubexpr(node.left, ctx, false)
 			node.right := analyzeSubexpr(node.right, ctx, false)
 
-			if node.local? {
-				true -> if node.left.type {
-					:identifier -> ctx.decls.(node.left.val) := true
-					:list -> node.left.elems |> with each() fn(el) if el.type {
-						:identifier -> ctx.decls.(el.val) := true
-					}
-					:object -> node.left.entries |> with each() fn(entry) if entry.val.type {
-						:identifier -> ctx.decls.(entry.val.val) := true
-					}
+			if node.local? -> if node.left.type {
+				:identifier -> ctx.decls.(node.left.val) := true
+				:list -> node.left.elems |> with each() fn(el) if el.type {
+					:identifier -> ctx.decls.(el.val) := true
+				}
+				:object -> node.left.entries |> with each() fn(entry) if entry.val.type {
+					:identifier -> ctx.decls.(entry.val.val) := true
 				}
 			}
 
@@ -930,12 +905,8 @@ postImport := with once() fn {
 	}
 }
 Includes |> with each() fn(spec) if ___runtime_lib?(spec.name) {
-	true -> if Web? {
-		true -> addImportsFromSource(spec.name, ___runtime_lib(spec.name))
-	}
-	_ -> if ModuleNodes.(spec.path) {
-		? -> addImportsFromFile(spec.path, postImport)
-	}
+	true -> if Web? -> addImportsFromSource(spec.name, ___runtime_lib(spec.name))
+	_ -> if ModuleNodes.(spec.path) = ? -> addImportsFromFile(spec.path, postImport)
 }
 addImportsFromFile(AbsoluteEntry, postImport)
 
