@@ -455,10 +455,25 @@ func (p *parser) parseUnit() (astNode, error) {
 	case falseLiteral:
 		return boolNode{payload: false, tok: &tok}, nil
 	case colon:
-		if p.peek().kind == identifier {
+		switch p.peek().kind {
+		case identifier:
 			return atomNode{payload: p.next().payload, tok: &tok}, nil
+		case ifKeyword:
+			p.next()
+			return atomNode{payload: "if", tok: &tok}, nil
+		case fnKeyword:
+			p.next()
+			return atomNode{payload: "fn", tok: &tok}, nil
+		case withKeyword:
+			p.next()
+			return atomNode{payload: "with", tok: &tok}, nil
+		case trueLiteral:
+			p.next()
+			return atomNode{payload: "true", tok: &tok}, nil
+		case falseLiteral:
+			p.next()
+			return atomNode{payload: "false", tok: &tok}, nil
 		}
-		// TODO: let keywords be valid atoms
 		return nil, parseError{
 			reason: fmt.Sprintf("Expected identifier after ':', got %s", p.peek()),
 			pos:    tok.pos,

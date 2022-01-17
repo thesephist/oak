@@ -499,6 +499,26 @@ fn Parser(tokens) {
 					tok: tok
 					val: next().val
 				}
+				:ifKeyword -> {
+					next()
+					{ type: :atom, tok: tok, val: 'if' }
+				}
+				:fnKeyword -> {
+					next()
+					{ type: :atom, tok: tok, val: 'fn' }
+				}
+				:withKeyword -> {
+					next()
+					{ type: :atom, tok: tok, val: 'with' }
+				}
+				:trueLiteral -> {
+					next()
+					{ type: :atom, tok: tok, val: 'true' }
+				}
+				:falseLiteral -> {
+					next()
+					{ type: :atom, tok: tok, val: 'false' }
+				}
 				_ -> error(format('Expected identifier after ":", got {{0}}', peek()), peek().pos)
 			}
 			:leftBracket -> {
