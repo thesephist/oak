@@ -25,7 +25,7 @@ with readFile('./README.md') fn(file) if file {
 println('Writing trash file to /tmp/trash')
 Trash := 'So trashy!\n'
 if writeFile('/tmp/trash-sync', Trash) {
-	? -> prinltn('sync write: failed')
+	? -> println('sync write: failed')
 }
 with writeFile('/tmp/trash-async', Trash) fn(end) if end {
 	? -> println('async write: failed')
