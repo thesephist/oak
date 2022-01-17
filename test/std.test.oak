@@ -15,6 +15,20 @@ fn run(t) {
 			['x', 'ax!', 'ax1!', 'a\n!', 'a\n!', 'ax1z!']
 		)
 
+		'atom literals matching keywords and other weird strings' |> t.eq(
+			[:_?, :if, :fn, :with, :true, :false, :_if, :not_found_404]
+			[
+				atom('_?')
+				atom('if')
+				atom('fn')
+				atom('with')
+				atom('true')
+				atom('false')
+				atom('_if')
+				atom('not_found_404')
+			]
+		)
+
 		'object literal' |> t.eq(
 			{ a: 'ay', 'b': 200, 100: { d: :dee } }
 			{ 'a': 'ay', 'b': 200, '100': { d: :dee } }

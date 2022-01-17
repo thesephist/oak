@@ -80,6 +80,27 @@ fn run(t) {
 			]
 		)
 
+		'atom literals matching keywords' |> t.eq(
+			tokenize(':if, :fn, :with, :true, :false')
+			[
+				Token(:colon, [1, 1])
+				Token(:ifKeyword, [1, 2])
+				Token(:comma, [1, 4])
+				Token(:colon, [1, 6])
+				Token(:fnKeyword, [1, 7])
+				Token(:comma, [1, 9])
+				Token(:colon, [1, 11])
+				Token(:withKeyword, [1, 12])
+				Token(:comma, [1, 16])
+				Token(:colon, [1, 18])
+				Token(:trueLiteral, [1, 19])
+				Token(:comma, [1, 23])
+				Token(:colon, [1, 25])
+				Token(:falseLiteral, [1, 26])
+				Token(:comma, [1, 30])
+			]
+		)
+
 		'identifiers' |> t.eq(
 			tokenize('hi _hello? whats_up__ nothing! ')
 			[
@@ -367,6 +388,25 @@ fn run(t) {
 				{ type: :string, val: 'hello', tok: at(1, 1) }
 				{ type: :string, val: 'hi', tok: at(1, 10) }
 				{ type: :string, val: 'what\'s up\n\t', tok: at(1, 16) }
+			]
+		)
+
+		'atom literals' |> t.eq(
+			parse(':whatever, :not_found_404')
+			[
+				{ type: :atom, val: 'whatever', tok: at(1, 1) }
+				{ type: :atom, val: 'not_found_404', tok: at(1, 12) }
+			]
+		)
+
+		'atom literals matching keywords' |> t.eq(
+			parse(':if, :fn, :with, :true, :false')
+			[
+				{ type: :atom, val: 'if', tok: at(1, 1) }
+				{ type: :atom, val: 'fn', tok: at(1, 6) }
+				{ type: :atom, val: 'with', tok: at(1, 11) }
+				{ type: :atom, val: 'true', tok: at(1, 18) }
+				{ type: :atom, val: 'false', tok: at(1, 25) }
 			]
 		)
 
@@ -1006,6 +1046,10 @@ fn run(t) {
 		'atoms' |> t.eq(
 			print(':whatever, :not_found_404')
 			':whatever, :not_found_404'
+		)
+		'atoms like keywords' |> t.eq(
+			print(':_?,:if, : fn,: with, :true, :  false')
+			':_?, :if, :fn, :with, :true, :false'
 		)
 		'atoms in blocks' |> t.eq(
 			print('(:hi), {:hi}')

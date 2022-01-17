@@ -73,7 +73,21 @@ func TestFloatLiteral(t *testing.T) {
 }
 
 func TestAtomLiteral(t *testing.T) {
-	expectProgramToReturn(t, ":not_found_404", AtomValue("not_found_404"))
+	atomNames := []string{
+		"_?", "_if", "not_found_404",
+	}
+
+	for _, atomName := range atomNames {
+		expectProgramToReturn(t, ":"+atomName, AtomValue(atomName))
+	}
+}
+
+func TestKeywordLikeAtomLiteral(t *testing.T) {
+	expectProgramToReturn(t, ":if", AtomValue("if"))
+	expectProgramToReturn(t, ":fn", AtomValue("fn"))
+	expectProgramToReturn(t, ":with", AtomValue("with"))
+	expectProgramToReturn(t, ":true", AtomValue("true"))
+	expectProgramToReturn(t, ":false", AtomValue("false"))
 }
 
 func TestListLiteral(t *testing.T) {
