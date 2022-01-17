@@ -1385,7 +1385,12 @@ fn Printer(tokens) {
 				}
 
 				// atom special case
-				[:colon, :identifier, _] -> if lastLastType {
+				[:colon, :identifier, _]
+				[:colon, :ifKeyword, _]
+				[:colon, :fnKeyword, _]
+				[:colon, :withKeyword, _]
+				[:colon, :trueLiteral, _]
+				[:colon, :falseLiteral, _] -> if lastLastType {
 					// if token before colon cannot be end of an object key,
 					// don't insert a space. This isn't a perfect rule but
 					// seems to be a good-enough algorithm.
