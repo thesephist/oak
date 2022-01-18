@@ -254,14 +254,14 @@ fn flatten(xs) xs |> reduce([], append)
 // true by some predicate pred.
 fn some(xs, pred) {
 	pred := default(pred, identity)
-	xs |> reduce(false, fn(acc, x) acc | pred(x))
+	xs |> reduce(false, fn(acc, x, i) acc | pred(x, i))
 }
 
 // every checks whether every item in the given iterable is true, or is true by
 // some predicate pred.
 fn every(xs, pred) {
 	pred := default(pred, identity)
-	xs |> reduce(true, fn(acc, x) acc & pred(x))
+	xs |> reduce(true, fn(acc, x, i) acc & pred(x, i))
 }
 
 // zip "zips" together each pair of items from two iterables. If the zipper
@@ -284,7 +284,7 @@ fn zip(xs, ys, zipper) {
 	fn sub(acc, i) if i {
 		max -> acc
 		_ -> sub(
-			acc << zipper(xs.(i), ys.(i))
+			acc << zipper(xs.(i), ys.(i), i)
 			i + 1
 		)
 	}
