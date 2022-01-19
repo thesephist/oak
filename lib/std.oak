@@ -14,6 +14,20 @@ fn _baseIterator(v) if type(v) {
 	:object -> {}
 }
 
+// _asPredicate takes a predicate argument pred (a common interface across
+// iterator-related functions here) and returns a predicate function.
+//
+// if a string, atom, or int is given rather than a function, the predicate
+// function will return the property of the given object by that given label.
+fn _asPredicate(pred) if type(pred) {
+	:atom -> {
+		prop := string(pred)
+		fn(x) x.(prop)
+	}
+	:string, :int -> fn(x) x.(pred)
+	_ -> pred
+}
+
 // default returns x if x is not null, or base otherwise. It is useful when
 // taking optional arguments in functions with default values. For example, we
 // can write
@@ -188,9 +202,11 @@ fn reverse(xs) {
 }
 
 // map produces a copy of the given iterable where each element has been put
-// through some mapper function f. The mapper function receives arguments
+// through some mapper predicate f. If f is a function, it receives arguments
 // (element, index).
 fn map(xs, f) {
+	f := _asPredicate(f)
+
 	fn sub(acc, i) if i {
 		len(xs) -> acc
 		_ -> sub(
@@ -215,9 +231,11 @@ fn each(xs, f) {
 }
 
 // filter produces an iterable containing only the elements of xs that return
-// true when passed to the filter function f. The function f receives arguments
-// (element, index).
+// true when passed to the filter predicate f. If f is a function, it receives
+// arguments (element, index).
 fn filter(xs, f) {
+	f := _asPredicate(f)
+
 	fn sub(acc, i) if i {
 		len(xs) -> acc
 		_ -> {
@@ -249,6 +267,10 @@ fn reduce(xs, seed, f) {
 // flatten takes a list of lists and flattens it to a list of elements. The
 // flattening is only 1 level deep.
 fn flatten(xs) xs |> reduce([], append)
+
+// compact returns a copy of the given list with all of its null elements
+// filtered out.
+fn compact(xs) xs |> filter(fn(x) x != ?)
 
 // some checks whether at least one item in the given iterable is true, or is
 // true by some predicate pred.
@@ -341,6 +363,14 @@ fn uniq(xs, pred) {
 	}
 	sub(0)
 }
+
+// first returns the first item in an iterable. It's trivial, but useful to
+// have in the stdlib for use in pipelines or iterators.
+fn first(xs) xs.0
+
+// last returns the last item in an iterable. It's trivial, but useful to have
+// in the stdlib for use in pipelines or iterators.
+fn last(xs) xs.(len(xs) - 1)
 
 // find returns the index of the first item in the iterable xs for which the
 // predicate returns true. If no match is found, find returns -1.

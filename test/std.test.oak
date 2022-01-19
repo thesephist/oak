@@ -581,8 +581,8 @@ fn run(t) {
 		'range(start, end, step) with off-step end' |> t.eq(range(2, 10, 3), [2, 5, 8])
 	}
 
-	// array functions -- reverse, map, each, filter, reduce, flatten, some,
-	// every, zip, partition, uniq
+	// array iterating functions -- reverse, map, each, filter, reduce,
+	// flatten, compact, some, every, zip, partition, uniq
 	{
 		{
 			clone: clone
@@ -593,6 +593,7 @@ fn run(t) {
 			filter: filter
 			reduce: reduce
 			flatten: flatten
+			compact: compact
 			some: some
 			every: every
 			zip: zip
@@ -626,20 +627,42 @@ fn run(t) {
 		ensureDoesNotMutate('map(f)', fn(xs) map(xs, double))
 		ensureDoesNotMutate('filter(f)', fn(xs) filter(xs, even?))
 		ensureDoesNotMutate('flatten(f)', flatten, [[1, 2], [10, 20]])
-
-		'reverse empty string' |> t.eq(reverse(''), '')
-		'reverse len(1) string' |> t.eq(reverse('A'), 'A')
-		'reverse len(n) string' |> t.eq(reverse('hello world'), 'dlrow olleh')
+		ensureDoesNotMutate('compact(f)', compact, [1, ?, 5, ?, ?, 10, ?])
 
 		'reverse empty list' |> t.eq(reverse([]), [])
 		'reverse len(1) list' |> t.eq(reverse([10]), [10])
 		'reverse len(n) list' |> t.eq(reverse([10, 20, 30, 40]), [40, 30, 20, 10])
 
-		'map empty string' |> t.eq(map('', upcase), '')
-		'map string' |> t.eq('abc' |> map(repeat) |> map(upcase), 'AABBCC')
+		'reverse empty string' |> t.eq(reverse(''), '')
+		'reverse len(1) string' |> t.eq(reverse('A'), 'A')
+		'reverse len(n) string' |> t.eq(reverse('hello world'), 'dlrow olleh')
 
 		'map empty list' |> t.eq(map([], double), [])
 		'map list' |> t.eq(map(arr, double), [2, 4, 6, 8, 20])
+		'map with atom predicate' |> t.eq(
+			map([
+				{ name: 'Linus' }
+				{ name: 'Mozzie' }
+				{ name: 'Marvin' }
+				{ name: 'Button' }
+			], :name)
+			['Linus', 'Mozzie', 'Marvin', 'Button']
+		)
+		'map with string predicate' |> t.eq(
+			map([
+				{ name: 'Linus' }
+				{ name: 'Mozzie' }
+				{ name: 'Marvin' }
+				{ name: 'Button' }
+			], 'name')
+			['Linus', 'Mozzie', 'Marvin', 'Button']
+		)
+		'map with int predicate' |> t.eq(
+			map([[1, 10], [2, 5], [3, -40], [10, 2]], 1)
+			[10, 5, -40, 2]
+		)
+		'map empty string' |> t.eq(map('', upcase), '')
+		'map string' |> t.eq('abc' |> map(repeat) |> map(upcase), 'AABBCC')
 		'map callback gets index' |> t.eq(map(arr, index), [0, 1, 2, 3, 4])
 		'map string callback gets index' |> t.eq(
 			map('....', fn(c, i) c + string(i))
@@ -662,10 +685,26 @@ fn run(t) {
 			}
 			[1, 2, 3, 4, 10]
 		)
+		'each empty string' |> t.eq(
+			{
+				chars := []
+				each('', fn(c) chars << c)
+				chars
+			}
+			[]
+		)
+		'each string' |> t.eq(
+			{
+				chars := []
+				each('hello!', fn(c) chars << c)
+				chars
+			}
+			['h', 'e', 'l', 'l', 'o', '!']
+		)
 		'each callback gets index' |> t.eq(
 			{
 				nums := []
-				each(arr, fn(_, i) { nums << i })
+				each(arr, fn(_, i) nums << i)
 				nums
 			}
 			[0, 1, 2, 3, 4]
@@ -673,17 +712,44 @@ fn run(t) {
 		'each string callback gets index' |> t.eq(
 			{
 				nums := []
-				each('sixth', fn(_, i) { nums << i })
+				each('sixth', fn(_, i) nums << i)
 				nums
 			}
 			[0, 1, 2, 3, 4]
 		)
 
-		'filter empty string' |> t.eq(filter('', isX?), '')
-		'filter string' |> t.eq(filter('axbCXingx', isX?), 'xXx')
-
 		'filter empty list' |> t.eq(filter([], even?), [])
 		'filter list' |> t.eq(filter(arr, even?), [2, 4, 10])
+		'filter with atom predicate' |> t.eq(
+			filter([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], :show)
+			[
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+			]
+		)
+		'filter with string predicate' |> t.eq(
+			filter([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], 'show')
+			[
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+			]
+		)
+		'filter with int predicate' |> t.eq(
+			filter([[1, true], [2, false], [3, true], [10, false]], 1)
+			[[1, true], [3, true]]
+		)
+		'filter empty string' |> t.eq(filter('', isX?), '')
+		'filter string' |> t.eq(filter('axbCXingx', isX?), 'xXx')
 		'filter callback gets index' |> t.eq(
 			{
 				nums := []
@@ -709,6 +775,14 @@ fn run(t) {
 
 		'reduce empty list' |> t.eq(reduce([], 0, add), 0)
 		'reduce list' |> t.eq(reduce(arr, 0, add), 20)
+		'reduce empty string' |> t.eq(
+			reduce('', [], fn(acc, c) acc << atom(c))
+			[]
+		)
+		'reduce string' |> t.eq(
+			reduce('hello!', [], fn(acc, c) acc << atom(c))
+			[:h, :e, :l, :l, :o, atom('!')]
+		)
 		'reduce callback gets index' |> t.eq(
 			{
 				nums := []
@@ -738,6 +812,10 @@ fn run(t) {
 			flatten([[1, 2], [[3, 4], [5, 6]]])
 			[1, 2, [3, 4], [5, 6]]
 		)
+
+		'compact empty list' |> t.eq(compact([]), [])
+		'compact all nulls' |> t.eq(compact([?, ?, ?, ?]), [])
+		'compact list' |> t.eq(compact([1, ?, ?, 4, 10, ?, 12, ?, ?]), [1, 4, 10, 12])
 
 		'some empty list' |> t.eq(some([]), false)
 		'some list' |> t.eq(some([true, false]), true)
@@ -822,27 +900,48 @@ fn run(t) {
 	// find, indexOf, and contains?
 	{
 		{
+			first: first
+			last: last
 			find: find
 			indexOf: indexOf
 			contains?: contains?
 		} := std
 
+
 		fn even?(n) n % 2 = 0
+		fn space?(c) c = ' '
+
+		'first of empty list' |> t.eq(first([]), ?)
+		'first of list' |> t.eq(first([:a, :b, :c]), :a)
+		'first of empty string' |> t.eq(first(''), ?)
+		'first of string' |> t.eq(first('abc'), 'a')
 
 		'find empty list' |> t.eq(find([], even?), -1)
-		'find nonexistent item' |> t.eq(find([1, 3, 5], even?), -1)
-		'find existent item' |> t.eq(find([1, 5, 6, 7], even?), 2)
-		'find duplicate item' |> t.eq(find([9, 11, 12, 13, 14], even?), 2)
+		'find nonexistent item in list' |> t.eq(find([1, 3, 5], even?), -1)
+		'find existent item in list' |> t.eq(find([1, 5, 6, 7], even?), 2)
+		'find duplicate item in list' |> t.eq(find([9, 11, 12, 13, 14], even?), 2)
+		'find empty string' |> t.eq(find('', space?), -1)
+		'find nonexistent char in string' |> t.eq(find('abc', space?), -1)
+		'find existent char in string' |> t.eq(find('quick brown', space?), 5)
+		'find duplicate char in string' |> t.eq(find('quick brown fox', space?), 5)
 
 		'indexOf empty list' |> t.eq(indexOf([], :a), -1)
 		'indexOf nonexistent item' |> t.eq(indexOf([:a, :b, :c], :x), -1)
 		'indexOf existent item' |> t.eq(indexOf([:a, :b, :c], :b), 1)
 		'indexOf duplicate item' |> t.eq(indexOf([:a, :b, :c, :d, :c], :c), 2)
+		'indexOf empty string' |> t.eq(indexOf('', 'x'), -1)
+		'indexOf nonexistent char in string' |> t.eq(indexOf('abc', 'x'), -1)
+		'indexOf existent char in string' |> t.eq(indexOf('abc', 'b'), 1)
+		'indexOf duplicate char in string' |> t.eq(indexOf('oaklang', 'a'), 1)
 
 		'contains? empty list' |> t.eq(contains?([], :a), false)
 		'contains? nonexistent item' |> t.eq(contains?([:a, :b, :c], :x), false)
 		'contains? existent item' |> t.eq(contains?([:a, :b, :c], :b), true)
 		'contains? duplicate item' |> t.eq(contains?([:a, :b, :c, :d, :c], :c), true)
+		'contains? empty string' |> t.eq(contains?('', 'x'), false)
+		'contains? nonexistent char in string' |> t.eq(contains?('abc', 'x'), false)
+		'contains? existent char in string' |> t.eq(contains?('abc', 'b'), true)
+		'contains? duplicate char in string' |> t.eq(contains?('oaklang', 'a'), true)
 	}
 
 	// object operators: values, entries, merge
@@ -897,8 +996,7 @@ fn run(t) {
 		)
 		'merge N objects' |> t.eq(
 			merge(
-				std.range(10) |>
-					std.map(fn(i) {(i):string(i) + 'val' })...
+				std.range(10) |> std.map(fn(i) {(i):string(i) + 'val' })...
 			)
 			{
 				0: '0val'
