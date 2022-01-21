@@ -318,8 +318,8 @@ fn wrapBundle(modules, entryModuleName) {
 		// way, module paths remain meaningful and unique, but do not contain
 		// build env information.
 		bundledPaths := append(
-			modules |> map(fn(module) module.0)
-			Includes |> map(fn(spec) spec.path)
+			modules |> map(0)
+			Includes |> map(:path)
 		) |> filter(fn(path) !___runtime_lib?(path))
 		bundlePrefixLen := commonPrefix(bundledPaths) |> len()
 
@@ -718,13 +718,21 @@ fn renderOakBundle(bundleNode) {
 fn renderJSBundle(bundleNode) {
 	fn renderErr(msg) 'throw new Error(\'' << replace(msg, '\'', '\\\'') << '\')'
 
+	// symbols can appear in many places in JS, but they cannot appear as
+	// object keys without disrupting Oak's semantics. Whenever they appear as
+	// potential object keys, we need them to behave like strings.
+	fn renderAsObjectKey(node) [
+		'(()=>{let __oak_node={{0}}'
+		'return typeof __oak_node===\'symbol\'?Symbol.keyFor(__oak_node):__oak_node})()'
+	] |> join(';') |> format(renderNode(node))
+
 	fn renderAssignTarget(node) if node.type {
 		// not a bare '_' to avoid common conflicts with global '_' name
 		:empty -> '__oak_empty_assgn_trgt'
 		:identifier -> formatIdent(node.val)
 		:propertyAccess -> if node.right.type {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
-			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderNode(node.right))
+			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
 		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << '=null]'
 		:object -> '{' << {
@@ -732,7 +740,7 @@ fn renderJSBundle(bundleNode) {
 				{ key: k, val: v } := entry
 				if k.type {
 					:identifier, :empty, :int, :float -> renderNode(k)
-					_ -> '[' << renderNode(k) << ']'
+					_ -> '[' << renderAsObjectKey(k) << ']'
 				} << ':' << renderAssignTarget(v) << '=null'
 			}) |> join(',')
 		} << '}'
@@ -751,7 +759,7 @@ fn renderJSBundle(bundleNode) {
 				{ key: k, val: v } := entry
 				if k.type {
 					:identifier, :empty, :int, :float -> renderNode(k)
-					_ -> '[' << renderNode(k) << ']'
+					_ -> '[' << renderAsObjectKey(k) << ']'
 				} << ':' << renderNode(v)
 			}) |> join(',')
 		} << '}'
@@ -802,7 +810,8 @@ fn renderJSBundle(bundleNode) {
 					//   expression
 					[
 						'(()=>{let __oak_assgn_trgt=__as_oak_string({{0}})'
-						'__is_oak_string(__oak_assgn_trgt)?__oak_assgn_trgt.assign({{3}},{{2}}):({{1}}={{2}})'
+						'let __oak_assgn_val={{2}}'
+						'__is_oak_string(__oak_assgn_trgt)?__oak_assgn_trgt.assign({{3}},__oak_assgn_val):({{1}}=__oak_assgn_val)'
 						'return __oak_assgn_trgt})()'
 					] |> join(';') |> format(
 						renderNode(node.left.left)
@@ -824,7 +833,7 @@ fn renderJSBundle(bundleNode) {
 			_ -> [
 				'(()=>{let __oak_acc_trgt=__as_oak_string({{0}})'
 				'return __is_oak_string(__oak_acc_trgt)?__as_oak_string(__oak_acc_trgt.valueOf()[{{1}}])||null:(__oak_acc_trgt[{{1}}]!==undefined?__oak_acc_trgt[{{1}}]:null)})()'
-			] |> join(';') |> format(renderNode(node.left), renderNode(node.right))
+			] |> join(';') |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
 		:ifExpr -> '__oak_if(' << renderNode(node.cond) << ',[' << {
 			node.branches |> map(fn(br) {

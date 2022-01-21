@@ -658,12 +658,14 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				switch typedKey := key.(type) {
 				case *StringValue:
 					keyString = string(*typedKey)
+				case AtomValue:
+					keyString = string(typedKey)
 				case IntValue:
 					keyString = typedKey.String()
 				case FloatValue:
 					keyString = typedKey.String()
 				default:
-					return nil, &runtimeError{reason: fmt.Sprintf("Expected a string or number as object key, got %s", key.String()),
+					return nil, &runtimeError{reason: fmt.Sprintf("Expected a string, atom, or number as object key, got %s", key.String()),
 						pos: entry.key.pos(),
 					}
 				}
@@ -778,8 +780,10 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				}
 
 				var keyString string
-				if key, ok := key.(*StringValue); ok {
-					keyString = string(*key)
+				if k, ok := key.(*StringValue); ok {
+					keyString = string(*k)
+				} else if k, ok := key.(AtomValue); ok {
+					keyString = string(k)
 				} else {
 					keyString = key.String()
 				}
@@ -878,6 +882,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 				var objKeyString string
 				if objKey, ok := assignRight.(*StringValue); ok {
 					objKeyString = string(*objKey)
+				} else if objKey, ok := assignRight.(AtomValue); ok {
+					objKeyString = string(objKey)
 				} else {
 					objKeyString = assignRight.String()
 				}
@@ -941,6 +947,8 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			var objKeyString string
 			if objKey, ok := right.(*StringValue); ok {
 				objKeyString = string(*objKey)
+			} else if objKey, ok := right.(AtomValue); ok {
+				objKeyString = string(objKey)
 			} else {
 				objKeyString = right.String()
 			}

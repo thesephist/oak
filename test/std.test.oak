@@ -30,8 +30,8 @@ fn run(t) {
 		)
 
 		'object literal' |> t.eq(
-			{ a: 'ay', 'b': 200, 100: { d: :dee } }
-			{ 'a': 'ay', 'b': 200, '100': { d: :dee } }
+			{ a: 'ay', :be: 200, 100: {('d' + 'i'): :dee } }
+			{ a: 'ay', be: 200, '100': { di: :dee } }
 		)
 
 		'list stringify' |> t.eq(
@@ -108,13 +108,16 @@ fn run(t) {
 
 		'destructure object' |> t.eq(
 			{
-				list := [1, 2, 3]
-				obj := { a: 'ay', b: 'bee' }
+				obj := {
+					a: 'ay'
+					b: 'bee'
+					12: 'see'
+				}
 				{ a: a } := obj
-				{ b: b, c: see } := obj
-				[a, b, see]
+				{ :b: b, 10 + 2: see } := { 'whatever': dee } := obj
+				[a, b, see, dee]
 			}
-			['ay', 'bee', ?]
+			['ay', 'bee', 'see', ?]
 		)
 
 		'destructure to reassign list' |> t.eq(
@@ -313,6 +316,48 @@ fn run(t) {
 				[s.payload.3 := 'pie', t]
 			}
 			['Magpieia', 'Magpieia']
+		)
+
+		'object access' |> t.eq(
+			{
+				obj := {
+					a: 'ay'
+					b: 'bee'
+					c: ['see', {
+						d: 'd'
+					}]
+				}
+				[
+					obj.c.(1).: d
+					obj.c.(1).(:d)
+				]
+			}
+			['d', 'd']
+		)
+
+		'object assign' |> t.eq(
+			{
+				obj := {
+					a: 'ay'
+					b: 'bee'
+					c: ['see', {
+						d: 'd'
+					}]
+				}
+				[
+					obj.c.(1).: e := 'hello_e'
+					obj.c.(1).(:f) := 'hello_f'
+					obj.c
+				]
+			}
+			[
+				{ d: 'd', e: 'hello_e', f: 'hello_f' }
+				{ d: 'd', e: 'hello_e', f: 'hello_f' }
+				[
+					'see'
+					{ d: 'd', e: 'hello_e', f: 'hello_f' }
+				]
+			]
 		)
 
 		'object delete' |> t.eq(

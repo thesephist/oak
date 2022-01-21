@@ -102,11 +102,11 @@ func TestListLiteral(t *testing.T) {
 }
 
 func TestObjectLiteral(t *testing.T) {
-	expectProgramToReturn(t, `{a: 'ay', 'b': 200, 100: {d: :dee}}`, ObjectValue{
-		"a": MakeString("ay"),
-		"b": IntValue(200),
+	expectProgramToReturn(t, `{ a: 'ay', :be: 200, 100: {('d' + 'i'): :dee } }`, ObjectValue{
+		"a":  MakeString("ay"),
+		"be": IntValue(200),
 		"100": ObjectValue{
-			"d": AtomValue("dee"),
+			"di": AtomValue("dee"),
 		},
 	})
 }
@@ -200,14 +200,18 @@ func TestDestructureList(t *testing.T) {
 
 func TestDestructureObject(t *testing.T) {
 	expectProgramToReturn(t, `
-	list := [1, 2, 3]
-	obj := {a: 'ay', b: 'bee'}
+	obj := {
+		a: 'ay'
+		b: 'bee'
+		12: 'see'
+	}
 	{a: a} := obj
-	{b: b, c: see} := obj
-	[a, b, see]
+	{:b: b, 10 + 2: see} := {'whatever': dee} := obj
+	[a, b, see, dee]
 	`, MakeList(
 		MakeString("ay"),
 		MakeString("bee"),
+		MakeString("see"),
 		null,
 	))
 }
@@ -700,8 +704,14 @@ func TestObjectAccess(t *testing.T) {
 			d: 'd'
 		}]
 	}
-	obj.c.(1).d
-	`, MakeString("d"))
+	[
+		obj.c.(1).:d
+		obj.c.(1).(:d)
+	]
+	`, MakeList(
+		MakeString("d"),
+		MakeString("d"),
+	))
 }
 
 func TestObjectAssign(t *testing.T) {
@@ -714,17 +724,25 @@ func TestObjectAssign(t *testing.T) {
 		}]
 	}
 	[
-		obj.c.(1).e := 'hello'
+		obj.c.(1).:e := 'hello_e'
+		obj.c.(1).(:f) := 'hello_f'
 		obj.c
 	]
 	`, MakeList(
 		ObjectValue{
 			"d": MakeString("d"),
-			"e": MakeString("hello"),
+			"e": MakeString("hello_e"),
+			"f": MakeString("hello_f"),
+		},
+		ObjectValue{
+			"d": MakeString("d"),
+			"e": MakeString("hello_e"),
+			"f": MakeString("hello_f"),
 		},
 		MakeList(MakeString("see"), ObjectValue{
 			"d": MakeString("d"),
-			"e": MakeString("hello"),
+			"e": MakeString("hello_e"),
+			"f": MakeString("hello_f"),
 		}),
 	))
 }
