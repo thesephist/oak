@@ -721,14 +721,14 @@ fn renderJSBundle(bundleNode) {
 	// symbols can appear in many places in JS, but they cannot appear as
 	// object keys without disrupting Oak's semantics. Whenever they appear as
 	// potential object keys, we need them to behave like strings.
-	fn renderAsObjectKey(node) [
-		'(()=>{let __oak_node={{0}}'
-		'return typeof __oak_node===\'symbol\'?Symbol.keyFor(__oak_node):__oak_node})()'
-	] |> join(';') |> format(renderNode(node))
+	fn renderAsObjectKey(node) if node.type {
+		:string, :int, :float -> renderNode(node)
+		_ -> '__oak_obj_key({{0}})' |> format(renderNode(node))
+	}
 
 	fn renderAssignTarget(node) if node.type {
 		// not a bare '_' to avoid common conflicts with global '_' name
-		:empty -> '__oak_empty_assgn_trgt'
+		:empty -> '__oak_empty_assgn_tgt'
 		:identifier -> formatIdent(node.val)
 		:propertyAccess -> if node.right.type {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
@@ -754,7 +754,9 @@ fn renderJSBundle(bundleNode) {
 		:identifier -> formatIdent(node.val)
 		:atom -> 'Symbol.for(\'' << node.val << '\')'
 		:list -> '[' << (node.elems |> map(renderNode) |> join(',')) << ']'
-		:object -> '{' << {
+		// wrap object literals in (...) to avoid being mis-parsed as a lexical
+		// block when appearing in statement position
+		:object -> '({' << {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
 				if k.type {
@@ -762,7 +764,7 @@ fn renderJSBundle(bundleNode) {
 					_ -> '[' << renderAsObjectKey(k) << ']'
 				} << ':' << renderNode(v)
 			}) |> join(',')
-		} << '}'
+		} << '})'
 		:unary -> if node.op {
 			:minus -> '-' << renderNode(node.right)
 			:exclam -> '!' << renderNode(node.right)
@@ -791,7 +793,7 @@ fn renderJSBundle(bundleNode) {
 		}
 		:assignment -> if node.left.type {
 			:propertyAccess -> if node.right.type {
-				:empty -> '(delete {{0}}, {{1}})' |> format(
+				:empty -> '(delete {{0}},{{1}})' |> format(
 					renderAssignTarget(node.left)
 					renderNode(node.left.left)
 				)
@@ -800,7 +802,7 @@ fn renderJSBundle(bundleNode) {
 					tmpDfn.left := {
 						type: :identifier
 						tok: node.tok
-						val: '__oak_assgn_trgt'
+						val: '__oak_assgn_tgt'
 					}
 
 					// this production preserves two Oak semantics:
@@ -808,49 +810,39 @@ fn renderJSBundle(bundleNode) {
 					// - assignment on strings and composites return the assignment
 					//   target, not the assigned value, as the value of the
 					//   expression
-					[
-						'(()=>{let __oak_assgn_trgt=__as_oak_string({{0}})'
-						'let __oak_assgn_val={{2}}'
-						'__is_oak_string(__oak_assgn_trgt)?__oak_assgn_trgt.assign({{3}},__oak_assgn_val):({{1}}=__oak_assgn_val)'
-						'return __oak_assgn_trgt})()'
-					] |> join(';') |> format(
+					'((__oak_assgn_tgt,__oak_assgn_val)=>(__is_oak_string(__oak_assgn_tgt)?__oak_assgn_tgt.assign({{2}},__oak_assgn_val):{{1}}=__oak_assgn_val,__oak_assgn_tgt))(__as_oak_string({{0}}),{{3}})' |> format(
 						renderNode(node.left.left)
 						// composite assignment
 						renderAssignTarget(tmpDfn)
-						renderNode(node.right)
 						// string assignment
 						renderNode(node.left.right)
+						renderNode(node.right)
 					)
 				}
 			}
 			_ -> '(' << renderAssignTarget(node.left) << '=' << renderNode(node.right) << ')'
 		}
 		:propertyAccess -> if node.right.type {
-			:identifier -> [
-				'(()=>{let __oak_acc_trgt=__as_oak_string({{0}})'
-				'return __is_oak_string(__oak_acc_trgt)?__as_oak_string(__oak_acc_trgt.valueOf()[{{1}}])||null:(__oak_acc_trgt.{{1}}!==undefined?__oak_acc_trgt.{{1}}:null)})()'
-			] |> join(';') |> format(renderNode(node.left), renderNode(node.right))
-			_ -> [
-				'(()=>{let __oak_acc_trgt=__as_oak_string({{0}})'
-				'return __is_oak_string(__oak_acc_trgt)?__as_oak_string(__oak_acc_trgt.valueOf()[{{1}}])||null:(__oak_acc_trgt[{{1}}]!==undefined?__oak_acc_trgt[{{1}}]:null)})()'
-			] |> join(';') |> format(renderNode(node.left), renderAsObjectKey(node.right))
+			// accessing into string values with identifier properties is
+			// illegal/invalid. Therefore, we treat the case where
+			// __oak_acc_tgt is a string as "undefined behavior" and only
+			// generate code for the case when it's a list or object.
+			:identifier -> '((__oak_acc_tgt)=>__oak_acc_tgt.{{1}}!==undefined?__oak_acc_tgt.{{1}}:null)({{0}})' |>
+				format(renderNode(node.left), renderNode(node.right))
+			_ -> '__oak_acc({{0}},{{1}})' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
 		:ifExpr -> '__oak_if(' << renderNode(node.cond) << ',[' << {
 			node.branches |> map(fn(br) {
-				'[()=>({{0}}),()=>({{1}})]' |> format(renderNode(br.target), renderNode(br.body))
+				'[()=>{{0}},()=>{{1}}]' |> format(renderNode(br.target), renderNode(br.body))
 			}) |> join(',')
 		} << '])'
 		:block -> if len(node.exprs) {
 			0 -> 'null'
 			_ -> if len(node.decls) {
-				0 -> '(' << (node.exprs |> map(renderNode) |> join(',')) << ')'
-				_ -> '(()=>{ {{0}}{{1}} })()' |> format(
-					node.decls |> sort!() |> map(fn(decl) 'let ' << formatIdent(decl) << ';') |> join()
-					{
-						exprs := node.exprs |> map(renderNode)
-						exprs.(len(exprs) - 1) := 'return ' << exprs.(len(exprs) - 1)
-						exprs |> join(';')
-					}
+				0 -> '({{0}})' |> format(node.exprs |> map(renderNode) |> join(','))
+				_ -> '(({{0}})=>({{1}}))()' |> format(
+					node.decls |> sort!() |> map(formatIdent) |> join(',')
+					node.exprs |> map(renderNode) |> join(',')
 				)
 			}
 		}
@@ -963,7 +955,7 @@ function __oak_module_import(name) {
 }
 
 // language primitives
-let __oak_empty_assgn_trgt;
+let __oak_empty_assgn_tgt;
 function __oak_eq(a, b) {
 	a = __as_oak_string(a);
 	b = __as_oak_string(b);
@@ -990,6 +982,16 @@ function __oak_eq(a, b) {
 		if (!__oak_eq(a[key], b[key])) return false;
 	}
 	return true;
+}
+function __oak_acc(tgt, prop) {
+	return __is_oak_string(tgt)
+		? __as_oak_string(tgt.valueOf()[prop]) || null
+		: tgt[prop] !== undefined
+		? tgt[prop]
+		: null;
+}
+function __oak_obj_key(x) {
+	return typeof x === \'symbol\' ? Symbol.keyFor(x) : x;
 }
 function __oak_push(a, b) {
 	a = __as_oak_string(a);
