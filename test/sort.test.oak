@@ -23,7 +23,7 @@ fn run(t) {
 		[-4, 1, 20, 20, 40]
 	)
 
-	'sort! mutates arg' |> t.eq(
+	'sort! mutates list' |> t.eq(
 		{
 			arr := [1, 2, 20, 3, -3]
 			sort!(arr)
@@ -31,13 +31,29 @@ fn run(t) {
 		}
 		[-3, 1, 2, 3, 20]
 	)
-	'sort does not mutate arg' |> t.eq(
+	'sort does not mutate list' |> t.eq(
 		{
 			arr := [1, 2, 20, 3, -3]
 			sort(arr)
 			arr
 		}
 		[1, 2, 20, 3, -3]
+	)
+	'sort! mutates string' |> t.eq(
+		{
+			arr := 'alphabet soup'
+			sort!(arr)
+			arr
+		}
+		' aabehloppstu'
+	)
+	'sort does not mutate string' |> t.eq(
+		{
+			arr := 'alphabet soup'
+			sort(arr)
+			arr
+		}
+		'alphabet soup'
 	)
 
 	// various types
@@ -107,5 +123,15 @@ fn run(t) {
 			arr
 		}
 		[o(1), o(2), o(20), o(3), o(-3)]
+	)
+
+	// sort strings
+	'sort! empty string' |> t.eq(
+		sort!('')
+		''
+	)
+	'sort! string' |> t.eq(
+		sort!('abacadbcab')
+		'aaaabbbccd'
 	)
 }
