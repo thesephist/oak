@@ -8,6 +8,7 @@
 	map: map
 	each: each
 	filter: filter
+	reduce: reduce
 	append: append
 	entries: entries
 	contains?: contains?
@@ -831,11 +832,13 @@ fn renderJSBundle(bundleNode) {
 				format(renderNode(node.left), renderNode(node.right))
 			_ -> '__oak_acc({{0}},{{1}})' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
-		:ifExpr -> '__oak_if(' << renderNode(node.cond) << ',[' << {
-			node.branches |> map(fn(br) {
-				'[()=>{{0}},()=>{{1}}]' |> format(renderNode(br.target), renderNode(br.body))
-			}) |> join(',')
-		} << '])'
+		:ifExpr -> '((__oak_cond)=>{{1}})({{0}})' |> format(
+			renderNode(node.cond)
+			node.branches |> reduce('', fn(branches, br) {
+				branches << '__oak_eq(__oak_cond,{{0}})?{{1}}:' |>
+					format(renderNode(br.target), renderNode(br.body))
+			}) << 'null'
+		)
 		:block -> if len(node.exprs) {
 			0 -> 'null'
 			_ -> if len(node.decls) {
@@ -1045,12 +1048,6 @@ function __oak_xor(a, b) {
 		return res;
 	}
 	return a ^ b;
-}
-function __oak_if(cond, branches) {
-	for (const [target, body] of branches) {
-		if (__oak_eq(cond, target())) return body();
-	}
-	return null;
 }
 const __Oak_Empty = Symbol(\'__Oak_Empty\');
 
