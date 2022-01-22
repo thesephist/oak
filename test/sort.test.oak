@@ -67,6 +67,31 @@ fn run(t) {
 		[o(-4), o(1), o(20), o(20), o(40)]
 	)
 
+	// non-function keys
+	'sort! list by atom predicate' |> t.eq(
+		sort!([o(1), o(40), o(20), o(-4)], :key)
+		[o(-4), o(1), o(20), o(40)]
+	)
+	'sort! list by string predicate' |> t.eq(
+		sort!([o(1), o(40), o(20), o(-4)], 'key')
+		[o(-4), o(1), o(20), o(40)]
+	)
+	'sort! list by int predicate' |> t.eq(
+		sort!([
+			[:d, 3, -2]
+			[:c, 10, 5]
+			[:a, 1, 10]
+			[:b, 2, 40]
+		], 1)
+		[
+			[:a, 1, 10]
+			[:b, 2, 40]
+			[:d, 3, -2]
+			[:c, 10, 5]
+		]
+	)
+
+	// mutation
 	'sort! mutates arg by predicate' |> t.eq(
 		{
 			arr := [o(1), o(2), o(20), o(3), o(-3)]
