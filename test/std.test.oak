@@ -940,6 +940,8 @@ fn run(t) {
 			)
 			[{ name: 'Linus' }, { name: 'Jan' }, { name: 'Al' }, { name: 'Linus' }]
 		)
+		'uniq empty string' |> t.eq(uniq(''), '')
+		'uniq string' |> t.eq(uniq('aaaabbbccd'), 'abcd')
 	}
 
 	// find, indexOf, and contains?

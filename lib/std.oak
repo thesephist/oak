@@ -348,7 +348,7 @@ fn partition(xs, by) if type(by) {
 // sort the list.
 fn uniq(xs, pred) {
 	pred := default(pred, identity)
-	ys := []
+	ys := _baseIterator(xs)
 	last := fn {} // empty fn is not equal to anything else
 	fn sub(i) if i {
 		len(xs) -> ys
