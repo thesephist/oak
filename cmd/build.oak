@@ -192,7 +192,7 @@ if Web? {
 	}
 	_ -> fn formatIdent(name, key) if name {
 		// prevent shadowing of some meaningful global '_' variable
-		'_' -> '_oak_empty_ident' << string(key |> default(''))
+		'_' -> '__oak_empty_ident' << string(key |> default(''))
 		// ECMAScript 2021 reserved words, cannot be used as identifiers
 		'await', 'break', 'case', 'catch', 'class', 'const', 'continue'
 		'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export'
