@@ -901,6 +901,11 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			}
 
 			return assignLeft, nil
+		default:
+			return nil, &runtimeError{
+				reason: fmt.Sprintf("Invalid assignment target %s", left.String()),
+				pos:    n.pos(),
+			}
 		}
 	case propertyAccessNode:
 		left, err := c.evalExpr(n.left, sc)
