@@ -42,6 +42,9 @@ var libhttp string
 //go:embed lib/test.oak
 var libtest string
 
+//go:embed lib/debug.oak
+var libdebug string
+
 //go:embed lib/cli.oak
 var libcli string
 
@@ -67,6 +70,7 @@ var stdlibs = map[string]string{
 	"path":     libpath,
 	"http":     libhttp,
 	"test":     libtest,
+	"debug":    libdebug,
 	"cli":      libcli,
 	"md":       libmd,
 	"crypto":   libcrypto,

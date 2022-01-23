@@ -1,0 +1,153 @@
+// libdebug contains utilities useful for debugging and inspecting runtime
+// values of Oak programs.
+
+{
+	println: stdPrintln
+	default: default
+	toHex: toHex
+	map: map
+	some: some
+	every: every
+	values: values
+	reduce: reduce
+	entries: entries
+} := import('std')
+{
+	letter?: letter?
+	digit?: digit?
+	join: join
+	padStart: padStart
+} := import('str')
+{
+	sort!: sort!
+} := import('sort')
+{
+	format: format
+} := import('fmt')
+
+// _validIdent? reports if the given string is a valid name for an Oak
+// identifier. It's used to check if a string can appear without quotes as an
+// object key, or if it must be displayed as a string.
+fn _validIdent?(s) s |> every(fn(c, i) if i {
+	0 -> letter?(c) | c = '_' | c = '?' | c = '!'
+	_ -> letter?(c) | digit?(c) | c = '_' | c = '?' | c = '!'
+})
+
+// _numeral? reports if the given string represents a positive integer, used
+// for similar purposes to _validIdent?.
+fn _numeral?(s) s |> every(digit?)
+
+// _primitive? reports whether the given Oak value x is of a primitive or
+// function type, or a composite type composed of other Oak values.
+fn _primitive?(x) if type(x) {
+	:null, :empty, :bool, :int, :float, :string, :atom
+	// functions are considered "primitives" for the purpose of
+	// inspect-printing because they're printed as `fn { ... }`
+	:function -> true
+	_ -> false
+}
+
+// inspect is a utility to pretty-print Oak data structures. Unlike the
+// string() builtin (used in std.println), inspect formats its input with
+// customizable, nested indentation and spacing for readability in an output
+// log or console output.
+fn inspect(x, options) {
+	{
+		indent: indentUnit
+		depth: depth
+		maxLine: maxLine
+		maxList: maxList
+		maxObject: maxObject
+	} := options |> default({})
+
+	indentUnit := indentUnit |> default('  ')
+	depth := depth |> default(-1)
+	maxLine := maxLine |> default(80)
+	maxList := maxList |> default(16)
+	maxObject := maxObject |> default(3)
+
+	fn inspectObjectKey(key) if {
+		_validIdent?(key), _numeral?(key) -> key
+		_ -> inspectLine(key, -1)
+	}
+
+	fn inspectAbbreviated(x) if type(x) {
+		:list -> '[ {{0}} items... ]' |> format(len(x))
+		:object -> '{ {{0}} entries... }' |> format(len(x))
+	}
+
+	fn inspectLine(x, depth) if type(x) {
+		:null, :empty, :bool, :int, :float -> string(x)
+		:string -> '\'' + (x |> map(fn(c) if c {
+			'\\' -> '\\\\'
+			'\'' -> '\\\''
+			'\n' -> '\\n'
+			'\r' -> '\\r'
+			'\f' -> '\\f'
+			'\t' -> '\\t'
+			_ -> if {
+				// hex-format non-printable bytes
+				codepoint(c) < 32
+				codepoint(c) > 126 -> '\\x' << toHex(codepoint(c)) |> padStart(2, '0')
+				_ -> c
+			}
+		})) + '\''
+		:atom -> if _validIdent?(payload := string(x)) {
+			true -> ':' + string(payload)
+			_ -> 'atom({{0}})' |> format(inspectLine(payload))
+		}
+		:function -> 'fn { ... }'
+		:list -> '[' + (x |> map(fn(y) inspectLine(y, depth)) |> join(', ')) + ']'
+		:object -> if len(x) {
+			0 -> '{}'
+			_ -> '{ ' + {
+				entries(x) |>
+					sort!(0) |>
+					map(fn(entry) inspectObjectKey(entry.0) + ': ' + inspectLine(entry.1, depth)) |>
+					join(', ')
+			} + ' }'
+		}
+	}
+
+	fn inspectMulti(x, indent, depth) {
+		innerIndent := indent + indentUnit
+		if type(x) {
+			:list -> x |> reduce('[', fn(lines, item) {
+				lines << '\n' + innerIndent + inspectAny(item, innerIndent, depth)
+			}) << '\n' + indent + ']'
+			:object -> entries(x) |> sort!(0) |> reduce('{', fn(lines, entry) {
+				lines << '\n' + innerIndent + inspectObjectKey(entry.0) + ': ' +
+					inspectAny(entry.1, innerIndent, depth)
+			}) << '\n' + indent + '}'
+		}
+	}
+
+	fn inspectAny(x, indent, depth) {
+		line := inspectLine(x, depth - 1)
+		overflows? := len(line) + len(indent) > maxLine
+		if {
+			_primitive?(x) -> line
+			depth = 0 -> inspectAbbreviated(x)
+			overflows? -> inspectMulti(x, indent, depth - 1)
+			type(x) = :list -> if {
+				len(x) > maxList
+				x |> some(fn(y) !_primitive?(y)) -> inspectMulti(x, indent, depth - 1)
+				_ -> line
+			}
+			type(x) = :object -> if {
+				len(x) > maxObject
+				x |> values() |> some(fn(y) !_primitive?(y)) -> inspectMulti(x, indent, depth - 1)
+				_ -> line
+			}
+		}
+	}
+
+	inspectAny(x, '', depth)
+}
+
+// println is a shorthand function to print the output of `inspect`. Note that
+// debug.println is not a drop-in replacement for std.println, because
+// std.println is variadic, but debug.println takes one argument and one
+// (optional) options object.
+fn println(x, options) stdPrintln(inspect(x, options))
+

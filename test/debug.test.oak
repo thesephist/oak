@@ -1,0 +1,166 @@
+std := import('std')
+str := import('str')
+debug := import('debug')
+
+fn run(t) {
+	// inspect
+	//
+	// debug.inspect has numerous possible input shapes and many options,
+	// which together create a huge search space for table-driven unit testing.
+	// We consciously do not attempt to cover the entire search space, because
+	// as a debugging library, the exact behavior in corner cases isn't very
+	// important. These tests are instead meant to catch general regressions
+	// and ensure reasonable behavior in the common cases. For this reason, we
+	// also do not test behaviors when not using certain default options.
+	{
+		ComplexObjectValue := {
+			type: :fnCall
+			tok: { pos: [1, 8], type: :leftParen, val: ? }
+			// identifier `function` is translated to `__oak_js_function` when
+			// testing with the --web compiler flag, which fails certain unit
+			// tests unnecessarily.
+			'function': {
+				type: :identifier
+				tok: { pos: [1, 1], type: :identifier, val: 'println' }
+				val: 'println'
+			}
+			args: [{
+				type: :atom
+				tok: { pos: [1, 9], type: :colon, val: ? }
+				val: 'hi'
+			}]
+			restArg: ?
+		}
+
+		Inspections := [
+			// primitives
+			[_, ?, '?']
+			[_, _, '_']
+			[_, true, 'true']
+			[_, false, 'false']
+			['positive int', 12, '12']
+			['negative int', -2400, '-2400']
+			['positive float', 3.14, '3.14']
+			['negative float', -0.00010, '-0.0001']
+			['empty string', '', '\'\'']
+			['string', 'Hello, World!', '\'Hello, World!\'']
+			['escaped string', '\\Name:\nLinus\'s.', '\'\\\\Name:\\nLinus\\\'s.\'']
+			['hex characters'
+				[0, 2, 10, 30, 128, 200] |> std.map(char) |> str.join()
+				'\'\\x00\\x02\\n\\x1e\\x80\\xc8\'']
+			['simple atom', :whatever, ':whatever']
+			['non-literal atom', atom('404 Not Found'), 'atom(\'404 Not Found\')']
+			['function', debug.inspect, 'fn { ... }']
+
+			// primitive composites
+			['empty list', [], '[]']
+			['short list', [1, 2, 3, 4], '[1, 2, 3, 4]']
+			['long list'
+				std.range(20)
+				'[\n  ' + (std.range(20) |> str.map(string) |> str.join('\n  ')) + '\n]']
+			['empty object', {}, '{}']
+			['short object', { a: 100, b: :noun, c: ? }, '{ a: 100, b: :noun, c: ? }']
+			['long object'
+				{ a: 1, b: 2, c: 3, d: 5, e: 6 }
+				'{\n  a: 1\n  b: 2\n  c: 3\n  d: 5\n  e: 6\n}']
+
+			// weird object keys
+			['number object key', { 123: 100 }, '{ 123: 100 }']
+			['string object key', { 'Perfect Day.': :today }, '{ \'Perfect Day.\': :today }']
+
+			// complex composites
+			['list of lists'
+				[[], [1, 2], [3, 4, [5], 6]]
+				'[\n  []\n  [1, 2]\n  [\n    3\n    4\n    [5]\n    6\n  ]\n]']
+			['list of objects'
+				[{ a: :ay }, { b: :bee, c: :see }]
+				'[\n  { a: :ay }\n  { b: :bee, c: :see }\n]']
+			['object of lists'
+				{ a: [1, 2], ' ': [3, 4, [5, 6]] }
+				'{\n  \' \': [\n    3\n    4\n    [5, 6]\n  ]\n  a: [1, 2]\n}']
+			['object of objects'
+				{ a: { b: { c: :success } } }
+				'{\n  a: {\n    b: { c: :success }\n  }\n}']
+			['small complex object'
+				{
+					't&c': ?
+					apple: 4
+					google: {
+						'c_c': [1, 2, [4, 5, :number]]
+						132: [' a', :test_atom]
+					}
+				}
+				'{\n  apple: 4\n  google: {\n    132: [\' a\', :test_atom]\n    c_c: [\n      1\n      2\n      [4, 5, :number]\n    ]\n  }\n  \'t&c\': ?\n}'
+			]
+			['large complex object'
+				ComplexObjectValue
+				'{\n  args: [\n    {\n      tok: {\n        pos: [1, 9]\n        type: :colon\n        val: ?\n      }\n      type: :atom\n      val: \'hi\'\n    }\n  ]\n  function: {\n    tok: {\n      pos: [1, 1]\n      type: :identifier\n      val: \'println\'\n    }\n    type: :identifier\n    val: \'println\'\n  }\n  restArg: ?\n  tok: {\n    pos: [1, 8]\n    type: :leftParen\n    val: ?\n  }\n  type: :fnCall\n}']
+
+			// indent option
+			['default indent'
+				[1, [2, [3, :three]]]
+				'[\n  1\n  [\n    2\n    [3, :three]\n  ]\n]']
+			['no indent'
+				[1, [2, [3, :three]]]
+				'[\n1\n[\n2\n[3, :three]\n]\n]'
+				{ indent: '' }]
+			['indent = \'    \''
+				[1, [2, [3, :three]]]
+				'[\n    1\n    [\n        2\n        [3, :three]\n    ]\n]'
+				{ indent: '    ' }]
+			['indent = TAB'
+				[1, [2, [3, :three]]]
+				'[\n\t1\n\t[\n\t\t2\n\t\t[3, :three]\n\t]\n]'
+				{ indent: '\t' }]
+			['indent = \'..\''
+				[1, [2, [3, :three]]]
+				'[\n..1\n..[\n....2\n....[3, :three]\n..]\n]'
+				{ indent: '..' }]
+
+			// depth option
+			['depth 0', ComplexObjectValue, '{ 5 entries... }', { depth: 0 }]
+			['depth 1'
+				ComplexObjectValue
+				'{\n  args: [ 1 items... ]\n  function: { 3 entries... }\n  restArg: ?\n  tok: { 3 entries... }\n  type: :fnCall\n}'
+				{ depth: 1 }]
+			['depth 3'
+				ComplexObjectValue
+				'{\n  args: [\n    {\n      tok: { 3 entries... }\n      type: :atom\n      val: \'hi\'\n    }\n  ]\n  function: {\n    tok: {\n      pos: [ 2 items... ]\n      type: :identifier\n      val: \'println\'\n    }\n    type: :identifier\n    val: \'println\'\n  }\n  restArg: ?\n  tok: {\n    pos: [1, 8]\n    type: :leftParen\n    val: ?\n  }\n  type: :fnCall\n}'
+				{ depth: 3 }]
+			['depth 1000'
+				ComplexObjectValue
+				'{\n  args: [\n    {\n      tok: {\n        pos: [1, 9]\n        type: :colon\n        val: ?\n      }\n      type: :atom\n      val: \'hi\'\n    }\n  ]\n  function: {\n    tok: {\n      pos: [1, 1]\n      type: :identifier\n      val: \'println\'\n    }\n    type: :identifier\n    val: \'println\'\n  }\n  restArg: ?\n  tok: {\n    pos: [1, 8]\n    type: :leftParen\n    val: ?\n  }\n  type: :fnCall\n}'
+				{ depth: 1000 }]
+			['depth -1'
+				ComplexObjectValue
+				'{\n  args: [\n    {\n      tok: {\n        pos: [1, 9]\n        type: :colon\n        val: ?\n      }\n      type: :atom\n      val: \'hi\'\n    }\n  ]\n  function: {\n    tok: {\n      pos: [1, 1]\n      type: :identifier\n      val: \'println\'\n    }\n    type: :identifier\n    val: \'println\'\n  }\n  restArg: ?\n  tok: {\n    pos: [1, 8]\n    type: :leftParen\n    val: ?\n  }\n  type: :fnCall\n}'
+				{ depth: -1 }]
+
+			// maxLine option
+			['maxLine -1'
+				[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+				'[\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n]'
+				{ maxLine: -1 }]
+			['maxLine 0'
+				[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+				'[\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n]'
+				{ maxLine: 0 }]
+			['maxLine 10'
+				[1, 2, 3, 4]
+				'[\n  1\n  2\n  3\n  4\n]'
+				{ maxLine: 10 }]
+			['maxLine 1000'
+				[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+				'[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]'
+				{ maxLine: 1000 }]
+		]
+
+		Inspections |> with std.each() fn(spec) {
+			[name, val, desc, options] := spec
+			if type(name) = :empty -> name <- string(val)
+
+			t.eq('Inspect ' << name
+				debug.inspect(val, options), desc)
+		}
+	}
+}
