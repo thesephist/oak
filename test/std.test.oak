@@ -96,6 +96,25 @@ fn run(t) {
 			?
 		)
 
+		'chained local assignment' |> t.eq(
+			{
+				a := b := 10
+				a + b
+			}
+			20
+		)
+
+		'chained nonlocal assignment' |> t.eq(
+			{
+				a := b := 0
+				{
+					a <- b <- 20
+				}
+				a + b
+			}
+			40
+		)
+
 		'destructure list' |> t.eq(
 			{
 				list := [1, 2, 3]

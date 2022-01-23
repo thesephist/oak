@@ -185,6 +185,23 @@ func TestLocalAssignment(t *testing.T) {
 	expectProgramToReturn(t, `x := 100, y := 200, x`, IntValue(100))
 }
 
+func TestChainedLocalAssignment(t *testing.T) {
+	expectProgramToReturn(t, `
+	a := b := 10
+	a + b
+	`, IntValue(20))
+}
+
+func TestChainedNonlocalAssignment(t *testing.T) {
+	expectProgramToReturn(t, `
+	a := b := 0
+	{
+		a <- b <- 20
+	}
+	a + b
+	`, IntValue(40))
+}
+
 func TestDestructureList(t *testing.T) {
 	expectProgramToReturn(t, `
 	list := [1, 2, 3]
