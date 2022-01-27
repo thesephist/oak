@@ -36,6 +36,13 @@ func main() {
 		return
 	}
 
+	// if stdin is being piped in, eval from stdin
+	stdin, _ := os.Stdin.Stat()
+	if (stdin.Mode() & os.ModeCharDevice) == 0 {
+		runStdin()
+		return
+	}
+
 	runRepl()
 }
 
@@ -105,6 +112,23 @@ func runFile(filePath string) {
 	defer ctx.Wait()
 
 	_, err = ctx.Eval(file)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func runStdin() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Could not get working directory")
+		os.Exit(1)
+	}
+	ctx := NewContext(cwd)
+	ctx.LoadBuiltins()
+	defer ctx.Wait()
+
+	_, err = ctx.Eval(os.Stdin)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
