@@ -22,7 +22,8 @@ fn selectAll(selector) {
 selectAll('.try-details') |> each(fn(el) el.open := false)
 if {
 	UA |> contains?('Macintosh')
-	UA |> contains?('iPhone') -> select('.try-details.os-macos').open := true
+	UA |> contains?('iPhone')
+	UA |> contains?('iPad') -> select('.try-details.os-macos').open := true
 	UA |> contains?('Linux') -> select('.try-details.os-linux').open := true
 	_ -> select('.try-details.os-other').open := true
 }
