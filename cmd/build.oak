@@ -834,10 +834,21 @@ fn renderJSBundle(bundleNode) {
 		}
 		:ifExpr -> '((__oak_cond)=>{{1}})({{0}})' |> format(
 			renderNode(node.cond)
-			node.branches |> reduce('', fn(branches, br) {
-				branches << '__oak_eq(__oak_cond,{{0}})?{{1}}:' |>
-					format(renderNode(br.target), renderNode(br.body))
-			}) << 'null'
+			node.branches |> reduce('', fn(branches, br, i) {
+				last? := i + 1 = len(node.branches)
+				if {
+					// optimized common case, where last branch is `_ -> body`
+					br.target.type = :empty & last? -> branches << renderNode(br.body)
+					_ -> {
+						branches << '__oak_eq(__oak_cond,{{0}})?{{1}}:' |> format(
+							renderNode(br.target)
+							renderNode(br.body)
+						)
+						if last? -> branches << 'null'
+						branches
+					}
+				}
+			})
 		)
 		:block -> if len(node.exprs) {
 			0 -> 'null'
