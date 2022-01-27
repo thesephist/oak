@@ -44,6 +44,14 @@ build-%:
 # build for all OS targets
 build: build-linux build-darwin build-windows build-openbsd
 
+# build Oak source for the website
+site:
+	oak build --entry www/src/app.js.oak --output www/static/js/bundle.js --web
+
+# build Oak source for the website on file change, using entr
+site-w:
+	ls www/src/app.js.oak | entr -cr make site
+
 # install as "oak" binary
 install:
 	cp tools/oak.vim ~/.vim/syntax/oak.vim

@@ -16,6 +16,7 @@
             </div>
             <nav>
                 <a href="https://github.com/thesephist/oak" target="_blank">source</a>
+                <a href="#start">download</a>
             </nav>
         </div>
     </header>
@@ -24,8 +25,8 @@
             <div class="left">
                 <h1>Oak</h1>
                 <p class="tagline">An expressive, simple, dynamic programming language.</p>
-                <a class="button" href="https://github.com/thesephist/oak" target="_blank">Try Oak &rarr;</a>
-                <p class="disclaimer">* Oak is still under construction! An official download and documentation for Oak will be available when the language is more finished.</p>
+                <a class="button" href="#start">Try Oak &rarr;</a>
+                <p class="disclaimer">* Oak is still under construction! Official documentation for Oak will be available when the language is more finished.</p>
             </div>
             <div class="right">
                 <pre><code>std := import('std')
@@ -47,39 +48,495 @@ server.start(9999)</code></pre>
             </div>
         </div>
         <article class="overlay">
-            <p>
-            Once upon a time, there was
+            <p>Oak is a dynamically typed, general-purpose programming language
+            with a focus on simplicity and asynchrony, designed for (my) hobby
+            projects. Idiomatic Oak code borrows often from the functional
+            programming paradigm.</p>
+            <p>Oak code is easy to read and write, and Oak programs are
+            practically capable — common tasks like running simple web servers,
+            working with files, and rendering a web UI are straightforward. Oak
+            has good support for concurrency and asynchronous programming with
+            easy fall-backs to synchronous execution when it's simpler.</p>
+            <p>It borrows basic syntax and semantics from Lua and JavaScript:
+            Oak has lists and objects, the null value, and first-class
+            functions. But unlike those languages (at least, until recently),
+            Oak has distinct 64-bit integer and floating-point types, as well
+            as atoms (also called keywords).</p>
+            <p>The <code>oak</code> command-line tool ships an interpreter, but
+            also includes:</p>
+            <ul>
+                <li>a rich standard library</li>
+                <li>a code formatter</li>
+                <li>a bundler and an Oak-to-JavaScript compiler</li>
+                <li>a test runner</li>
+                <li>a tool for working with documentation in source files</li>
+            </ul>
+            <p>As a result, all of Oak ships as a single executable file, and
+            Oak programs can be deployed as a single source "bundle". This
+            makes development and deployment easy.</p>
+            <p>Since late 2021, Oak has been my main programming language for
+            simple scripts, side projects, and
+            <a href="https://thesephist.com/projects/">personal knowledge tools</a>.
+            </p>
+
+            <h2>How Oak came to be</h2>
+            <p>Once upon a time, there was
             <a href="https://dotink.co" target="_blank">Ink</a>.
             Ink was a toy programming language, and I used it to build
             everything from personal productivity apps to compilers to ray
             tracers. Ink was wonderful, but had a handful of shortcomings and
             misfeatures that became more and more obvious over time as I used
-            it.
-            </p>
-            <p>
-            Oak is a sequel to Ink that tries to correct many of these early
+            it.</p>
+            <p>Oak is a sequel to Ink that tries to correct many of these early
             mistakes, while being easier to read and use. Oak is intentionally
-            not "Ink 2.0" — it's not a simple upgrade or bugfix, but a
-            completely different language with quite different semantics and
-            syntax.
-            </p>
-            <p>
-            I've been building Oak since early July 2021. The core language and
-            basic standard libraries are complete, but still feel too unstable
-            to call it ready, and there's a lot missing that I'd like to add to
-            Oak's tooling, like compile-to-JavaScript support baked into the
-            language, and support for automatic code formatting, testing, and
-            documentation generation. This is also why this website is very
-            bare today — I haven't had time to stabilize and document much of
-            anything yet!
-            </p>
-            <p>
-            In the meantime, if you're curious about the language, you can
-            check out the
-            <a href="https://github.com/thesephist/oak" target="_blank">Oak repository</a>
-            on GitHub, where you'll find more details about the language and a
-            guide on how to try it today.
-            </p>
+            not "Ink 2.0" — it's not a simple upgrade or bug fix, but a
+            different language with many well-considered updates in the
+            details.</p>
+            <p>I've been building Oak since early July 2021. The core language
+            and basic standard libraries are complete, but still feel too
+            unstable to call it ready, and there's a lot missing that I'd like
+            to add to Oak's tooling, like built-in utilities for testing,
+            documentation generation, and perhaps even deployment. This is also
+            why this website is very bare today — I haven't had time to
+            stabilize and document much of anything yet!</p>
+
+            <h2 id="start">Try Oak</h2>
+            <p>You can download Oak from
+            <a href="https://github.com/thesephist/oak/releases">the GitHub releases page</a>.
+            I currently build and test release versions of Oak for Linux and
+            macOS. To install, follow the instructions below for your operating
+            system.</p>
+            <details open class="try-details os-macos">
+                <summary><h3>macOS</h3></summary>
+                <p>On macOS, you may be able to run the following commands to
+                install Oak to your <code>$PATH</code>.</p>
+                <pre><code># Download the released executable
+curl -L https://github.com/thesephist/oak/releases/download/v0.1/oak-darwin &gt; /usr/local/bin/oak
+
+# Mark the binary as executable
+chmod +x /usr/local/bin/oak</code></pre>
+            </details>
+            <details open class="try-details os-linux">
+                <summary><h3>Linux</h3></summary>
+                <p>On Linux systems, you may be able to run the following
+                commands to install Ink to your <code>$PATH</code>. You may
+                need to become a superuser (<code>sudo -s</code>) to run these
+                commands.</p>
+                <pre><code>curl -L https://github.com/thesephist/oak/releases/download/v0.1/oak-linux &gt; /usr/local/bin/oak
+chmod +x /usr/local/bin/oak</code></pre>
+            </details>
+            <details class="try-details os-other">
+                <summary><h3>Other platforms</h3></summary>
+                <p>Once you download the executable for your platform, mark it
+                as an executable file if necessary, and try running <code>oak
+                version</code>.</p>
+                <pre><code>$ ./oak version
+Oak v0.1</code></pre>
+                <p>If you see a version number like above, you’re all set. If
+                you want to run Oak without the preceding <code>./</code>, add
+                it to your <code>$PATH</code> environment variable.</p>
+            </details>
+
+            <h2>An introduction to Oak</h2>
+            <p><em>What follows here is a work-in-progress — it'll probably evolve as Oak itself grows.</em></p>
+
+            <details open>
+                <summary><h3>The REPL</h3></summary>
+                <p>The easiest way to run Oak code is through the
+                <a href="https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL</a>,
+                which you can start by simply running <code>oak</code> at your
+                terminal. Try running the program <code>1 + 2 + 3</code>.</p>
+                <pre><code>$ oak
+&gt; 1 + 2 + 3
+6
+&gt;</code></pre>
+                <p>The REPL will evaluate the expression typed in, print its
+                value, and wait for your next input. At the REPL, all standard
+                libraries are exposed by default through their names. For
+                example, we can see the current time using the <code>datetime</code>
+                library.</p>
+                <pre><code>&gt; time() |&gt; datetime.format()
+'2022-01-27T07:56:11.680098056793213Z'
+&gt;</code></pre>
+                <p>At the REPL, we can type out the classic Hello World
+                program. Here, the program prints <code>Hello, World!</code>,
+                and <em>returns</em> the value <code>14</code>, which is the
+                number of bytes printed (which we usually ignore).</p>
+                <pre><code>&gt; std.println('Hello, World!')
+Hello, World!
+14
+&gt;</code></pre>
+                <p>You can hit <kbd>Ctrl-C</kbd> or <kbd>Ctrl-D</kbd> to exit
+                the REPL and return to your shell.</p>
+            </details>
+
+            <details open>
+                <summary><h3>Writing Oak programs</h3></summary>
+                <p>Oak programs are written in files ending with
+                <code>.oak</code>.  You can pass other files to the
+                <code>oak</code> CLI to run them, but when
+                <code>import(...)</code>-ing files, Oak will only look for
+                <code>.oak</code> files.</p>
+                <p>We can run Oak programs by simply passing it to
+                <code>oak</code>.</p>
+                <pre><code>$ cat hello.oak
+std := import('std')
+std.println('My first Oak program')
+
+$ oak hello.oak
+My first Oak program</code></pre>
+                <p>Here's a more realistic Oak program.</p>
+                <pre><code>std := import('std')
+
+fn fizzbuzz(n) if [n % 3, n % 5] {
+    [0, 0] -&gt; 'FizzBuzz'
+    [0, _] -&gt; 'Fizz'
+    [_, 0] -&gt; 'Buzz'
+    _ -&gt; string(n)
+}
+
+std.range(1, 101) |&gt; std.each(fn(n) {
+    std.println(fizzbuzz(n))
+})</code></pre>
+                <p>To get a sense of how Oak programs look, you can check out the
+                <a href="https://github.com/thesephist/oak/tree/main/samples">samples directory on GitHub</a>.
+                </p>
+            </details>
+
+            <details open>
+                <summary><h3>Values, types, functions, and modules</h3></summary>
+                <p>Oak has 10 different types of values. Oak is strongly typed,
+                so moving a value between any of these types requires explicit
+                conversion via a function, like <code>int()</code>. These 10
+                types are:</p>
+                <ul>
+                    <li>The <em>null value</em>, written <code>?</code></li>
+                    <li>The <em>empty value</em>, written <code>_</code>, which is equal to all values, and useful for pattern-matching</li>
+                    <li>Booleans, <code>true</code> and <code>false</code></li>
+                    <li>Integers like <code>10</code>, <code>-42</code>, <code>1000000</code></li>
+                    <li>Floating-point numbers like <code>0.0</code>, <code>3.141592</code>, <code>-123456.789</code></li>
+                    <li>Strings, mutable sequences of bytes, always written with single quotes like <code>'Hi'</code></li>
+                    <li>Atoms or "keywords", written like <code>:name</code>,which are immutable strings used like enums or tags</li>
+                    <li>Lists, written like <code>[1, 2, 3]</code>, which can contain any other Oak value</li>
+                    <li>Objects, written like <code>{ name: 'Linus' }</code>, which are unordered dictionaries from string keys to any other Oak value</li>
+                    <li>Functions, which are defined with the <code>fn</code> keyword, like <code>fn double(n) 2 * n</code></li>
+                </ul>
+                <p>Most values in Oak behave the way you'd expect, so here, let
+                me draw your attention to the quirks unique to Oak.</p>
+                <ul>
+                    <li>There is no implicit type casting between any types, except during arithmetic operations when ints may be cast up to floats.</li>
+                    <li>Both ints and floats are full 64-bit precision values.</li>
+                    <li>Strings are mutable byte arrays, also used for arbitrary data storage in memory, like in Lua. For immutable strings, use atoms.</li>
+                    <li>For lists and objects, equality (the <code>=</code> operator) is defined as deep equality. <em>There is no identity equality in Oak.</em></li>
+                </ul>
+                <p>We define a function in Oak with the <code>fn</code>
+                keyword. A name is optional, and if given, will define that
+                function in that scope. If there are no arguments, the
+                <code>()</code> may be omitted.</p>
+                <pre><code>fn double(n) 2 * n
+fn speak {
+    println('Hello!')
+}</code></pre>
+                <p>In broad strokes, Oak is a conventional imperative,
+                expression-based, scripting language. Rather than re-introduce
+                the whole language, here are the pieces that might set Oak
+                apart from other languages you're familiar with.</p>
+
+                <details open>
+                    <summary><h4>Naming things</h4></summary>
+                    <p>Oak variables and functions can begin with letters and
+                    the "_", "!", "?" characters, and can also contain numbers
+                    after the first character.  <code>ProductionEnv?</code>,
+                    <code>invalidate!</code>, <code>num_attendees</code>, and
+                    <code>___runtime_gc</code> are all valid Oak
+                    identifiers.</p>
+                    <p>There are two loosely enforced naming conventions in
+                    Oak. First, global constants begin with uppercase letters,
+                    but are not written <code>ALL_CAPS</code>. Second, names
+                    starting with an underscore, like
+                    <code>_bootstrapServer</code>, are considered private to
+                    the file and shouldn't be imported into other modules.
+                    (However, this isn't currently enforced.)</p>
+                </details>
+
+                <details open>
+                    <summary><h4>Everything is an expression</h4></summary>
+                    <p>In Oak, everything is an expression. Function
+                    definitions return the defined function; variable
+                    declarations and assignments return the new value;
+                    conditional expressions evaluate to their final value.
+                    Multiple expressions may be grouped into a single "block"
+                    with <code>(...)</code> or <code>{...}</code>, which are
+                    themselves expressions that evaluate to the last expression
+                    in the block.</p>
+                </details>
+
+                <details open>
+                    <summary><h4>Recursion: it's recursion</h4></summary>
+                    <p>Oak doesn't have language constructs for looping like
+                    <code>for</code> or <code>while</code>, but has robust
+                    support for recursion and
+                    <a href="https://en.wikipedia.org/wiki/Tail_call">optimized tail calls</a>,
+                    which is the preferred way of expressing loops — after one
+                    iteration, the function calls itself again to run the next
+                    iteration. For example, the <code>each</code> standard
+                    library function is implemented with a recursive
+                    sub-function <code>fn sub</code>:</p>
+                    <pre><code>fn each(xs, f) {
+    fn sub(i) if i {
+        len(xs) -&gt; ?
+        _ -&gt; {
+            f(xs.(i), i)
+            sub(i + 1)
+        }
+    }
+    sub(0)
+}
+                    </code></pre>
+                    <p>In practice, we rarely write tail-recursive functions by
+                    hand for loops, and instead depend on standard library
+                    functions like <code>range</code>, <code>map</code>,
+                    <code>each</code>, <code>filter</code>, and
+                    <code>reduce</code> to express iteration.</p>
+                </details>
+
+                <details>
+                    <summary><h4><code>if</code> expressions</h4></summary>
+                    <p>Oak uses one construct for control flow -- the
+                    <code>if</code> expression. Unlike a traditional
+                    <code>if</code> expression, which can only test for truthy
+                    and falsy values, Oak's <code>if</code> acts like a
+                    sophisticated switch-case, checking the target value in
+                    each "branch" until one that deeply equals the original
+                    value is reached.</p>
+                    <pre><code>fn pluralize(word, count) if count {
+    1 -&gt; word
+    2 -&gt; 'a pair of ' + word + 's'
+    _ -&gt; word + 's'
+}</code></pre>
+                    <p>The true value of Oak's <code>if</code> expressions is
+                    its ability to match against complex shapes of data. For
+                    example, you might find this snippet in some server
+                    code:</p>
+                    <pre><code>if resp {
+    { status: :ok, body: _ } -&gt; handleResponse(resp)
+    { status: :error, body: 'unknown' } -&gt; handleUnknownError(resp)
+    { status: :error, body: _ } -&gt; handleGenericError(resp)
+    _ -&gt; pass(resp)
+}</code></pre>
+                    <p>The <code>if</code> expression has a few different
+                    shorthands. The following pairs of expressions are
+                    equivalent — they're syntactic sugar for each other.</p>
+                    <pre><code>if show? -&gt; showDialog()
+if show? {
+    true -&gt; showDialog()
+}
+
+if {
+    first?, last? -&gt; counts.push(count)
+    _ -&gt; counts.shuffle()
+}
+if true {
+    first? -&gt; counts.push(count)
+    last? -&gt; counts.push(count)
+    _ -&gt; counts.shuffle()
+}</code></pre>
+                </details>
+
+                <details>
+                    <summary><h4>Lists and objects</h4></summary>
+                    <p>Oak uses lists and objects to organize state and data in programs.</p>
+                    <p>A <strong>list</strong> is an ordered sequence of
+                    values. We can access and update the value of a list
+                    anywhere using an integer index, and append to the end of a
+                    list using the <code>&lt;&lt;</code> operator. However, we
+                    can't remove values from the middle of a list — to do so,
+                    we'll need to create a new list that doesn't contain the
+                    values we don't want.</p>
+                    <pre><code>fruits := [:apple, :orange]
+fruits &lt;&lt; :pear
+fruits.1 := :grapefruit
+
+// fruits = [:apple, :grapefruit, :pear]</code></pre>
+                    <p>An <strong>object</strong> is an unordered dictionary
+                    relating string keys to arbitrary values. We can access and
+                    update values, add new values, and delete values by keys,
+                    but the values inserted into an object
+                    <em>do not remember the order in which they were added</em>
+                    — the order in which Oak loops through items in an object
+                    may change randomly.</p>
+                    <pre><code>profile := {
+    name: 'Linus Lee'
+    age: ?
+    work: 'Thought &amp; Craft'
+    languages: ['Oak', 'Ink', 'JavaScript', 'Go']
+}
+
+// access and update values
+profile.age := 23
+profile.('work') := 'Writer'
+
+// delete values by assigning _
+profile.age := _
+
+// get all keys of the object
+keys(profile) // ['name', 'work', 'languages']
+</code></pre>
+                    <p>Accessing an index that is out of bounds in a list, or
+                    accessing an object with a key that doesn't exist on that
+                    object, will evaluate to <code>?</code>, the null
+                    value.</p>
+                </details>
+
+                <details>
+                    <summary><h4>Unorthodox operators</h4></summary>
+                    <p>Besides the normal set of binary and arithmetic
+                    operators, Oak has a few strange operators.</p>
+                    <p>The <strong>assignment operator</strong> <code>:=</code>
+                    binds values on the right side to names on the left,
+                    potentially by destructuring an object or list. For
+                    example:</p>
+                    <pre><code>a := 1              // a is 1
+[b, c] := [2, 3]    // b is 2, c is 3
+d := double(a)      // d is 2</code></pre>
+                    <p>The <strong>nonlocal assignment operator</strong>
+                    <code>&lt;-</code> binds values on the right side to names
+                    on the left, but only when those variables already exist.
+                    If the variable doesn't exist in the current scope, the
+                    operator ascends up parent scopes until it reaches the
+                    global scope to find the last scope where that name was
+                    bound.</p>
+                    <pre><code>n := 10
+m := 20
+{
+    n &lt;- 30
+    m := 40
+}
+n // 30
+m // 20</code></pre>
+                    <p>The <strong>push operator</strong> <code>&lt;&lt;</code>
+                    pushes values onto the end of a string or a list, mutating
+                    it, and returns the changed string or list.</p>
+                    <pre><code>str := 'Hello '
+str &lt;&lt; 'World!' // 'Hello World!'
+
+list := [1, 2, 3]
+list &lt;&lt; 4
+list &lt;&lt; 5 &lt;&lt; 6 // [1, 2, 3, 4, 5, 6]</code></pre>
+                    <p>The <strong>pipe operator</strong> <code>|&gt;</code>
+                    takes a value on the left and makes it the first argument
+                    to a function call on the right.</p>
+                    <pre><code>// print 2n for every prime n in range [0, 10)
+range(10) |&gt; filter(prime?) |&gt;
+    each(double) |&gt; each(println)
+
+// adding numbers
+fn add(a, b) a + b
+10 |&gt; add(20) |&gt; add(3) // 33</code></pre>
+                </details>
+
+                <details>
+                    <summary><h4>Importing libraries</h4></summary>
+                    <p>Oak code is organized into "modules". A module is a
+                    single source file, described by its name or relative path.
+                    To use functions and variables defined in one file from
+                    another file, use the <code>import()</code> function.</p>
+                    <pre><code>std := import('std')
+std.println('Hello!')</code></pre>
+                    <p><code>import('./path/to/module')</code> returns an
+                    object whose keys are the names of all variables defined at
+                    the module's top-level scope, and whose values are the
+                    values of those variables. If you're familiar with
+                    JavaScript's <code>require()</code> module system,
+                    <code>import()</code> works very similarly, except that
+                    there is no explicit <code>module.exports</code>
+                    variable.</p>
+                    <p>Standard libraries like <code>std</code>,
+                    <code>str</code>, and
+                    <a href="https://github.com/thesephist/oak/tree/main/lib">others</a>,
+                    can be referenced by their name directly in
+                    <code>import</code>. Other modules imported from your file
+                    system must be referenced by a relative path, beginning
+                    with <code>./</code>, as in
+                    <code>utils&nbsp;:=&nbsp;import('./utils')</code>.</p>
+                </details>
+
+                <details>
+                    <summary><h4>Callbacks and the <code>with</code> expression</h4></summary>
+                    <p>Because callback-based asynchronous concurrency is
+                    common in Oak, there's special syntax sugar, the
+                    <code>with</code> expression, to help. The
+                    <code>with</code> syntax lets you place the last argument
+                    to a function (usually a callback function) after the
+                    function call itself, like this.</p>
+                    <pre><code>with readFile('./path') fn(file) {
+    println(file)
+}
+
+// desugars to
+readFile('./path', fn(file) {
+    println(file)
+})</code></pre>
+                    <p>This syntax makes common callback-based patterns easier
+                    to read. For example, to read a file:</p>
+                    <pre><code>std := import('std')
+fs := import('fs')
+
+with fs.readFile('./file.txt') fn(file) if file {
+    ? -&gt; std.println('Could not read file!')
+    _ -&gt; print(file)
+}</code></pre>
+                </details>
+            </details>
+
+            <details open>
+                <summary><h3>Consistent style with <code>oak&nbsp;fmt</code></h3></summary>
+                <p>Inspired by <a href="https://dotink.co/posts/inkfmt/">inkfmt</a>, as well
+                as the many code formatters before it like clang-format, gofmt,
+                and prettier, Oak has a canonical code formatter called
+                <code>oak fmt</code>. It ships with the Oak CLI, and you can
+                invoke it on any file using <code>oak fmt <file></code>.</p>
+                <p>By default, <code>oak fmt</code> will take Oak source files,
+                format them, and print the result. But most of the time, what
+                you want is <code>oak fmt &lt;files&gt; --fix</code>, which
+                will modify the files in-place with the correct formatting.
+                Another helpful flag, <code>--changes</code>, will run
+                <code>git diff</code> to only format Oak source files that have
+                uncommitted changes.</p>
+                <p>For more information on <code>oak fmt</code>, see
+                <code>oak help fmt</code>.</p>
+            </details>
+
+            <details open>
+                <summary><h3>Bundling and compiling with <code>oak&nbsp;build</code></h3></summary>
+                <p>While the Oak interpreter can run programs and modules
+                directly from source code on the file system, Oak also offers a
+                build tool, <code>oak build</code>, which can <em>bundle</em>
+                an Oak program distributed across many files into a single
+                "bundle" source file.  <code>oak build</code> can also
+                cross-compile Oak bundles into JavaScript bundles, to run in
+                the browser or in JavaScript environments like Node.js and
+                Deno. This allows Oak programs to be deployed and distributed
+                as single-file programs, both on the server and in the
+                browser.</p>
+                <p>To build a new bundle, we can simply pass an "entrypoint" to
+                the program.</p>
+                <pre><code data-lang="sh">oak build --entry src/main.oak --output dist/bundle.oak</code></pre>
+                <p>Compiling to JavaScript works similarly, but with the
+                <code>--web</code> flag, which turns on JavaScript
+                cross-compilation.</p>
+                <pre><code data-lang="sh">oak build --entry src/app.js.oak --output dist/bundle.js --web</code></pre>
+                <p>The bundler and compiler are built on top of my past work
+                with the <a href="https://github.com/thesephist/september">September</a>
+                toolchain for Ink, but slightly re-architected to support
+                bundling and multiple compilation targets. In the future, the
+                goal of <code>oak build</code> is to become an optimizing
+                compiler and potentially help yield an <code>oak compile</code>
+                command that could package the interpreter and an Oak bundle
+                into a single executable binary.</p>
+                <p>For more information on <code>oak build</code>, see
+                <code>oak help build</code>.</p>
+            </details>
         </article>
     </main>
     <footer>
@@ -87,8 +544,9 @@ server.start(9999)</code></pre>
             <div class="left">
             </div>
             <div class="right">
-                - Linus
+                - <a href="https://thesephist.com/">Linus</a>
             </div>
         </div>
     </footer>
 </body>
+<script src="/js/bundle.js"></script>

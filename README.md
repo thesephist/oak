@@ -120,7 +120,7 @@ Besides the normal set of arithmetic operators, Oak has a few strange operators.
     list << 4
     list << 5 << 6 // [1, 2, 3, 4, 5, 6]
     ```
-- The **pipe operator** `|>`, which takes a value on the left and makes it the first argument to a function call on the right.
+- The **pipe operator** `|>` takes a value on the left and makes it the first argument to a function call on the right.
 
     ```js
     // print 2n for every prime n in range [0, 10)
@@ -186,9 +186,8 @@ Runtime performance is not currently my primary concern; my primary concern is i
 There are several immediately actionable things we can do to speed up Oak programs' runtime performance, though none are under works today. In order of increasing implementation complexity:
 
 1. Basic compiler optimization techniques applied to the abstract syntax tree, like constant folding and propagation.
-2. Variable name mangling and caching, so string comparisons become `u64` comparisons between machine words.
-3. A thorough audit of the interpreter's memory allocation profile and a memory optimization pass (and the same for L1/L2 cache misses).
-4. A bytecode VM that executes Oak compiled down to more compact and efficient bytecode rather than a syntax tree-walking interpreter.
+2. A thorough audit of the interpreter's memory allocation profile and a memory optimization pass (and the same for L1/L2 cache misses).
+3. A bytecode VM that executes Oak compiled down to more compact and efficient bytecode rather than a syntax tree-walking interpreter.
 
 ## Development
 
