@@ -775,10 +775,31 @@ func TestObjectDelete(t *testing.T) {
 		}
 	}
 	[
+		obj.nonexistent := _
+		obj.b := { 1, 2, _ }
+		obj
 		obj.c.d := _
 		obj.c
 	]
 	`, MakeList(
+		ObjectValue{
+			"a": MakeString("ay"),
+			"c": ObjectValue{
+				"e": MakeString("ee"),
+			},
+		},
+		ObjectValue{
+			"a": MakeString("ay"),
+			"c": ObjectValue{
+				"e": MakeString("ee"),
+			},
+		},
+		ObjectValue{
+			"a": MakeString("ay"),
+			"c": ObjectValue{
+				"e": MakeString("ee"),
+			},
+		},
 		ObjectValue{
 			"e": MakeString("ee"),
 		},

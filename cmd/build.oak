@@ -811,7 +811,7 @@ fn renderJSBundle(bundleNode) {
 					// - assignment on strings and composites return the assignment
 					//   target, not the assigned value, as the value of the
 					//   expression
-					'((__oak_assgn_tgt,__oak_assgn_val)=>(__is_oak_string(__oak_assgn_tgt)?__oak_assgn_tgt.assign({{2}},__oak_assgn_val):{{1}}=__oak_assgn_val,__oak_assgn_tgt))(__as_oak_string({{0}}),{{3}})' |> format(
+					'((__oak_assgn_tgt,__oak_assgn_val)=>(__is_oak_string(__oak_assgn_tgt)?__oak_assgn_tgt.assign({{2}},__oak_assgn_val):__oak_assgn_val===__Oak_Empty?delete {{1}}:{{1}}=__oak_assgn_val,__oak_assgn_tgt))(__as_oak_string({{0}}),{{3}})' |> format(
 						renderNode(node.left.left)
 						// composite assignment
 						renderAssignTarget(tmpDfn)

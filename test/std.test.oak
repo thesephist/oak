@@ -390,11 +390,19 @@ fn run(t) {
 					}
 				}
 				[
+					obj.nonexistent := _
+					obj.b := { 1, 2, _ }
+					obj
 					obj.c.d := _
 					obj.c
 				]
 			}
-			[{ e: 'ee' }, { e: 'ee' }]
+			[
+				{ a: 'ay', c: { e: 'ee' } }
+				{ a: 'ay', c: { e: 'ee' } }
+				{ a: 'ay', c: { e: 'ee' } }
+				{ e: 'ee' }, { e: 'ee' }
+			]
 		)
 
 		'extra args' |> t.eq(
@@ -1076,6 +1084,18 @@ fn run(t) {
 				8: '8val'
 				9: '9val'
 			}
+		)
+		'merge _ to delete key from literal' |> t.eq(
+			{ x: :to_delete } |> merge({ x: _ })
+			{}
+		)
+		'merge _ to delete key from variable' |> t.eq(
+			{
+				o := { x: :to_delete, y: :to_save }
+				o |> merge({ x: _ })
+				o
+			}
+			{ y: :to_save }
 		)
 		oo := { a: '100', b: '200', c: '300' }
 		'merge mutates first object' |> t.eq(
