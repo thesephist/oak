@@ -214,12 +214,13 @@ if Web? {
 // a global `module` object. It returns a single AST node object representing
 // this closure, to be wrapped further into a bundle AST.
 fn wrapModule(block) {
-	// wrap nodes in AST of
+	// wrap nodes in AST of:
+	//
 	// fn {
-	//     __module := {}
 	//     { ... module code }
-	//     { ... __module.exportedName := exportedName }
-	//     __module
+	//     {
+	//         ... exportedName: exportedName
+	//     }
 	// }
 	type: :function
 	name: ''
@@ -230,46 +231,31 @@ fn wrapModule(block) {
 	body: {
 		type: :block
 		tok: { pos: [1, 4], type: :leftBrace, val: ? }
-		decls: block.decls << '__module'
-		exprs: [{
-			left: { tok: { pos: [1, 6], type: :identifier, val: '__module' }, type: :identifier, val: '__module' }
-			local?: true
-			right: { entries: [], tok: { pos: [1, 16], type: :leftBrace, val: ? }, type: :object }
-			tok: { pos: [1, 13], type: :assign, val: ? }
-			type: :assignment
-		}] |> append(block.exprs) |> append(
-			block.decls |>
-				filter(fn(decl) decl != '__module') |>
-				sort!() |>
-				map(fn(exportedName) {
-					type: :assignment
-					tok: { pos: [1, 10], type: :assign, val: ? }
-					local?: true
-					left: {
-						type: :propertyAccess
-						tok: { pos: [1, 7], type: :dot, val: ? }
-						left: {
-							type: :identifier
-							tok: { pos: [1, 1], type: :identifier, val: '__module' }
-							val: '__module'
-						}
-						right: {
-							type: :identifier
-							tok: { pos: [1, 8], type: :identifier, val: formatIdent(exportedName) }
-							val: formatIdent(exportedName)
-						}
-					}
-					right: {
+		decls: block.decls
+		exprs: block.exprs << {
+			type: :object
+			tok: { pos: [1, 6], type: :leftBrace, val: ? }
+			entries: block.decls |> sort!() |> map(fn(exportedName) {
+				key: {
+					type: :identifier
+					tok: {
+						pos: [1, 8]
 						type: :identifier
-						tok: { pos: [1, 13], type: :identifier, val: formatIdent(exportedName) }
-						val: formatIdent(exportedName)
+						val: exportedName
 					}
-			}) << {
-				tok: { pos: [1, 20], type: :identifier, val: '__module' }
-				type: :identifier
-				val: '__module'
-			}
-		)
+					val: exportedName
+				}
+				val: {
+					type: :identifier
+					tok: {
+						pos: [1, 11]
+						type: :identifier
+						val: exportedName
+					}
+					val: exportedName
+				}
+			})
+		}
 	}
 }
 
@@ -739,10 +725,13 @@ fn renderJSBundle(bundleNode) {
 		:object -> '{' << {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
-				if k.type {
-					:identifier, :empty, :int, :float -> renderNode(k)
-					_ -> '[' << renderAsObjectKey(k) << ']'
-				} << ':' << renderAssignTarget(v) << '=null'
+				if k.type = :identifier & v.type = :identifier & k.val = v.val {
+					true -> formatIdent(k.val)
+					_ -> if k.type {
+						:identifier, :empty, :int, :float -> renderNode(k)
+						_ -> '[' << renderAsObjectKey(k) << ']'
+					} << ':' << renderAssignTarget(v) << '=null'
+				}
 			}) |> join(',')
 		} << '}'
 	}
@@ -760,10 +749,13 @@ fn renderJSBundle(bundleNode) {
 		:object -> '({' << {
 			node.entries |> map(fn(entry) {
 				{ key: k, val: v } := entry
-				if k.type {
-					:identifier, :empty, :int, :float -> renderNode(k)
-					_ -> '[' << renderAsObjectKey(k) << ']'
-				} << ':' << renderNode(v)
+				if k.type = :identifier & v.type = :identifier & k.val = v.val {
+					true -> formatIdent(k.val)
+					_ -> if k.type {
+						:identifier, :empty, :int, :float -> renderNode(k)
+						_ -> '[' << renderAsObjectKey(k) << ']'
+					} << ':' << renderNode(v)
+				}
 			}) |> join(',')
 		} << '})'
 		:unary -> if node.op {
