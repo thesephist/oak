@@ -956,6 +956,7 @@ function __oak_module_import(name) {
 	if (typeof __Oak_Modules[name] === \'object\') return __Oak_Modules[name];
 	const module = __Oak_Modules[name] || __Oak_Modules[__Oak_Import_Aliases[name]];
 	if (module) {
+		__Oak_Modules[name] = {}; // break circular imports
 		return __Oak_Modules[name] = module();
 	} else {
 		throw new Error(`Could not import Oak module "${name}" at runtime`);
