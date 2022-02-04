@@ -4,7 +4,6 @@
 	each: each
 	filter: filter
 } := import('std')
-
 {
 	printf: printf
 } := import('fmt')
