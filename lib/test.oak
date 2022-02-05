@@ -1,7 +1,9 @@
 // libtest is a unit testing library for Oak
 
 {
+	default: default
 	each: each
+	every: every
 	filter: filter
 } := import('std')
 {
@@ -69,6 +71,20 @@ fn new(title) {
 			passed?: result = expect
 			result: result
 			expect: expect
+		}
+		approx: fn(name, result, expect, epsilon) {
+			epsilon := epsilon |> default(0.0000001)
+			fn similar?(a, b) if type(a) {
+				:list -> a |> every(fn(_, i) similar?(a.(i), b.(i)))
+				:object -> a |> keys() |> every(fn(k) similar?(a.(k), b.(k)))
+				_ -> a > b - epsilon & a < b + epsilon
+			}
+			Tests << {
+				name: name
+				passed?: similar?(result, expect)
+				result: result
+				expect: expect
+			}
 		}
 		assert: fn(name, result) self.eq(name, result, true)
 		skip: fn(name, result, expect) Skipped << {
