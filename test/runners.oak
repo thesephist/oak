@@ -28,6 +28,7 @@ Runners := [
 	'json'
 	'datetime'
 	'path'
+	'http'
 	'debug'
 	'cli'
 	'md'

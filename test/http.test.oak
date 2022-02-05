@@ -1,0 +1,107 @@
+std := import('std')
+fmt := import('fmt')
+http := import('http')
+
+fn run(t) {
+	// percent encodings
+	{
+		{
+			percentEncode: encode
+			percentEncodeURI: encodeURI
+			percentDecode: decode
+		} := http
+
+		URIComponents := [
+			// basic strings
+			['', '']
+			['oaklang.org', 'oaklang.org']
+			// numbers
+			['(123) 456-7890', '(123)%20456-7890']
+			// space ' '
+			['Linus Lee', 'Linus%20Lee']
+
+			// decoding plus '+' into space ' '
+			['Linus+Lee', 'Linus%2BLee', 'Linus+Lee', :encode]
+			['Linus+Lee', 'Linus%2BLee', 'Linus%2BLee', :decode]
+			['Linus Lee', 'Linus+Lee', 'Linus+Lee', :decode]
+			// percent sign
+			['A%20B', 'A%2520B']
+			['20% 30%', '20%25%2030%25']
+			// special characters that are never escaped
+			['-_.!~*\'()', '-_.!~*\'()', '-_.!~*\'()']
+			// special characters that are only escaped in URI components
+			//
+			// NOTE: this test case excludes the escaped character '+', because
+			// it's handled specially during decoding in case it represents the
+			// space character ' '. See above and below instead for that case.
+			[';,/?:@&=$', '%3B%2C%2F%3F%3A%40%26%3D%24', ';,/?:@&=$']
+
+			// simple full URL
+			[
+				'https://thesephist.com/?q=linus'
+				'https%3A%2F%2Fthesephist.com%2F%3Fq%3Dlinus'
+				'https://thesephist.com/?q=linus'
+			]
+			// complex full URL
+			[
+				'http://username:password@www.example.com:80/path/to/file.php?foo=316&bar=this+has+spaces#anchor'
+				'http%3A%2F%2Fusername%3Apassword%40www.example.com%3A80%2Fpath%2Fto%2Ffile.php%3Ffoo%3D316%26bar%3Dthis%2Bhas%2Bspaces%23anchor'
+				'http://username:password@www.example.com:80/path/to/file.php?foo=316&bar=this+has+spaces#anchor'
+				:encode
+			]
+			[
+				'http://username:password@www.example.com:80/path/to/file.php?foo=316&bar=this has spaces#anchor'
+				'http%3A%2F%2Fusername%3Apassword%40www.example.com%3A80%2Fpath%2Fto%2Ffile.php%3Ffoo%3D316%26bar%3Dthis%20has%20spaces%23anchor'
+				'http://username:password@www.example.com:80/path/to/file.php?foo=316&bar=this+has+spaces#anchor'
+				:decode
+			]
+		] |> with std.each() fn(spec) {
+			[plain, encoded, uriEncoded, ty] := spec
+
+			uriEncoded := uriEncoded |> std.default(encoded)
+			ty := ty |> std.default(_)
+
+			if ty = :encode -> {
+				'percentEncode "{{0}}"' |> fmt.format(plain) |>
+					t.eq(encode(plain), encoded)
+				'percentEncodeURI "{{0}}"' |> fmt.format(plain) |>
+					t.eq(encodeURI(plain), uriEncoded)
+			}
+			if ty = :decode -> {
+				'percentDecode "{{0}}"' |> fmt.format(encoded) |>
+					t.eq(decode(encoded), plain)
+				'percentDecode from URI "{{0}}"' |> fmt.format(uriEncoded) |>
+					t.eq(decode(uriEncoded), plain)
+			}
+		}
+	}
+
+	// MIME smoke tests
+	{
+		{
+			mimeForPath: mime
+		} := http
+
+		[
+			['some-unknown-file', 'application/octet-stream']
+
+			['index.html', 'text/html; charset=utf-8']
+			['style.css', 'text/css; charset=utf-8']
+			['script.js', 'application/javascript; charset=utf-8']
+
+			['image.jpg', 'image/jpeg']
+			['image.jpeg', 'image/jpeg']
+			['image.png', 'image/png']
+			['image.gif', 'image/gif']
+			['image.svg', 'image/svg+xml']
+
+			['file.pdf', 'application/pdf']
+			['file.zip', 'application/zip']
+		] |> with std.each() fn(spec) {
+			[path, mimeType] := spec
+			'mimeForPath({{0}})' |> fmt.format(path) |>
+				t.eq(mime(path), mimeType)
+		}
+	}
+}
+

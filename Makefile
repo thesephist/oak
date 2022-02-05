@@ -26,7 +26,7 @@ tk: test-oak
 test-bundle:
 	${RUN} build --entry test/main.oak \
 		-o /tmp/oak-test.oak \
-		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
+		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,http.test:test/http.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
 	${RUN} /tmp/oak-test.oak
 
 # run oak build --web tests
@@ -34,7 +34,7 @@ test-js:
 	${RUN} build --entry test/main.oak \
 		-o /tmp/oak-test.js \
 		--web \
-		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
+		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,http.test:test/http.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
 	node /tmp/oak-test.js
 
 # build for a specific GOOS target

@@ -27,38 +27,35 @@
 	lower: lower
 	split: split
 } := import('str')
-
 {
 	readFile: readFile
 } := import('fs')
-
 {
 	printf: printf
 } := import('fmt')
 
 // percent encoding, also known as URI encoding
-fn _encodeChar(encodeSlash?) fn(c) {
-	validPunct? := if encodeSlash? {
-		true -> '._-!' |> contains?(c)
-		_ -> '._-!/' |> contains?(c)
-	}
-	if word?(c) | validPunct? {
-		true -> c
-		_ -> '%' + upper(toHex(codepoint(c)))
-	}
+fn _encodeChar(uri?) fn(c) if {
+	word?(c)
+	'-_.!~*\'()' |> contains?(c)
+	uri? & ';,/?:@&=+$#' |> contains?(c) -> c
+	_ -> '%' + codepoint(c) |> toHex() |> upper()
 }
-// percentEncodeKeepSlash encodes the string `s` in the "percent encoding" or
-// URI encoding scheme, but preserves `/` characters.
-fn percentEncodeKeepSlash(s) s |> map(_encodeChar(false)) |> join()
-// percentEncode encodes the string `s` in the "percent encoding" or URI encoding scheme.
-fn percentEncode(s) s |> map(_encodeChar(true)) |> join()
+// percentEncode encodes the string `s` in the "percent encoding" or URI
+// encoding scheme. This function roughly corresponds to JavaScript's
+// `encodeURIComponent` function.
+fn percentEncode(s) s |> map(_encodeChar(false))
+// percentEncodeURI encodes the string `s` in the "percent encoding" or URI
+// encoding scheme, but preserves characters that are expected to appear in a
+// URL. It roughly corresponds to JavaScript's `encodeURI` function.
+fn percentEncodeURI(s) s |> map(_encodeChar(true))
 
-upperAF? := checkRange(codepoint('A'), codepoint('F'))
-lowerAF? := checkRange(codepoint('a'), codepoint('f'))
-// hex? reports whether a particular character is a valid hexadecimal character
-fn hex?(c) digit?(c) | upperAF?(c) | lowerAF?(c)
-// percentDecode decodes a URI-encoded value from `str`
-fn percentDecode(str) {
+_upperAF? := checkRange(codepoint('A'), codepoint('F'))
+_lowerAF? := checkRange(codepoint('a'), codepoint('f'))
+// _hex? reports whether a particular character is a valid hexadecimal character
+fn _hex?(c) digit?(c) | _upperAF?(c) | _lowerAF?(c)
+// percentDecode decodes a URI-encoded value from `s`
+fn percentDecode(s) {
 	// possible values:
 	// :default
 	// :sawPercent
@@ -66,7 +63,7 @@ fn percentDecode(str) {
 	stage := :default
 	buf := ?
 
-	str |> reduce('', fn(decoded, curr) if stage {
+	s |> with reduce('') fn(decoded, curr) if stage {
 		:default -> if curr {
 			'+' -> decoded << ' '
 			'%' -> {
@@ -75,7 +72,7 @@ fn percentDecode(str) {
 			}
 			_ -> decoded << curr
 		}
-		:sawPercent -> if hex?(curr) {
+		:sawPercent -> if _hex?(curr) {
 			false -> {
 				stage <- :default
 				decoded << '%' << curr
@@ -89,13 +86,13 @@ fn percentDecode(str) {
 		_ -> {
 			last := buf
 			stage <- :default
-			buf := ?
-			if hex?(curr) {
+			buf <- ?
+			if _hex?(curr) {
 				false -> decoded << '%' << last << curr
 				_ -> decoded << lower(last << curr) |> fromHex() |> char()
 			}
 		}
-	})
+	}
 }
 
 // Router constructs a router object, which encapsulates state for routing HTTP
