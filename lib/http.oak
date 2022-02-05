@@ -50,10 +50,8 @@ fn percentEncode(s) s |> map(_encodeChar(false))
 // URL. It roughly corresponds to JavaScript's `encodeURI` function.
 fn percentEncodeURI(s) s |> map(_encodeChar(true))
 
-_upperAF? := checkRange(codepoint('A'), codepoint('F'))
-_lowerAF? := checkRange(codepoint('a'), codepoint('f'))
 // _hex? reports whether a particular character is a valid hexadecimal character
-fn _hex?(c) digit?(c) | _upperAF?(c) | _lowerAF?(c)
+fn _hex?(c) digit?(c) | (c >= 'A' & c <= 'F') | (c >= 'a' & c <= 'f')
 // percentDecode decodes a URI-encoded value from `s`
 fn percentDecode(s) {
 	// possible values:

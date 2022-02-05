@@ -18,13 +18,13 @@ fn checkRange(lo, hi) fn checker(c) {
 }
 
 // upper? reports whether a given char is an uppercase ASCII letter
-upper? := checkRange(codepoint('A'), codepoint('Z'))
+fn upper?(c) c >= 'A' & c <= 'Z'
 // lower? reports whether a given char is a lowercase ASCII letter
-lower? := checkRange(codepoint('a'), codepoint('z'))
+fn lower?(c) c >= 'a' & c <= 'z'
 // digit? reports whether a given char is an ASCII digit
-digit? := checkRange(codepoint('0'), codepoint('9'))
+fn digit?(c) c >= '0' & c <= '9'
 // space? reports whether a given char is an ASCII whitespace
-space? := fn(c) if c {
+fn space?(c) if c {
 	' ', '\t', '\n', '\r', '\f' -> true
 	_ -> false
 }
