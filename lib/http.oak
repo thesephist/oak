@@ -14,7 +14,6 @@
 	filter: filter
 	reduce: reduce
 } := import('std')
-
 {
 	checkRange: checkRange
 	cut: cut
@@ -264,18 +263,9 @@ fn Server {
 				{ method: method, url: url } := evt.req
 				printf('{{ 0 }}: {{ 1 }}', method, url)
 
-				if method {
-					'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' -> {
-						router.match(url)(evt.req, fn(resp) {
-							resp.headers := _hdr(default(resp.headers, {}))
-							evt.end(resp)
-						})
-					}
-					_ -> evt.end({
-						status: 405
-						headers: _hdr({})
-						body: 'method not allowed'
-					})
+				with router.match(url)(evt.req) fn(resp) {
+					resp.headers := _hdr(resp.headers |> default({}))
+					evt.end(resp)
 				}
 			}
 		}
