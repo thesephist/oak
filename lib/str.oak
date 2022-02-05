@@ -106,15 +106,15 @@ fn cut(s, sep) if idx := indexOf(s, sep) {
 }
 
 // lower returns a string where any uppercase letter in `s` has been down-cased.
-fn lower(s) s |> reduce('', fn(acc, c, i) if upper?(c) {
-	true -> acc.(i) := char(codepoint(c) + 32)
-	_ -> acc.(i) := c
+fn lower(s) s |> reduce('', fn(acc, c) if upper?(c) {
+	true -> acc << char(codepoint(c) + 32)
+	_ -> acc << c
 })
 
 // upper returns a string where any lowercase letter in `s` has been up-cased.
-fn upper(s) s |> reduce('', fn(acc, c, i) if lower?(c) {
-	true -> acc.(i) := char(codepoint(c) - 32)
-	_ -> acc.(i) := c
+fn upper(s) s |> reduce('', fn(acc, c) if lower?(c) {
+	true -> acc << char(codepoint(c) - 32)
+	_ -> acc << c
 })
 
 fn _replaceNonEmpty(s, old, new) {
