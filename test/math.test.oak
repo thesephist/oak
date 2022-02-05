@@ -25,6 +25,121 @@ fn run(t) {
 		)
 	}
 
+	// sqrt, hypot
+	{
+		{
+			sqrt: sqrt
+			hypot: hypot
+		} := math
+
+		'sqrt(0)' |> t.eq(sqrt(0), 0)
+		'sqrt(1)' |> t.eq(sqrt(1), 1)
+		'sqrt(negative number)' |> t.eq(sqrt(-10), ?)
+		[2, 10, 100, 225, 1000] |> with std.each() fn(n) {
+			'sqrt({{0}}) <> pow({{0}}, 0.5)' |> fmt.format(n) |>
+				t.approx(sqrt(n), pow(n, 0.5))
+		}
+
+		Triples := [
+			[0, 0, 0]
+			[3, 4, 5]
+			[5, 12, 13]
+		]
+
+		// single-point
+		Triples |> with std.each() fn(pt) {
+			[a, b, c] := pt
+
+			'hypot({{0}}, {{1}}) = {{2}}' |>
+				fmt.format(pt...) |>
+				t.approx(hypot(a, b), c)
+
+			'hypot(-{{0}}, -{{1}}) = {{2}}' |>
+				fmt.format(pt...) |>
+				t.approx(hypot(-a, -b), c)
+		}
+
+		// double-point
+		Triples |> with std.each() fn(pt) {
+			[a0, b0] := [-2, -4]
+			[a, b, c] := pt
+
+			'hypot({{0}}, {{1}}, {{2}}, {{3}}) = {{4}}' |>
+				fmt.format(a0, b0, a0 + a, b0 + b, c) |>
+				t.approx(hypot(a0, b0, a0 + a, b0 + b), c)
+
+			'hypot({{0}}, {{1}}, {{2}}, {{3}}) = {{4}}' |>
+				fmt.format(a0, b0, a0 - a, b0 - b, c) |>
+				t.approx(hypot(a0, b0, a0 - a, b0 - b), c)
+		}
+	}
+
+	// scale
+	{
+		{ scale: scale } := math
+
+		'scale <min to [0, 1]' |> t.eq(scale(-10, 0, 10), -1)
+		'scale min to [0, 1]' |> t.eq(scale(0, 0, 10), 0)
+		'scale max to [0, 1]' |> t.eq(scale(10, 0, 10), 1)
+		'scale mid to [0, 1]' |> t.eq(scale(5, 0, 10), 0.5)
+		'scale >max to [0, 1]' |> t.eq(scale(20, 0, 10), 2)
+
+		'scale <min to [0, 1] in range < 0' |> t.eq(scale(10, 0, -10), -1)
+		'scale min to [0, 1] in range < 0' |> t.eq(scale(0, 0, -10), 0)
+		'scale max to [0, 1] in range < 0' |> t.eq(scale(-10, 0, -10), 1)
+		'scale mid to [0, 1] in range < 0' |> t.eq(scale(-5, 0, -10), 0.5)
+		'scale >max to [0, 1] in range < 0' |> t.eq(scale(-20, 0, -10), 2)
+
+		'scale <min to [50, 100]' |> t.eq(scale(-10, 0, 10, 50, 100), 0)
+		'scale min to [50, 100]' |> t.eq(scale(0, 0, 10, 50, 100), 50)
+		'scale max to [50, 100]' |> t.eq(scale(10, 0, 10, 50, 100), 100)
+		'scale mid to [50, 100]' |> t.eq(scale(5, 0, 10, 50, 100), 75)
+		'scale >max to [50, 100]' |> t.eq(scale(20, 0, 10, 50, 100), 150)
+
+		'scale <min to [-50, -100]' |> t.eq(scale(-10, 0, 10, -50, -100), 0)
+		'scale min to [-50, -100]' |> t.eq(scale(0, 0, 10, -50, -100), -50)
+		'scale max to [-50, -100]' |> t.eq(scale(10, 0, 10, -50, -100), -100)
+		'scale mid to [-50, -100]' |> t.eq(scale(5, 0, 10, -50, -100), -75)
+		'scale >max to [-50, -100]' |> t.eq(scale(20, 0, 10, -50, -100), -150)
+
+		'scale to 0' |> t.eq(scale(7, 0, 10, 0, 0), 0)
+		'scale to singularity' |> t.eq(scale(7, 0, 10, 12, 12), 12)
+	}
+
+	// bearing, orient
+	{
+		{
+			bearing: bearing
+			orient: orient
+		} := math
+
+		fn angle(t) t * math.Pi / 180
+
+		[
+			['east', 0, [10, 0]]
+			['north', 90, [0, 10]]
+			['west', 180, [-10, 0]]
+			['south', -90, [0, -10]]
+			['30deg', 30, [8.66025403, 5]]
+			['60deg', 60, [5, 8.66025403]]
+		] |> with std.each() fn(spec) {
+			[dir, th, pt] := spec
+			[px, py] := pt
+
+			[
+				[0, 0]
+				[2, 5]
+				[-2, 5]
+				[-2, -5]
+			] |> with std.each() fn(origin) {
+				[ox, oy] := origin
+				'bearing {{0}} from ({{1}}, {{2}})' |>
+					fmt.format(dir, ox, oy) |>
+					t.approx(bearing(ox, oy, 10, angle(th)), [ox + px, oy + py])
+			}
+		}
+	}
+
 	// sum
 	{
 		{ sum: sum } := math

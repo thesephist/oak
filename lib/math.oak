@@ -1,4 +1,8 @@
 // libmath implements basic arithmetic and algebraic functions
+//
+// For functions dealing with coordinate pairs and angles, the coordinate plane
+// is assumed to be a Cartesian plane with +x to the east and +y to the north,
+// where the angle is measured in radians from the +x axis, counterclockwise.
 
 {
 	default: default
@@ -21,6 +25,53 @@ fn sign(n) if n >= 0 {
 fn abs(n) if n >= 0 {
 	true -> n
 	_ -> -n
+}
+
+// sqrt returns the principal square root of a real number, or ? if the number
+// is negative.
+fn sqrt(n) if n >= 0 -> pow(n, 0.5)
+
+// hypot returns the Euclidean distance between two points, equivalent to the
+// hypotenuse of a right triangle with the given two points as vertices.
+fn hypot(x0, y0, x1, y1) {
+	if x1 = ? & y1 = ? -> x1 <- y1 <- 0
+	sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1))
+}
+
+// scale maps the value x in the range [a, b] to the range [c, d]. If [c, d]
+// are not provided, they are assumed to be [0, 1]. x may be outside the range
+// [a, b], in which case the value is scaled to be an equal amount outside of
+// the range [c, d].
+fn scale(x, a, b, c, d) {
+	normed := (x - a) / (b - a)
+	if {
+		c = ? & d = ? -> normed
+		_ -> (d - c) * normed + c
+	}
+}
+
+// bearing returns the point [x', y'] at the other end of a line segment
+// starting at (x, y) and extending by distance d at angle t.
+fn bearing(x, y, d, t) [
+	x + d * cos(t)
+	y + d * sin(t)
+]
+
+// orient returns the angle of the line extending from (x0, y0) to (x1, y1). If
+// (x1, y1) is not provided, the given coordinate point is assumed to be (x1,
+// y1) and (x0, y0) is assumed to be the origin (0, 0). Return values are in
+// the range (-Pi, Pi]. This function is more commonly known in the form
+// `atan2(y, x)` (note the reversed argument order).
+fn orient(x0, y0, x1, y1) {
+	[x, y] := if x1 = ? & y1 = ? {
+		true -> [x0, y0]
+		_ -> [x1 - x0, y1 - y0]
+	}
+	if {
+		x > 0 -> 2 * atan(y / (hypot(x, y) + x))
+		x <= 0 & y != 0 -> 2 * atan((hypot(x, y) - x) / y)
+		x < 0 & y = 0 -> Pi
+	}
 }
 
 // sum takes a sequence of values and returns their sum
