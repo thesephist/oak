@@ -110,29 +110,61 @@ fn run(t) {
 			endsWith?: endsWith?
 		} := str
 
+		'empty string |> startsWith?(empty string)' |> t.eq(
+			'' |> startsWith?('')
+			true
+		)
+		'empty string |> startsWith?(non-empty string)' |> t.eq(
+			'' |> startsWith?('Hello')
+			false
+		)
 		'startsWith?(empty string)' |> t.eq(
 			'Hello' |> startsWith?('')
 			true
 		)
-		'startsWith?(string)' |> t.eq(
+		'startsWith?(non-empty string)' |> t.eq(
 			'Hello' |> startsWith?('Hel')
 			true
 		)
-		'startsWith?(incorrect string)' |> t.eq(
+		'startsWith?(incorrect prefix)' |> t.eq(
 			'Hello' |> startsWith?('Helo')
 			false
 		)
+		'startsWith?(string itself)' |> t.eq(
+			'Hello' |> startsWith?('Hello')
+			true
+		)
+		'startsWith?(prefix longer than string)' |> t.eq(
+			'Hello' |> startsWith?('Hello World!')
+			false
+		)
 
+		'empty string |> endsWith?(empty string)' |> t.eq(
+			'' |> endsWith?('')
+			true
+		)
+		'empty string |> endsWith?(non-empty string)' |> t.eq(
+			'' |> endsWith?('Hello')
+			false
+		)
 		'endsWith?(empty string)' |> t.eq(
 			'Hello' |> endsWith?('')
 			true
 		)
-		'endsWith?(string)' |> t.eq(
+		'endsWith?(non-empty string)' |> t.eq(
 			'Hello' |> endsWith?('llo')
 			true
 		)
-		'endsWith?(incorrect string)' |> t.eq(
+		'endsWith?(incorrect suffix)' |> t.eq(
 			'Hello' |> endsWith?('elo')
+			false
+		)
+		'endsWith?(string itself)' |> t.eq(
+			'Hello' |> endsWith?('Hello')
+			true
+		)
+		'endsWith?(suffix longer than string)' |> t.eq(
+			'Hello' |> endsWith?('Oak says Hello')
 			false
 		)
 	}

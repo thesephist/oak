@@ -45,17 +45,10 @@ fn join(strings, joiner) {
 }
 
 // startsWith? reports whether a string starts with the substring `prefix`.
-fn startsWith?(s, prefix) prefix |> reduce(true, fn(acc, c, i) {
-	acc & (s.(i) = c)
-})
+fn startsWith?(s, prefix) s |> slice(0, len(prefix)) = prefix
 
 // endsWith? reports whether a string ends with the substring `suffix`.
-fn endsWith?(s, suffix) {
-	diff := len(s) - len(suffix)
-	suffix |> reduce(true, fn(acc, c, i) {
-		acc & (s.(i + diff) = c)
-	})
-}
+fn endsWith?(s, suffix) s |> slice(len(s) - len(suffix)) = suffix
 
 // _matchesAt? is an internal helper that reports whether a given string `s`
 // contains the substring `substr` at index `idx`. It performs this comparison
