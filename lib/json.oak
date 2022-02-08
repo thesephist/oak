@@ -7,7 +7,6 @@
 } := import('std')
 {
 	space?: space?
-	digit?: digit?
 	join: join
 } := import('str')
 

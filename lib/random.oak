@@ -5,14 +5,6 @@
 // security-sensitive work. For such code, use srand() for secure randomness or
 // the 'crypto' standard library.
 
-{
-	toHex: toHex
-	map: map
-} := import('std')
-{
-	split: split
-} := import('str')
-
 // boolean returns either true or false with equal probability
 fn boolean rand() > 0.5
 

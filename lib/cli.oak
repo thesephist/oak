@@ -9,9 +9,6 @@
 {
 	startsWith?: startsWith?
 } := import('str')
-{
-	format: format
-} := import('fmt')
 
 // _maybeOpt checks if a given string is a CLI flag, and if so returns the name
 // of the flag. If not, it returns ?

@@ -8,8 +8,6 @@
 	reduce: reduce
 } := import('std')
 {
-	startsWith?: startsWith?
-	endsWith?: endsWith?
 	join: strJoin
 	split: strSplit
 	trimEnd: trimEnd

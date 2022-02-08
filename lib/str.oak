@@ -5,7 +5,6 @@
 
 {
 	default: default
-	map: map
 	slice: slice
 	reduce: reduce
 } := import('std')

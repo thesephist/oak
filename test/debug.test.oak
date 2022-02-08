@@ -57,7 +57,7 @@ fn run(t) {
 			['short list', [1, 2, 3, 4], '[1, 2, 3, 4]']
 			['long list'
 				std.range(20)
-				'[\n  ' + (std.range(20) |> str.map(string) |> str.join('\n  ')) + '\n]']
+				'[\n  ' + (std.range(20) |> std.map(string) |> str.join('\n  ')) + '\n]']
 			['empty object', {}, '{}']
 			['short object', { a: 100, b: :noun, c: ? }, '{ a: 100, b: :noun, c: ? }']
 			['long object'
