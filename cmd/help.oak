@@ -33,8 +33,16 @@ Cat := 'Print syntax-highlighted Oak source files to supported terminals.
 Oak cat works much like the UNIX utility `cat`, except that `oak cat`
 syntax-highlights Oak source code in the process. This is useful when trying to
 read Oak programs in the terminal outside of an editor with syntax highlighting
-support for Oak, and also serves as a demonstration of how to use the
-\'syntax\' Oak standard library.'
+support for Oak, and also supports syntax-highlighting Oak source code to embed
+in HTML documents.
+
+Usage
+	oak cat [files] [options]
+
+Options
+	--html      Format output to be an HTML string with token information
+	            embedded as CSS classes, for syntax highlighting on the web.
+'
 
 Repl := 'Oak REPL is an interactive programming environment for Oak.
 
@@ -75,6 +83,15 @@ Test := 'Run unit tests in *.test.oak files.
 '
 
 Build := 'Compile and bundle Oak programs to Oak or JavaScript.
+
+Oak build will compile and bundle an Oak program, potentially with many
+dependencies, into a single, self-contained source file. This is useful when
+deploying or distributing Oak programs. The compiler can also generate
+JavaScript code when using the --web option, rather than Oak code, to output a
+bundle that can run on the web and Node.js.
+
+Usage
+	oak build --entry [src] --output [dest] [options]
 
 Options
 	--entry     Entrypoint for the bundle (main.oak by default)

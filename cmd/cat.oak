@@ -1,23 +1,121 @@
 // oak cat -- syntax highlighter
 
 {
-	slice: slice
+	map: map
 	each: each
+	slice: slice
+	append: append
+	compact: compact
 } := import('std')
 {
-	readFile: readFile
-} := import('fs')
-{
-	printf: printf
-} := import('fmt')
-{
-	Tokenizer: Tokenizer
-	Parser: Parser
-} := import('syntax')
+	join: join
+} := import('str')
+fs := import('fs')
+fmt := import('fmt')
+cli := import('cli')
+syntax := import('syntax')
 
-// TODO: add syntax highlighting
-args() |> slice(2) |> with each() fn(path) if file := readFile(path) {
-	? -> printf('[oak cat] Could not open file {{0}}', path)
-	_ -> print(file)
+Cli := cli.parse()
+
+Html? := Cli.opts.html != ?
+
+fn _ansiWrap(s, color) {
+	colorCode := if color {
+		:red -> 31
+		:green -> 32
+		:yellow -> 33
+		:blue -> 34
+		:magenta -> 35
+		:cyan -> 36
+		:gray -> 90
+		// :error shows text against a red background
+		:error, _ -> 41
+	}
+	'\x1b[0;' << string(colorCode) << 'm' << s << '\x1b[0;0m'
+}
+
+fn _ansiColor(s, type, prev, next) if type {
+	:newline -> s
+	:comment -> _ansiWrap(s, :gray)
+
+	:comma -> s
+	:dot -> s
+	:leftParen, :rightParen
+	:leftBracket, :rightBracket
+	:leftBrace, :rightBrace -> s
+	:assign, :nonlocalAssign -> _ansiWrap(s, :red)
+	:pipeArrow -> _ansiWrap(s, :blue) // to match fnKeyword
+	:branchArrow -> _ansiWrap(s, :red) // to match ifKeyword
+	:pushArrow -> _ansiWrap(s, :red)
+	:colon -> s
+	:ellipsis -> _ansiWrap(s, :blue)
+	:qmark -> _ansiWrap(s, :magenta)
+	:exclam -> _ansiWrap(s, :red)
+
+	:plus, :minus, :times, :divide, :modulus
+	:xor, :and, :or
+	:greater, :less, :eq, :geq, :leq, :neq -> _ansiWrap(s, :red)
+
+	:ifKeyword -> _ansiWrap(s, :red)
+	:fnKeyword -> _ansiWrap(s, :blue)
+	:withKeyword -> _ansiWrap(s, :cyan)
+
+	:underscore -> _ansiWrap(s, :magenta)
+	:identifier -> if {
+		prev = :fnKeyword
+		next = :leftParen -> _ansiWrap(s, :green)
+		_ -> s
+	}
+	:trueLiteral, :falseLiteral -> _ansiWrap(s, :magenta)
+	:stringLiteral -> _ansiWrap(s, :yellow)
+	:numberLiteral -> _ansiWrap(s, :cyan)
+
+	_ -> _ansiWrap(s, :error)
+}
+
+fn _htmlColor(s, type, prev, next) if s {
+	'', '\n' -> s
+	_ -> {
+		if type {
+			:identifier -> if {
+				prev = :fnKeyword
+				next = :leftParen -> type <- :fnName
+			}
+		}
+		'<span class="oak-' << string(type) << '">' << s << '</span>'
+	}
+}
+
+color := if {
+	Html? -> _htmlColor
+	_ -> _ansiColor
+}
+
+Args := [Cli.verb] |> append(Cli.args) |> compact()
+
+Args |> with each() fn(path) if file := fs.readFile(path) {
+	? -> fmt.printf('[oak cat] Could not read file {{0}}', path)
+	_ -> {
+		tokens := file |> syntax.tokenize()
+		spans := tokens |> with map() fn(tok, i) {
+			type: tok.type
+			start: tok.pos.0
+			end: if nextTok := tokens.(i + 1) {
+				? -> len(file)
+				_ -> nextTok.pos.0
+			}
+		}
+		chunks := spans |> with map() fn(span, i) {
+			{
+				type: type
+				start: start
+				end: end
+			} := span
+			prevType := if ? != prev := spans.(i - 1) -> prev.type
+			nextType := if ? != next := spans.(i + 1) -> next.type
+			file |> slice(start, end) |> color(type, prevType, nextType)
+		}
+		chunks |> join() |> print()
+	}
 }
 

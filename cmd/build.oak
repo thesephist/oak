@@ -1,7 +1,6 @@
 // oak build -- compiler and bundler
 
 {
-	println: println
 	default: default
 	slice: slice
 	clone: clone

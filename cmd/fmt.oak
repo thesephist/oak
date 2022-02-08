@@ -1,7 +1,6 @@
-// oak fmt -- automatic code formatter
+// oak fmt -- code formatter
 
 {
-	println: println
 	slice: slice
 	each: each
 	filter: filter
@@ -46,7 +45,7 @@ Args := if Cli.opts.changes != ? {
 }
 
 Args |> with each() fn(path) with readFile(path) fn(file) if file {
-	? -> printf('[oak fmt] Could not open file {{ 0 }}', path)
+	? -> printf('[oak fmt] Could not read file {{ 0 }}', path)
 	_ -> if {
 		Fix? -> with writeFile(path, file |> syntax.print(file)) fn(res) if res {
 			? -> printf('[oak fmt] Could not write file {{ 0 }}', path)
