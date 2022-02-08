@@ -2,13 +2,19 @@
 
 {
 	default: default
+	map: map
 	each: each
 	every: every
 	filter: filter
 } := import('std')
 {
+	split: split
+	join: join
+} := import('str')
+{
 	printf: printf
 } := import('fmt')
+debug := import('debug')
 
 // new constructs a new test suite, named `title`
 //
@@ -46,9 +52,16 @@ fn new(title) {
 				name
 			)
 
+			fn printIndentedDebug(x, indent) {
+				debug.inspect(x) |>
+					split('\n') |>
+					map(fn(line, i) if i { 0 -> line, _ -> indent + line }) |>
+					join('\n')
+			}
+
 			if !p? -> {
-				printf('\texpected: {{ 0 }}', expect)
-				printf('\t  result: {{ 0 }}', result)
+				printf('\texpected: {{ 0 }}', printIndentedDebug(expect, '\t          '))
+				printf('\t  result: {{ 0 }}', printIndentedDebug(result, '\t          '))
 			}
 		})
 	}
