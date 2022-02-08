@@ -73,6 +73,12 @@ fn _ansiColor(s, type, prev, next) if type {
 	_ -> _ansiWrap(s, :error)
 }
 
+fn _escapeHTML(s) s |> map(fn(c) if c {
+	'&' -> '&amp;'
+	'<' -> '&lt;'
+	_ -> c
+})
+
 fn _htmlColor(s, type, prev, next) if s {
 	'', '\n' -> s
 	_ -> {
@@ -82,7 +88,7 @@ fn _htmlColor(s, type, prev, next) if s {
 				next = :leftParen -> type <- :fnName
 			}
 		}
-		'<span class="oak-' << string(type) << '">' << s << '</span>'
+		'<span class="oak-' << string(type) << '">' << _escapeHTML(s) << '</span>'
 	}
 }
 
