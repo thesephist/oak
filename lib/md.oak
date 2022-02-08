@@ -619,7 +619,11 @@ fn wrap(tag, node) '<' << tag << '>' << compile(node.children) << '</' << tag <<
 
 // compileNode transforms an individual Markdown AST node into HTML
 fn compileNode(node) if type(node) {
-	:string -> node |> replace('&', '&amp;') |> replace('<', '&lt;')
+	:string -> node |> map(fn(c) if c {
+		'&' -> '&amp;'
+		'<' -> '&lt;'
+		_ -> c
+	})
 	_ -> if node.tag {
 		:p, :em, :strong, :strike
 		:h1, :h2, :h3, :h4, :h5, :h6
