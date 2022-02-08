@@ -1,11 +1,37 @@
 std := import('std')
 {
+	shebang?: shebang?
+	renderPos: renderPos
+	renderToken: renderToken
 	tokenize: tokenize
 	parse: parse
 	print: print
 } := import('syntax')
 
 fn run(t) {
+	// utilities
+	{
+		'shebang? recognizes shebang file' |> t.assert(
+			shebang?('#!/usr/bin/env oak\nprint(1 + 2)')
+		)
+		'shebang? reports false for non-shebang file' |> t.eq(
+			shebang?('// just a comment\nprint(1 + 2)')
+			false
+		)
+
+		'renderPos [0:0]' |> t.eq(renderPos([10, 0, 0]), '[0:0]')
+		'renderPos [line:col]' |> t.eq(renderPos([1, 2, 3]), '[2:3]')
+
+		'renderToken arbitrary token without val' |> t.eq(
+			renderToken({ type: :testKeyword, pos: [1, 2, 3], val: ? })
+			'testKeyword [2:3]'
+		)
+		'renderToken arbitrary token with val' |> t.eq(
+			renderToken({ type: :testKeyword, pos: [1, 2, 3], val: 'xyz' })
+			'testKeyword(xyz) [2:3]'
+		)
+	}
+
 	// tokenizer tests
 	{
 		fn Token(type, pos, val) {
