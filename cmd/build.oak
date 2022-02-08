@@ -110,7 +110,7 @@ fn cachedParse(path, text) if cached := ModuleNodes.(path) {
 		if nodes := text |> syntax.parse() {
 			{ type: :error, error: _, pos: _ } -> {
 				printf('[oak build] Parse error at {{0}}:{{1}}:{{2}}: {{3}}'
-					path, nodes.pos.0, nodes.pos.1, nodes.error)
+					path, nodes.pos.1, nodes.pos.2, nodes.error)
 				exit(1)
 			}
 			_ -> {
@@ -175,7 +175,7 @@ fn addImportsFromSource(path, file, next) {
 // sub-expressions of the block. In effect, it makes N AST nodes 1 node.
 fn wrapBlock(nodes) {
 	type: :block
-	tok: { pos: [1, 1], type: :leftBrace, val: ? }
+	tok: { pos: [0, 1, 1], type: :leftBrace, val: ? }
 	exprs: nodes
 }
 
@@ -224,22 +224,22 @@ fn wrapModule(block) {
 	// }
 	type: :function
 	name: ''
-	tok: { pos: [1, 1], type: :fnKeyword, val: ? }
+	tok: { pos: [0, 1, 1], type: :fnKeyword, val: ? }
 	args: []
 	restArg: ''
 	decls: []
 	body: {
 		type: :block
-		tok: { pos: [1, 4], type: :leftBrace, val: ? }
+		tok: { pos: [0, 1, 4], type: :leftBrace, val: ? }
 		decls: block.decls
 		exprs: block.exprs << {
 			type: :object
-			tok: { pos: [1, 6], type: :leftBrace, val: ? }
+			tok: { pos: [0, 1, 6], type: :leftBrace, val: ? }
 			entries: block.decls |> sort!() |> map(fn(exportedName) {
 				key: {
 					type: :identifier
 					tok: {
-						pos: [1, 8]
+						pos: [0, 1, 8]
 						type: :identifier
 						val: exportedName
 					}
@@ -248,7 +248,7 @@ fn wrapModule(block) {
 				val: {
 					type: :identifier
 					tok: {
-						pos: [1, 11]
+						pos: [0, 1, 11]
 						type: :identifier
 						val: exportedName
 					}
@@ -292,7 +292,7 @@ fn commonPrefix(paths) {
 // object instead of executing Oak's default import() builtin.
 fn wrapBundle(modules, entryModuleName) {
 	type: :block
-	tok: { pos: [1, 1], type: :leftBrace, val: ? }
+	tok: { pos: [0, 1, 1], type: :leftBrace, val: ? }
 	decls: []
 	exprs: {
 		// Internally, the bundler represents each module by its full path on
@@ -365,17 +365,17 @@ fn wrapBundle(modules, entryModuleName) {
 			moduleName := normalizeModulePath(modulePath)
 			{
 				type: :fnCall
-				tok: { pos: [1, 17], type: :leftParen, val: ? }
+				tok: { pos: [0, 1, 17], type: :leftParen, val: ? }
 				function: {
 					type: :identifier
-					tok: { pos: [1, 1], type: :identifier, val: '__oak_modularize' }
+					tok: { pos: [0, 1, 1], type: :identifier, val: '__oak_modularize' }
 					val: '__oak_modularize'
 				}
 				args: [
 					{
 						type: :string
 						val: moduleName
-						tok: { type: :stringLiteral, pos: [1, 18], val: moduleName }
+						tok: { type: :stringLiteral, pos: [0, 1, 18], val: moduleName }
 					}
 					{
 						normalizeModuleImports!(moduleBody, modulePath)
@@ -389,37 +389,37 @@ fn wrapBundle(modules, entryModuleName) {
 		// call into entrypoint
 		moduleDefns << {
 			type: :assignment
-			tok: { pos: [1, 0], type: :assign, val: ? }
-			left: { tok: { pos: [1, 0], type: :identifier, val: '__Oak_Import_Aliases' }, type: :identifier, val: '__Oak_Import_Aliases' }
+			tok: { pos: [0, 1, 0], type: :assign, val: ? }
+			left: { tok: { pos: [0, 1, 0], type: :identifier, val: '__Oak_Import_Aliases' }, type: :identifier, val: '__Oak_Import_Aliases' }
 			local?: false // nonlocal so runtime can access it
 			right: {
 				type: :object
-				tok: { pos: [1, 0], type: :leftBrace, val: ? }
+				tok: { pos: [0, 1, 0], type: :leftBrace, val: ? }
 				entries: Includes |> with map() fn(spec) {
 					key: {
 						type: :string
 						val: spec.name
-						tok: { pos: [1, 0], type: :stringLiteral, val: spec.name }
+						tok: { pos: [0, 1, 0], type: :stringLiteral, val: spec.name }
 					}
 					val: {
 						type: :string
 						val: normalizeModulePath(spec.path)
-						tok: { pos: [1, 0], type: :stringLiteral, val: normalizeModulePath(spec.path) }
+						tok: { pos: [0, 1, 0], type: :stringLiteral, val: normalizeModulePath(spec.path) }
 					}
 				}
 			}
 		} << {
 			type: :fnCall
-			tok: { pos: [1, 0], type: :leftParen, val: ? }
+			tok: { pos: [0, 1, 0], type: :leftParen, val: ? }
 			function: {
 				type: :identifier
-				tok: { pos: [1, 0], type: :identifier, val: '__oak_module_import' }
+				tok: { pos: [0, 1, 0], type: :identifier, val: '__oak_module_import' }
 				val: '__oak_module_import'
 			}
 			args: [{
 				type: :string
 				val: normalizeModulePath(entryModuleName)
-				tok: { type: :stringLiteral, pos: [1, 0], val: normalizeModulePath(entryModuleName) }
+				tok: { type: :stringLiteral, pos: [0, 1, 0], val: normalizeModulePath(entryModuleName) }
 			}]
 			restArg: ?
 		}

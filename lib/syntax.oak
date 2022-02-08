@@ -35,7 +35,7 @@
 
 fn shebang?(text) text |> startsWith?('#!')
 
-fn renderPos(pos) '[' + string(pos.0) + ':' + string(pos.1) + ']'
+fn renderPos(pos) '[' + string(pos.1) + ':' + string(pos.2) + ']'
 
 fn renderToken(token) if token.val {
 	? -> format('{{ 0 }} {{ 1 }}', string(token.type), renderPos(token.pos))
@@ -53,7 +53,7 @@ fn renderToken(token) if token.val {
 fn Tokenizer(source) {
 	index := 0
 	line := 1
-	col := 0
+	col := 1
 
 	fn TokenAt(type, pos, val) {
 		type: type
@@ -61,9 +61,8 @@ fn Tokenizer(source) {
 		pos: pos
 	}
 
-	fn Token(type, val) TokenAt(type, [line, col], val)
+	fn Token(type, val) TokenAt(type, [index, line, col], val)
 
-	fn pos [line, col]
 	fn eof? index = len(source)
 	fn peek source.(index)
 	fn peekAhead(n) if index + n >= len(source) {
@@ -76,7 +75,7 @@ fn Tokenizer(source) {
 		if char {
 			'\n' -> {
 				line <- line + 1
-				col <- 0
+				col <- 1
 			}
 			_ -> col <- col + 1
 		}
@@ -135,125 +134,115 @@ fn Tokenizer(source) {
 		}
 		sub('')
 	}
-	fn nextToken if c := next() {
-		',' -> Token(:comma)
-		'.' -> if peek() = '.' & peekAhead(1) = '.' {
-			true -> {
-				pos := [line, col]
-				next()
-				next()
-				TokenAt(:ellipsis, pos)
-			}
-			_ -> Token(:dot)
-		}
-		'(' -> Token(:leftParen)
-		')' -> Token(:rightParen)
-		'[' -> Token(:leftBracket)
-		']' -> Token(:rightBracket)
-		'{' -> Token(:leftBrace)
-		'}' -> Token(:rightBrace)
-		':' -> if peek() {
-			'=' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:assign, pos)
-			}
-			_ -> Token(:colon)
-		}
-		'<' -> if peek() {
-			'<' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:pushArrow, pos)
-			}
-			'-' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:nonlocalAssign, pos)
-			}
-			'=' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:leq, pos)
-			}
-			_ -> Token(:less)
-		}
-		'?' -> Token(:qmark)
-		'!' -> if peek() {
-			'=' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:neq, pos)
-			}
-			_ -> Token(:exclam)
-		}
-		'+' -> Token(:plus)
-		'-' -> if peek() {
-			'>' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:branchArrow, pos)
-			}
-			_ -> Token(:minus)
-		}
-		'*' -> Token(:times)
-		'/' -> if peek() {
-			'/' -> {
-				// line comment
-				pos := [line, col]
-				next()
-				commentString := readUntilChar('\n') |> trimEnd(' ') |> trimEnd('\t')
-				if commentString |> trim() = '' -> commentString <- ''
-				TokenAt(:comment, pos, commentString)
-			}
-			_ -> Token(:divide)
-		}
-		'%' -> Token(:modulus)
-		'^' -> Token(:xor)
-		'&' -> Token(:and)
-		'|' -> if peek() {
-			'>' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:pipeArrow, pos)
-			}
-			_ -> Token(:or)
-		}
-		'>' -> if peek() {
-			'=' -> {
-				pos := [line, col]
-				next()
-				TokenAt(:geq, pos)
-			}
-			_ -> Token(:greater)
-		}
-		'=' -> Token(:eq)
-		'\'' -> {
-			pos := [line, col]
-			fn sub(payload) if charInString := next() {
-				? -> payload
-				'\'' -> payload
-				'\\' -> sub(payload << '\\' << next())
-				_ -> sub(payload << charInString)
-			}
-			stringContent := sub('')
-			TokenAt(:stringLiteral, pos, stringContent)
-		}
-		_ -> {
-			pos := [line, col]
-			if digit?(c) {
+	fn nextToken {
+		pos := [index, line, col]
+		if c := next() {
+			',' -> TokenAt(:comma, pos)
+			'.' -> if peek() = '.' & peekAhead(1) = '.' {
 				true -> {
-					numberContent := c << readValidNumeral()
-					TokenAt(:numberLiteral, pos, numberContent)
+					next()
+					next()
+					TokenAt(:ellipsis, pos)
 				}
-				_ -> if payload := c << readValidIdentifier() {
-					'_' -> TokenAt(:underscore, pos)
-					'if' -> TokenAt(:ifKeyword, pos)
-					'fn' -> TokenAt(:fnKeyword, pos)
-					'with' -> TokenAt(:withKeyword, pos)
-					'true' -> TokenAt(:trueLiteral, pos)
-					'false' -> TokenAt(:falseLiteral, pos)
-					_ -> TokenAt(:identifier, pos, payload)
+				_ -> TokenAt(:dot, pos)
+			}
+			'(' -> TokenAt(:leftParen, pos)
+			')' -> TokenAt(:rightParen, pos)
+			'[' -> TokenAt(:leftBracket, pos)
+			']' -> TokenAt(:rightBracket, pos)
+			'{' -> TokenAt(:leftBrace, pos)
+			'}' -> TokenAt(:rightBrace, pos)
+			':' -> if peek() {
+				'=' -> {
+					next()
+					TokenAt(:assign, pos)
+				}
+				_ -> TokenAt(:colon, pos)
+			}
+			'<' -> if peek() {
+				'<' -> {
+					next()
+					TokenAt(:pushArrow, pos)
+				}
+				'-' -> {
+					next()
+					TokenAt(:nonlocalAssign, pos)
+				}
+				'=' -> {
+					next()
+					TokenAt(:leq, pos)
+				}
+				_ -> TokenAt(:less, pos)
+			}
+			'?' -> TokenAt(:qmark, pos)
+			'!' -> if peek() {
+				'=' -> {
+					next()
+					TokenAt(:neq, pos)
+				}
+				_ -> TokenAt(:exclam, pos)
+			}
+			'+' -> TokenAt(:plus, pos)
+			'-' -> if peek() {
+				'>' -> {
+					next()
+					TokenAt(:branchArrow, pos)
+				}
+				_ -> TokenAt(:minus, pos)
+			}
+			'*' -> TokenAt(:times, pos)
+			'/' -> if peek() {
+				'/' -> {
+					// line comment
+					next()
+					commentString := readUntilChar('\n') |> trimEnd(' ') |> trimEnd('\t')
+					if commentString |> trim() = '' -> commentString <- ''
+					TokenAt(:comment, pos, commentString)
+				}
+				_ -> TokenAt(:divide, pos)
+			}
+			'%' -> TokenAt(:modulus, pos)
+			'^' -> TokenAt(:xor, pos)
+			'&' -> TokenAt(:and, pos)
+			'|' -> if peek() {
+				'>' -> {
+					next()
+					TokenAt(:pipeArrow, pos)
+				}
+				_ -> TokenAt(:or, pos)
+			}
+			'>' -> if peek() {
+				'=' -> {
+					next()
+					TokenAt(:geq, pos)
+				}
+				_ -> TokenAt(:greater, pos)
+			}
+			'=' -> TokenAt(:eq, pos)
+			'\'' -> {
+				fn sub(payload) if charInString := next() {
+					?, '\'' -> payload
+					'\\' -> sub(payload << '\\' << next())
+					_ -> sub(payload << charInString)
+				}
+				stringContent := sub('')
+				TokenAt(:stringLiteral, pos, stringContent)
+			}
+			_ -> {
+				if digit?(c) {
+					true -> {
+						numberContent := c << readValidNumeral()
+						TokenAt(:numberLiteral, pos, numberContent)
+					}
+					_ -> if payload := c << readValidIdentifier() {
+						'_' -> TokenAt(:underscore, pos)
+						'if' -> TokenAt(:ifKeyword, pos)
+						'fn' -> TokenAt(:fnKeyword, pos)
+						'with' -> TokenAt(:withKeyword, pos)
+						'true' -> TokenAt(:trueLiteral, pos)
+						'false' -> TokenAt(:falseLiteral, pos)
+						_ -> TokenAt(:identifier, pos, payload)
+					}
 				}
 			}
 		}
@@ -273,9 +262,7 @@ fn Tokenizer(source) {
 
 		// snip whitespace before
 		fn eatSpace if space?(sp := peek()) -> {
-			if sp {
-				'\n' -> tokens << Token(:newline)
-			}
+			if sp = '\n' -> tokens << Token(:newline)
 			next()
 			eatSpace()
 		}
@@ -287,7 +274,7 @@ fn Tokenizer(source) {
 
 			if !(
 				[:leftParen, :leftBracket, :leftBrace, :comma] |> contains?(lastTok.type)
-			) & [:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) -> tokens << Token(:comma)
+			) & [:rightParen, :rightBracket, :rightBrace] |> contains?(nextTok.type) -> tokens << TokenAt(:comma, nextTok.pos)
 
 			tokens << nextTok
 			if nextTok.type = :comment -> nextTok := lastTok
@@ -296,15 +283,13 @@ fn Tokenizer(source) {
 			fn eatSpaceAutoInsertComma if space?(peek()) -> {
 				if peek() {
 					'\n' -> {
-						if [
+						if nextTok.type {
 							:comma, :leftParen, :leftBracket, :leftBrace
 							:plus, :minus, :times, :divide, :modulus, :xor
 							:and, :or, :exclam, :greater, :less, :eq, :geq
 							:leq, :assign, :nonlocalAssign, :dot, :colon
 							:fnKeyword, :ifKeyword, :withKeyword
-							:pipeArrow, :branchArrow, :pushArrow
-						] |> contains?(nextTok.type) {
-							true -> ? // do nothing
+							:pipeArrow, :branchArrow, :pushArrow -> ?
 							_ -> {
 								nextTok <- Token(:comma)
 								tokens << nextTok
@@ -331,7 +316,11 @@ fn Tokenizer(source) {
 
 		if lastTok.type {
 			:comma -> ?
-			_ -> tokens << Token(:comma)
+			_ -> tokens << TokenAt(:comma, [
+				len(source)
+				line
+				col
+			])
 		}
 
 		tokens
@@ -390,7 +379,7 @@ fn Parser(tokens) {
 			nextTok := next()
 			if nextTok.type {
 				type -> nextTok
-				_ -> error(format('Unexpected token {{0}}, expected {{1}}', nextTok, type), nextTok.pos)
+				_ -> error(format('Unexpected token {{0}}, expected {{1}}', renderToken(nextTok), type), nextTok.pos)
 			}
 		}
 	}
@@ -519,7 +508,7 @@ fn Parser(tokens) {
 					next()
 					{ type: :atom, tok: tok, val: 'false' }
 				}
-				_ -> error(format('Expected identifier after ":", got {{0}}', peek()), peek().pos)
+				_ -> error(format('Expected identifier after ":", got {{0}}', renderToken(peek())), peek().pos)
 			}
 			:leftBracket -> {
 				pushMinPrec(0)
@@ -862,7 +851,7 @@ fn Parser(tokens) {
 					}
 				}
 			}
-			_ -> error(format('Unexpected token {{0}} at start of unit', tok), tok.pos)
+			_ -> error(format('Unexpected token {{0}} at start of unit', renderToken(tok)), tok.pos)
 		}
 	}
 

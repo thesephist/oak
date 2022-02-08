@@ -48,302 +48,303 @@ fn run(t) {
 		'comment program' |> t.eq(
 			tokenize('// this is a comment\n//second comment')
 			[
-				Token(:comment, [1, 1], ' this is a comment')
-				Token(:newline, [1, 20])
-				Token(:comment, [2, 1], 'second comment')
+				Token(:comment, [0, 1, 1], ' this is a comment')
+				Token(:newline, [20, 1, 21])
+				Token(:comment, [21, 2, 1], 'second comment')
 			]
 		)
 
 		'whitespace-only program' |> t.eq(
-			tokenize('   \n')
+			tokenize('\t   \n')
 			[
-				Token(:newline, [1, 3])
+				Token(:newline, [4, 1, 5])
 			]
 		)
 
 		'null and empty' |> t.eq(
 			tokenize('?, _, __')
 			[
-				Token(:qmark, [1, 1])
-				Token(:comma, [1, 2])
-				Token(:underscore, [1, 4])
-				Token(:comma, [1, 5])
-				Token(:identifier, [1, 7], '__')
-				Token(:comma, [1, 8])
+				Token(:qmark, [0, 1, 1])
+				Token(:comma, [1, 1, 2])
+				Token(:underscore, [3, 1, 4])
+				Token(:comma, [4, 1, 5])
+				Token(:identifier, [6, 1, 7], '__')
+				Token(:comma, [8, 1, 9])
 			]
 		)
 
 		'number literals' |> t.eq(
 			tokenize(' 0 1 2.34 -0.567')
 			[
-				Token(:numberLiteral, [1, 2], '0')
-				Token(:numberLiteral, [1, 4], '1')
-				Token(:numberLiteral, [1, 6], '2.34')
-				Token(:minus, [1, 11])
-				Token(:numberLiteral, [1, 12], '0.567')
-				Token(:comma, [1, 16])
+				Token(:numberLiteral, [1, 1, 2], '0')
+				Token(:numberLiteral, [3, 1, 4], '1')
+				Token(:numberLiteral, [5, 1, 6], '2.34')
+				Token(:minus, [10, 1, 11])
+				Token(:numberLiteral, [11, 1, 12], '0.567')
+				Token(:comma, [16, 1, 17])
 			]
 		)
 
 		'string literals' |> t.eq(
 			tokenize('\'hello\' \'hi\' \'what\\\'s up\\n\\t\' ')
 			[
-				Token(:stringLiteral, [1, 1], 'hello')
-				Token(:stringLiteral, [1, 9], 'hi')
-				Token(:stringLiteral, [1, 14], 'what\\\'s up\\n\\t')
-				Token(:comma, [1, 30])
+				Token(:stringLiteral, [0, 1, 1], 'hello')
+				Token(:stringLiteral, [8, 1, 9], 'hi')
+				Token(:stringLiteral, [13, 1, 14], 'what\\\'s up\\n\\t')
+				Token(:comma, [30, 1, 31])
 			]
 		)
 
 		'atom literals' |> t.eq(
 			tokenize(':whatever :not_found_404')
 			[
-				Token(:colon, [1, 1])
-				Token(:identifier, [1, 2], 'whatever')
-				Token(:colon, [1, 11])
-				Token(:identifier, [1, 12], 'not_found_404')
-				Token(:comma, [1, 24])
+				Token(:colon, [0, 1, 1])
+				Token(:identifier, [1, 1, 2], 'whatever')
+				Token(:colon, [10, 1, 11])
+				Token(:identifier, [11, 1, 12], 'not_found_404')
+				Token(:comma, [24, 1, 25])
 			]
 		)
 
 		'atom literals matching keywords' |> t.eq(
 			tokenize(':if, :fn, :with, :true, :false')
 			[
-				Token(:colon, [1, 1])
-				Token(:ifKeyword, [1, 2])
-				Token(:comma, [1, 4])
-				Token(:colon, [1, 6])
-				Token(:fnKeyword, [1, 7])
-				Token(:comma, [1, 9])
-				Token(:colon, [1, 11])
-				Token(:withKeyword, [1, 12])
-				Token(:comma, [1, 16])
-				Token(:colon, [1, 18])
-				Token(:trueLiteral, [1, 19])
-				Token(:comma, [1, 23])
-				Token(:colon, [1, 25])
-				Token(:falseLiteral, [1, 26])
-				Token(:comma, [1, 30])
+				Token(:colon, [0, 1, 1])
+				Token(:ifKeyword, [1, 1, 2])
+				Token(:comma, [3, 1, 4])
+				Token(:colon, [5, 1, 6])
+				Token(:fnKeyword, [6, 1, 7])
+				Token(:comma, [8, 1, 9])
+				Token(:colon, [10, 1, 11])
+				Token(:withKeyword, [11, 1, 12])
+				Token(:comma, [15, 1, 16])
+				Token(:colon, [17, 1, 18])
+				Token(:trueLiteral, [18, 1, 19])
+				Token(:comma, [22, 1, 23])
+				Token(:colon, [24, 1, 25])
+				Token(:falseLiteral, [25, 1, 26])
+				Token(:comma, [30, 1, 31])
 			]
 		)
 
 		'identifiers' |> t.eq(
 			tokenize('hi _hello? whats_up__ nothing! ')
 			[
-				Token(:identifier, [1, 1], 'hi')
-				Token(:identifier, [1, 4], '_hello?')
-				Token(:identifier, [1, 12], 'whats_up__')
-				Token(:identifier, [1, 23], 'nothing!')
-				Token(:comma, [1, 31])
+				Token(:identifier, [0, 1, 1], 'hi')
+				Token(:identifier, [3, 1, 4], '_hello?')
+				Token(:identifier, [11, 1, 12], 'whats_up__')
+				Token(:identifier, [22, 1, 23], 'nothing!')
+				Token(:comma, [31, 1, 32])
 			]
 		)
 
 		'simple binary expression' |> t.eq(
 			tokenize('total := 1 + 2 * 4')
 			[
-				Token(:identifier, [1, 1], 'total')
-				Token(:assign, [1, 7])
-				Token(:numberLiteral, [1, 10], '1')
-				Token(:plus, [1, 12])
-				Token(:numberLiteral, [1, 14], '2')
-				Token(:times, [1, 16])
-				Token(:numberLiteral, [1, 18], '4')
-				Token(:comma, [1, 18])
+				Token(:identifier, [0, 1, 1], 'total')
+				Token(:assign, [6, 1, 7])
+				Token(:numberLiteral, [9, 1, 10], '1')
+				Token(:plus, [11, 1, 12])
+				Token(:numberLiteral, [13, 1, 14], '2')
+				Token(:times, [15, 1, 16])
+				Token(:numberLiteral, [17, 1, 18], '4')
+				Token(:comma, [18, 1, 19])
 			]
 		)
+
 		'hanging binary expression' |> t.eq(
 			tokenize('1 + 2 +\n3 *\n4')
 			[
-				Token(:numberLiteral, [1, 1], '1')
-				Token(:plus, [1, 3])
-				Token(:numberLiteral, [1, 5], '2')
-				Token(:plus, [1, 7])
-				Token(:newline, [1, 7])
-				Token(:numberLiteral, [2, 1], '3')
-				Token(:times, [2, 3])
-				Token(:newline, [2, 3])
-				Token(:numberLiteral, [3, 1], '4')
-				Token(:comma, [3, 1])
+				Token(:numberLiteral, [0, 1, 1], '1')
+				Token(:plus, [2, 1, 3])
+				Token(:numberLiteral, [4, 1, 5], '2')
+				Token(:plus, [6, 1, 7])
+				Token(:newline, [7, 1, 8])
+				Token(:numberLiteral, [8, 2, 1], '3')
+				Token(:times, [10, 2, 3])
+				Token(:newline, [11, 2, 4])
+				Token(:numberLiteral, [12, 3, 1], '4')
+				Token(:comma, [13, 3, 2])
 			]
 		)
 
 		'delimiters' |> t.eq(
 			tokenize('( [{ hi: :hello }] ) + (2)')
 			[
-				Token(:leftParen, [1, 1])
-				Token(:leftBracket, [1, 3])
-				Token(:leftBrace, [1, 4])
-				Token(:identifier, [1, 6], 'hi')
-				Token(:colon, [1, 8])
-				Token(:colon, [1, 10])
-				Token(:identifier, [1, 11], 'hello')
-				Token(:comma, [1, 17])
-				Token(:rightBrace, [1, 17])
-				Token(:comma, [1, 18])
-				Token(:rightBracket, [1, 18])
-				Token(:comma, [1, 20])
-				Token(:rightParen, [1, 20])
-				Token(:plus, [1, 22])
-				Token(:leftParen, [1, 24])
-				Token(:numberLiteral, [1, 25], '2')
-				Token(:comma, [1, 26])
-				Token(:rightParen, [1, 26])
-				Token(:comma, [1, 26])
+				Token(:leftParen, [0, 1, 1])
+				Token(:leftBracket, [2, 1, 3])
+				Token(:leftBrace, [3, 1, 4])
+				Token(:identifier, [5, 1, 6], 'hi')
+				Token(:colon, [7, 1, 8])
+				Token(:colon, [9, 1, 10])
+				Token(:identifier, [10, 1, 11], 'hello')
+				Token(:comma, [16, 1, 17])
+				Token(:rightBrace, [16, 1, 17])
+				Token(:comma, [17, 1, 18])
+				Token(:rightBracket, [17, 1, 18])
+				Token(:comma, [19, 1, 20])
+				Token(:rightParen, [19, 1, 20])
+				Token(:plus, [21, 1, 22])
+				Token(:leftParen, [23, 1, 24])
+				Token(:numberLiteral, [24, 1, 25], '2')
+				Token(:comma, [25, 1, 26])
+				Token(:rightParen, [25, 1, 26])
+				Token(:comma, [26, 1, 27])
 			]
 		)
 
 		'list literal' |> t.eq(
 			tokenize('[1, a, :first]')
 			[
-				Token(:leftBracket, [1, 1])
-				Token(:numberLiteral, [1, 2], '1')
-				Token(:comma, [1, 3])
-				Token(:identifier, [1, 5], 'a')
-				Token(:comma, [1, 6])
-				Token(:colon, [1, 8])
-				Token(:identifier, [1, 9], 'first')
-				Token(:comma, [1, 14])
-				Token(:rightBracket, [1, 14])
-				Token(:comma, [1, 14])
+				Token(:leftBracket, [0, 1, 1])
+				Token(:numberLiteral, [1, 1, 2], '1')
+				Token(:comma, [2, 1, 3])
+				Token(:identifier, [4, 1, 5], 'a')
+				Token(:comma, [5, 1, 6])
+				Token(:colon, [7, 1, 8])
+				Token(:identifier, [8, 1, 9], 'first')
+				Token(:comma, [13, 1, 14])
+				Token(:rightBracket, [13, 1, 14])
+				Token(:comma, [14, 1, 15])
 			]
 		)
 
 		'list literal with newlines' |> t.eq(
 			tokenize('[\n\t1,\n\ta,\n\t:first\n]')
 			[
-				Token(:leftBracket, [1, 1])
-				Token(:newline, [1, 1])
-				Token(:numberLiteral, [2, 2], '1')
-				Token(:comma, [2, 3])
-				Token(:newline, [2, 3])
-				Token(:identifier, [3, 2], 'a')
-				Token(:comma, [3, 3])
-				Token(:newline, [3, 3])
-				Token(:colon, [4, 2])
-				Token(:identifier, [4, 3], 'first')
-				Token(:comma, [4, 0])
-				Token(:newline, [4, 0])
-				Token(:rightBracket, [5, 1])
-				Token(:comma, [5, 1])
+				Token(:leftBracket, [0, 1, 1])
+				Token(:newline, [1, 1, 2])
+				Token(:numberLiteral, [3, 2, 2], '1')
+				Token(:comma, [4, 2, 3])
+				Token(:newline, [5, 2, 4])
+				Token(:identifier, [7, 3, 2], 'a')
+				Token(:comma, [8, 3, 3])
+				Token(:newline, [9, 3, 4])
+				Token(:colon, [11, 4, 2])
+				Token(:identifier, [12, 4, 3], 'first')
+				Token(:comma, [17, 4, 1])
+				Token(:newline, [17, 4, 1])
+				Token(:rightBracket, [18, 5, 1])
+				Token(:comma, [19, 5, 2])
 			]
 		)
 
 		'empty object' |> t.eq(
 			tokenize('{}')
 			[
-				Token(:leftBrace, [1, 1])
-				Token(:rightBrace, [1, 2])
-				Token(:comma, [1, 2])
+				Token(:leftBrace, [0, 1, 1])
+				Token(:rightBrace, [1, 1, 2])
+				Token(:comma, [2, 1, 3])
 			]
 		)
 
 		'object literal' |> t.eq(
 			tokenize('{a: :bee}')
 			[
-				Token(:leftBrace, [1, 1])
-				Token(:identifier, [1, 2], 'a')
-				Token(:colon, [1, 3])
-				Token(:colon, [1, 5])
-				Token(:identifier, [1, 6], 'bee')
-				Token(:comma, [1, 9])
-				Token(:rightBrace, [1, 9])
-				Token(:comma, [1, 9])
+				Token(:leftBrace, [0, 1, 1])
+				Token(:identifier, [1, 1, 2], 'a')
+				Token(:colon, [2, 1, 3])
+				Token(:colon, [4, 1, 5])
+				Token(:identifier, [5, 1, 6], 'bee')
+				Token(:comma, [8, 1, 9])
+				Token(:rightBrace, [8, 1, 9])
+				Token(:comma, [9, 1, 10])
 			]
 		)
 
 		'object literal with newlines' |> t.eq(
 			tokenize('{\n1: 2\n3: ?\n}')
 			[
-				Token(:leftBrace, [1, 1])
-				Token(:newline, [1, 1])
-				Token(:numberLiteral, [2, 1], '1')
-				Token(:colon, [2, 2])
-				Token(:numberLiteral, [2, 4], '2')
-				Token(:comma, [2, 0])
-				Token(:newline, [2, 0])
-				Token(:numberLiteral, [3, 1], '3')
-				Token(:colon, [3, 2])
-				Token(:qmark, [3, 4])
-				Token(:comma, [3, 4])
-				Token(:newline, [3, 4])
-				Token(:rightBrace, [4, 1])
-				Token(:comma, [4, 1])
+				Token(:leftBrace, [0, 1, 1])
+				Token(:newline, [1, 1, 2])
+				Token(:numberLiteral, [2, 2, 1], '1')
+				Token(:colon, [3, 2, 2])
+				Token(:numberLiteral, [5, 2, 4], '2')
+				Token(:comma, [6, 2, 1])
+				Token(:newline, [6, 2, 1])
+				Token(:numberLiteral, [7, 3, 1], '3')
+				Token(:colon, [8, 3, 2])
+				Token(:qmark, [10, 3, 4])
+				Token(:comma, [11, 3, 5])
+				Token(:newline, [11, 3, 5])
+				Token(:rightBrace, [12, 4, 1])
+				Token(:comma, [13, 4, 2])
 			]
 		)
 
 		'basic function' |> t.eq(
 			tokenize('fn a(b, c) if a |> c {\nd -> e\n}')
 			[
-				Token(:fnKeyword, [1, 1])
-				Token(:identifier, [1, 4], 'a')
-				Token(:leftParen, [1, 5])
-				Token(:identifier, [1, 6], 'b')
-				Token(:comma, [1, 7])
-				Token(:identifier, [1, 9], 'c')
-				Token(:comma, [1, 10])
-				Token(:rightParen, [1, 10])
-				Token(:ifKeyword, [1, 12])
-				Token(:identifier, [1, 15], 'a')
-				Token(:pipeArrow, [1, 17])
-				Token(:identifier, [1, 20], 'c')
-				Token(:leftBrace, [1, 22])
-				Token(:newline, [1, 22])
-				Token(:identifier, [2, 1], 'd')
-				Token(:branchArrow, [2, 3])
-				Token(:identifier, [2, 6], 'e')
-				Token(:comma, [2, 0])
-				Token(:newline, [2, 0])
-				Token(:rightBrace, [3, 1])
-				Token(:comma, [3, 1])
+				Token(:fnKeyword, [0, 1, 1])
+				Token(:identifier, [3, 1, 4], 'a')
+				Token(:leftParen, [4, 1, 5])
+				Token(:identifier, [5, 1, 6], 'b')
+				Token(:comma, [6, 1, 7])
+				Token(:identifier, [8, 1, 9], 'c')
+				Token(:comma, [9, 1, 10])
+				Token(:rightParen, [9, 1, 10])
+				Token(:ifKeyword, [11, 1, 12])
+				Token(:identifier, [14, 1, 15], 'a')
+				Token(:pipeArrow, [16, 1, 17])
+				Token(:identifier, [19, 1, 20], 'c')
+				Token(:leftBrace, [21, 1, 22])
+				Token(:newline, [22, 1, 23])
+				Token(:identifier, [23, 2, 1], 'd')
+				Token(:branchArrow, [25, 2, 3])
+				Token(:identifier, [28, 2, 6], 'e')
+				Token(:comma, [29, 2, 1])
+				Token(:newline, [29, 2, 1])
+				Token(:rightBrace, [30, 3, 1])
+				Token(:comma, [31, 3, 2])
 			]
 		)
 
 		'variadic function' |> t.eq(
 			tokenize('fn f(x, y...) ?, f(1, a...)')
 			[
-				Token(:fnKeyword, [1, 1])
-				Token(:identifier, [1, 4], 'f')
-				Token(:leftParen, [1, 5])
-				Token(:identifier, [1, 6], 'x')
-				Token(:comma, [1, 7])
-				Token(:identifier, [1, 9], 'y')
-				Token(:ellipsis, [1, 10])
-				Token(:comma, [1, 13])
-				Token(:rightParen, [1, 13])
-				Token(:qmark, [1, 15])
-				Token(:comma, [1, 16])
-				Token(:identifier, [1, 18], 'f')
-				Token(:leftParen, [1, 19])
-				Token(:numberLiteral, [1, 20], '1')
-				Token(:comma, [1, 21])
-				Token(:identifier, [1, 23], 'a')
-				Token(:ellipsis, [1, 24])
-				Token(:comma, [1, 27])
-				Token(:rightParen, [1, 27])
-				Token(:comma, [1, 27])
+				Token(:fnKeyword, [0, 1, 1])
+				Token(:identifier, [3, 1, 4], 'f')
+				Token(:leftParen, [4, 1, 5])
+				Token(:identifier, [5, 1, 6], 'x')
+				Token(:comma, [6, 1, 7])
+				Token(:identifier, [8, 1, 9], 'y')
+				Token(:ellipsis, [9, 1, 10])
+				Token(:comma, [12, 1, 13])
+				Token(:rightParen, [12, 1, 13])
+				Token(:qmark, [14, 1, 15])
+				Token(:comma, [15, 1, 16])
+				Token(:identifier, [17, 1, 18], 'f')
+				Token(:leftParen, [18, 1, 19])
+				Token(:numberLiteral, [19, 1, 20], '1')
+				Token(:comma, [20, 1, 21])
+				Token(:identifier, [22, 1, 23], 'a')
+				Token(:ellipsis, [23, 1, 24])
+				Token(:comma, [26, 1, 27])
+				Token(:rightParen, [26, 1, 27])
+				Token(:comma, [27, 1, 28])
 			]
 		)
 
 		'with expression' |> t.eq(
 			tokenize('with readFile(path) fn(file) {\n\t// do thing\n}')
 			[
-				Token(:withKeyword, [1, 1])
-				Token(:identifier, [1, 6], 'readFile')
-				Token(:leftParen, [1, 14])
-				Token(:identifier, [1, 15], 'path')
-				Token(:comma, [1, 19])
-				Token(:rightParen, [1, 19])
-				Token(:fnKeyword, [1, 21])
-				Token(:leftParen, [1, 23])
-				Token(:identifier, [1, 24], 'file')
-				Token(:comma, [1, 28])
-				Token(:rightParen, [1, 28])
-				Token(:leftBrace, [1, 30])
-				Token(:newline, [1, 30])
-				Token(:comment, [2, 2], ' do thing')
-				Token(:newline, [2, 12])
-				Token(:rightBrace, [3, 1])
-				Token(:comma, [3, 1])
+				Token(:withKeyword, [0, 1, 1])
+				Token(:identifier, [5, 1, 6], 'readFile')
+				Token(:leftParen, [13, 1, 14])
+				Token(:identifier, [14, 1, 15], 'path')
+				Token(:comma, [18, 1, 19])
+				Token(:rightParen, [18, 1, 19])
+				Token(:fnKeyword, [20, 1, 21])
+				Token(:leftParen, [22, 1, 23])
+				Token(:identifier, [23, 1, 24], 'file')
+				Token(:comma, [27, 1, 28])
+				Token(:rightParen, [27, 1, 28])
+				Token(:leftBrace, [29, 1, 30])
+				Token(:newline, [30, 1, 31])
+				Token(:comment, [32, 2, 2], ' do thing')
+				Token(:newline, [43, 2, 13])
+				Token(:rightBrace, [44, 3, 1])
+				Token(:comma, [45, 3, 2])
 			]
 		)
 	}
@@ -351,10 +352,10 @@ fn run(t) {
 	// parser tests
 	{
 		// for positions
-		fn at(line, col) {
+		fn at(offset, line, col) {
 			type: _
 			val: _
-			pos: [line, col]
+			pos: [offset, line, col]
 		}
 
 		'empty program' |> t.eq(
@@ -375,17 +376,17 @@ fn run(t) {
 		'bool literals' |> t.eq(
 			parse('true, false')
 			[
-				{ type: :bool, val: true, tok: at(1, 1) }
-				{ type: :bool, val: false, tok: at(1, 7) }
+				{ type: :bool, val: true, tok: at(0, 1, 1) }
+				{ type: :bool, val: false, tok: at(6, 1, 7) }
 			]
 		)
 
 		'number literals' |> t.eq(
 			parse('12, 24.5, 0')
 			[
-				{ type: :int, val: 12, tok: at(1, 1) }
-				{ type: :float, val: 24.5, tok: at(1, 5) }
-				{ type: :int, val: 0, tok: at(1, 11) }
+				{ type: :int, val: 12, tok: at(0, 1, 1) }
+				{ type: :float, val: 24.5, tok: at(4, 1, 5) }
+				{ type: :int, val: 0, tok: at(10, 1, 11) }
 			]
 		)
 
@@ -393,16 +394,16 @@ fn run(t) {
 			parse('2.3.4.5.6')
 			[{
 				type: :propertyAccess
-				tok: at(1, 8)
+				tok: at(7, 1, 8)
 				left: {
 					type: :propertyAccess
-					tok: at(1, 4)
-					left: { type: :float, val: 2.3, tok: at(1, 1) }
-					right: { type: :float, val: 4.5, tok: at(1, 5) }
+					tok: at(3, 1, 4)
+					left: { type: :float, val: 2.3, tok: at(0, 1, 1) }
+					right: { type: :float, val: 4.5, tok: at(4, 1, 5) }
 				}
 				right: {
 					type: :int
-					tok: at(1, 9)
+					tok: at(8, 1, 9)
 					val: 6
 				}
 			}]
@@ -411,38 +412,38 @@ fn run(t) {
 		'string literals' |> t.eq(
 			parse('\'hello\', \'hi\', \'what\\\'s up\\n\\t\' ')
 			[
-				{ type: :string, val: 'hello', tok: at(1, 1) }
-				{ type: :string, val: 'hi', tok: at(1, 10) }
-				{ type: :string, val: 'what\'s up\n\t', tok: at(1, 16) }
+				{ type: :string, val: 'hello', tok: at(0, 1, 1) }
+				{ type: :string, val: 'hi', tok: at(9, 1, 10) }
+				{ type: :string, val: 'what\'s up\n\t', tok: at(15, 1, 16) }
 			]
 		)
 
 		'atom literals' |> t.eq(
 			parse(':whatever, :not_found_404')
 			[
-				{ type: :atom, val: 'whatever', tok: at(1, 1) }
-				{ type: :atom, val: 'not_found_404', tok: at(1, 12) }
+				{ type: :atom, val: 'whatever', tok: at(0, 1, 1) }
+				{ type: :atom, val: 'not_found_404', tok: at(11, 1, 12) }
 			]
 		)
 
 		'atom literals matching keywords' |> t.eq(
 			parse(':if, :fn, :with, :true, :false')
 			[
-				{ type: :atom, val: 'if', tok: at(1, 1) }
-				{ type: :atom, val: 'fn', tok: at(1, 6) }
-				{ type: :atom, val: 'with', tok: at(1, 11) }
-				{ type: :atom, val: 'true', tok: at(1, 18) }
-				{ type: :atom, val: 'false', tok: at(1, 25) }
+				{ type: :atom, val: 'if', tok: at(0, 1, 1) }
+				{ type: :atom, val: 'fn', tok: at(5, 1, 6) }
+				{ type: :atom, val: 'with', tok: at(10, 1, 11) }
+				{ type: :atom, val: 'true', tok: at(17, 1, 18) }
+				{ type: :atom, val: 'false', tok: at(24, 1, 25) }
 			]
 		)
 
 		'identifiers' |> t.eq(
 			parse('hi, _hello?, whats_up__, nothing! ')
 			[
-				{ type: :identifier, val: 'hi', tok: at(1, 1) }
-				{ type: :identifier, val: '_hello?', tok: at(1, 5) }
-				{ type: :identifier, val: 'whats_up__', tok: at(1, 14) }
-				{ type: :identifier, val: 'nothing!', tok: at(1, 26) }
+				{ type: :identifier, val: 'hi', tok: at(0, 1, 1) }
+				{ type: :identifier, val: '_hello?', tok: at(4, 1, 5) }
+				{ type: :identifier, val: 'whats_up__', tok: at(13, 1, 14) }
+				{ type: :identifier, val: 'nothing!', tok: at(25, 1, 26) }
 			]
 		)
 
@@ -451,9 +452,9 @@ fn run(t) {
 			[{
 				type: :binary
 				op: :plus
-				left: { type: :int, val: 10, tok: at(1, 1) }
-				right: { type: :int, val: 20, tok: at(1, 6) }
-				tok: at(1, 4)
+				left: { type: :int, val: 10, tok: at(0, 1, 1) }
+				right: { type: :int, val: 20, tok: at(5, 1, 6) }
+				tok: at(3, 1, 4)
 			}]
 		)
 
@@ -461,10 +462,10 @@ fn run(t) {
 			parse('x <- :hi')
 			[{
 				type: :assignment
-				tok: at(1, 3)
+				tok: at(2, 1, 3)
 				local?: false
-				left: { type: :identifier, val: 'x', tok: at(1, 1) }
-				right: { type: :atom, val: 'hi', tok: at(1, 6) }
+				left: { type: :identifier, val: 'x', tok: at(0, 1, 1) }
+				right: { type: :atom, val: 'hi', tok: at(5, 1, 6) }
 			}]
 		)
 
@@ -472,41 +473,41 @@ fn run(t) {
 			parse('total := 1 + 2 * 3 - 4')
 			[{
 				type: :assignment
-				tok: at(1, 7)
+				tok: at(6, 1, 7)
 				local?: true
-				left: { type: :identifier, val: 'total', tok: at(1, 1) }
+				left: { type: :identifier, val: 'total', tok: at(0, 1, 1) }
 				right: {
 					type: :binary
-					tok: at(1, 20)
+					tok: at(19, 1, 20)
 					op: :minus
 					left: {
 						type: :binary
-						tok: at(1, 12)
+						tok: at(11, 1, 12)
 						op: :plus
 						left: {
 							type: :int
-							tok: at(1, 10)
+							tok: at(9, 1, 10)
 							val: 1
 						}
 						right: {
 							type: :binary
-							tok: at(1, 16)
+							tok: at(15, 1, 16)
 							op: :times
 							left: {
 								type: :int
-								tok: at(1, 14)
+								tok: at(13, 1, 14)
 								val: 2
 							}
 							right: {
 								type: :int
-								tok: at(1, 18)
+								tok: at(17, 1, 18)
 								val: 3
 							}
 						}
 					}
 					right: {
 						type: :int
-						tok: at(1, 22)
+						tok: at(21, 1, 22)
 						val: 4
 					}
 				}
@@ -517,25 +518,25 @@ fn run(t) {
 			parse('[], [1, [2, 3]]')
 			[{
 				type: :list
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				elems: []
 			}, {
 				type: :list
-				tok: at(1, 5)
+				tok: at(4, 1, 5)
 				elems: [{
 					type: :int
-					tok: at(1, 6)
+					tok: at(5, 1, 6)
 					val: 1
 				}, {
 					type: :list
-					tok: at(1, 9)
+					tok: at(8, 1, 9)
 					elems: [{
 						type: :int
-						tok: at(1, 10)
+						tok: at(9, 1, 10)
 						val: 2
 					}, {
 						type: :int
-						tok: at(1, 13)
+						tok: at(12, 1, 13)
 						val: 3
 					}]
 				}]
@@ -546,36 +547,36 @@ fn run(t) {
 			parse('{}, {a: :ay, b + [c]: {d: \'dee\'}}')
 			[{
 				type: :object
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				entries: []
 			}, {
 				type: :object
-				tok: at(1, 5)
+				tok: at(4, 1, 5)
 				entries: [{
-					key: { type: :identifier, tok: at(1, 6), val: 'a' }
-					val: { type: :atom, tok: at(1, 9), val: 'ay' }
+					key: { type: :identifier, tok: at(5, 1, 6), val: 'a' }
+					val: { type: :atom, tok: at(8, 1, 9), val: 'ay' }
 				}, {
 					key: {
 						type: :binary
-						tok: at(1, 16)
+						tok: at(15, 1, 16)
 						op: :plus
-						left: { type: :identifier, tok: at(1, 14), val: 'b' }
+						left: { type: :identifier, tok: at(13, 1, 14), val: 'b' }
 						right: {
 							type: :list
-							tok: at(1, 18)
+							tok: at(17, 1, 18)
 							elems: [{
 								type: :identifier
-								tok: at(1, 19)
+								tok: at(18, 1, 19)
 								val: 'c'
 							}]
 						}
 					}
 					val: {
 						type: :object
-						tok: at(1, 23)
+						tok: at(22, 1, 23)
 						entries: [{
-							key: { type: :identifier, tok: at(1, 24), val: 'd' }
-							val: { type: :string, tok: at(1, 27), val: 'dee' }
+							key: { type: :identifier, tok: at(23, 1, 24), val: 'd' }
+							val: { type: :string, tok: at(26, 1, 27), val: 'dee' }
 						}]
 					}
 				}]
@@ -586,18 +587,18 @@ fn run(t) {
 			parse('fn {}\nfn named(){  }')
 			[{
 				type: :function
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				name: ''
 				args: []
 				restArg: ''
-				body: { type: :block, tok: at(1, 4), exprs: [] }
+				body: { type: :block, tok: at(3, 1, 4), exprs: [] }
 			}, {
 				type: :function
-				tok: at(2, 1)
+				tok: at(6, 2, 1)
 				name: 'named'
 				args: []
 				restArg: ''
-				body: { type: :block, tok: at(2, 11), exprs: [] }
+				body: { type: :block, tok: at(16, 2, 11), exprs: [] }
 			}]
 		)
 
@@ -605,45 +606,45 @@ fn run(t) {
 			parse('fn get3 { x := 4, 3 }\nget3(1, 2, []...)')
 			[{
 				type: :function
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				name: 'get3'
 				args: []
 				restArg: ''
 				body: {
 					type: :block
-					tok: at(1, 9)
+					tok: at(8, 1, 9)
 					exprs: [{
 						type: :assignment
-						tok: at(1, 13)
+						tok: at(12, 1, 13)
 						local?: true
-						left: { type: :identifier, tok: at(1, 11), val: 'x' }
-						right: { type: :int, tok: at(1, 16), val: 4 }
+						left: { type: :identifier, tok: at(10, 1, 11), val: 'x' }
+						right: { type: :int, tok: at(15, 1, 16), val: 4 }
 					}, {
 						type: :int
-						tok: at(1, 19)
+						tok: at(18, 1, 19)
 						val: 3
 					}]
 				}
 			}, {
 				type: :fnCall
-				tok: at(2, 5)
+				tok: at(26, 2, 5)
 				function: {
 					type: :identifier
-					tok: at(2, 1)
+					tok: at(22, 2, 1)
 					val: 'get3'
 				}
 				args: [{
 					type: :int
-					tok: at(2, 6)
+					tok: at(27, 2, 6)
 					val: 1
 				}, {
 					type: :int
-					tok: at(2, 9)
+					tok: at(30, 2, 9)
 					val: 2
 				}]
 				restArg: {
 					type: :list
-					tok: at(2, 12)
+					tok: at(33, 2, 12)
 					elems: []
 				}
 			}]
@@ -653,19 +654,19 @@ fn run(t) {
 			parse('if 1 + 2 {\n\t\t\t\t3 + 4 -> 5\n\t\t\t\tf(), g() -> 10\n\t\t\t\t_ -> ?\n\t\t\t}')
 			[{
 				type: :ifExpr
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				cond: {
 					type: :binary
-					tok: at(1, 6)
+					tok: at(5, 1, 6)
 					op: :plus
 					left: {
 						type: :int
-						tok: at(1, 4)
+						tok: at(3, 1, 4)
 						val: 1
 					}
 					right: {
 						type: :int
-						tok: at(1, 8)
+						tok: at(7, 1, 8)
 						val: 2
 					}
 				}
@@ -674,22 +675,22 @@ fn run(t) {
 						type: :ifBranch
 						target: {
 							type: :binary
-							tok: at(2, 7)
+							tok: at(17, 2, 7)
 							op: :plus
 							left: {
 								type: :int
-								tok: at(2, 5)
+								tok: at(15, 2, 5)
 								val: 3
 							}
 							right: {
 								type: :int
-								tok: at(2, 9)
+								tok: at(19, 2, 9)
 								val: 4
 							}
 						}
 						body: {
 							type: :int
-							tok: at(2, 14)
+							tok: at(24, 2, 14)
 							val: 5
 						}
 					}
@@ -697,10 +698,10 @@ fn run(t) {
 						type: :ifBranch
 						target: {
 							type: :fnCall
-							tok: at(3, 6)
+							tok: at(31, 3, 6)
 							function: {
 								type: :identifier
-								tok: at(3, 5)
+								tok: at(30, 3, 5)
 								val: 'f'
 							}
 							args: []
@@ -708,7 +709,7 @@ fn run(t) {
 						}
 						body: {
 							type: :int
-							tok: at(3, 17)
+							tok: at(42, 3, 17)
 							val: 10
 						}
 					}
@@ -716,10 +717,10 @@ fn run(t) {
 						type: :ifBranch
 						target: {
 							type: :fnCall
-							tok: at(3, 11)
+							tok: at(36, 3, 11)
 							function: {
 								type: :identifier
-								tok: at(3, 10)
+								tok: at(35, 3, 10)
 								val: 'g'
 							}
 							args: []
@@ -727,7 +728,7 @@ fn run(t) {
 						}
 						body: {
 							type: :int
-							tok: at(3, 17)
+							tok: at(42, 3, 17)
 							val: 10
 						}
 					}
@@ -735,11 +736,11 @@ fn run(t) {
 						type: :ifBranch
 						target: {
 							type: :empty
-							tok: at(4, 5)
+							tok: at(49, 4, 5)
 						}
 						body: {
 							type: :null
-							tok: at(4, 10)
+							tok: at(54, 4, 10)
 						}
 					}
 				]
@@ -750,21 +751,21 @@ fn run(t) {
 			parse('if {\n\t\t\t\t? -> 3\n\t\t\t}')
 			[{
 				type: :ifExpr
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				cond: {
 					type: :bool
-					tok: at(1, 1)
+					tok: at(0, 1, 1)
 					val: true
 				}
 				branches: [{
 					type: :ifBranch
 					target: {
 						type: :null
-						tok: at(2, 5)
+						tok: at(9, 2, 5)
 					}
 					body: {
 						type: :int
-						tok: at(2, 10)
+						tok: at(14, 2, 10)
 						val: 3
 					}
 				}]
@@ -775,13 +776,13 @@ fn run(t) {
 			parse('if letter() { a, b, c -> 3, d -> 4, _ -> 5 }')
 			[{
 				type: :ifExpr
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				cond: {
 					type: :fnCall
-					tok: at(1, 10)
+					tok: at(9, 1, 10)
 					function: {
 						type: :identifier
-						tok: at(1, 4)
+						tok: at(3, 1, 4)
 						val: 'letter'
 					}
 					args: []
@@ -791,59 +792,59 @@ fn run(t) {
 					type: :ifBranch
 					target: {
 						type: :identifier
-						tok: at(1, 15)
+						tok: at(14, 1, 15)
 						val: 'a'
 					}
 					body: {
 						type: :int
-						tok: at(1, 26)
+						tok: at(25, 1, 26)
 						val: 3
 					}
 				}, {
 					type: :ifBranch
 					target: {
 						type: :identifier
-						tok: at(1, 18)
+						tok: at(17, 1, 18)
 						val: 'b'
 					}
 					body: {
 						type: :int
-						tok: at(1, 26)
+						tok: at(25, 1, 26)
 						val: 3
 					}
 				}, {
 					type: :ifBranch
 					target: {
 						type: :identifier
-						tok: at(1, 21)
+						tok: at(20, 1, 21)
 						val: 'c'
 					}
 					body: {
 						type: :int
-						tok: at(1, 26)
+						tok: at(25, 1, 26)
 						val: 3
 					}
 				}, {
 					type: :ifBranch
 					target: {
 						type: :identifier
-						tok: at(1, 29)
+						tok: at(28, 1, 29)
 						val: 'd'
 					}
 					body: {
 						type: :int
-						tok: at(1, 34)
+						tok: at(33, 1, 34)
 						val: 4
 					}
 				}, {
 					type: :ifBranch
 					target: {
 						type: :empty
-						tok: at(1, 37)
+						tok: at(36, 1, 37)
 					}
 					body: {
 						type: :int
-						tok: at(1, 42)
+						tok: at(41, 1, 42)
 						val: 5
 					}
 				}]
@@ -854,29 +855,29 @@ fn run(t) {
 			parse('if a + b = c -> body')
 			[{
 				type: :ifExpr
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				cond: {
 					type: :binary
-					tok: at(1, 10)
+					tok: at(9, 1, 10)
 					op: :eq
 					left: {
 						type: :binary
-						tok: at(1, 6)
+						tok: at(5, 1, 6)
 						op: :plus
 						left: {
 							type: :identifier
-							tok: at(1, 4)
+							tok: at(3, 1, 4)
 							val: 'a'
 						}
 						right: {
 							type: :identifier
-							tok: at(1, 8)
+							tok: at(7, 1, 8)
 							val: 'b'
 						}
 					}
 					right: {
 						type: :identifier
-						tok: at(1, 12)
+						tok: at(11, 1, 12)
 						val: 'c'
 					}
 				}
@@ -884,12 +885,12 @@ fn run(t) {
 					type: :ifBranch
 					target: {
 						type: :bool
-						tok: at(1, 14)
+						tok: at(13, 1, 14)
 						val: true
 					}
 					body: {
 						type: :identifier
-						tok: at(1, 17)
+						tok: at(16, 1, 17)
 						val: 'body'
 					}
 				}]
@@ -900,27 +901,27 @@ fn run(t) {
 			parse('if cond -> {\n\tbody1()\n\tbody2\n}')
 			[{
 				type: :ifExpr
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				cond: {
 					type: :identifier
-					tok: at(1, 4)
+					tok: at(3, 1, 4)
 					val: 'cond'
 				}
 				branches: [{
 					type: :ifBranch
 					target: {
 						type: :bool
-						tok: at(1, 9)
+						tok: at(8, 1, 9)
 						val: true
 					}
 					body: {
 						type: :block
-						tok: at(1, 12)
+						tok: at(11, 1, 12)
 						exprs: [{
 							type: :fnCall
-							tok: at(2, 7)
+							tok: at(19, 2, 7)
 							function: {
-								tok: at(2, 2)
+								tok: at(14, 2, 2)
 								type: :identifier
 								val: 'body1'
 							}
@@ -929,7 +930,7 @@ fn run(t) {
 						}
 						{
 							type: :identifier
-							tok: at(3, 2)
+							tok: at(23, 3, 2)
 							val: 'body2'
 						}]
 					}
@@ -941,11 +942,11 @@ fn run(t) {
 			parse('fn(_, i) {}')
 			[{
 				type: :function
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				name: ''
 				args: ['_', 'i']
 				restArg: ''
-				body: { type: :block, tok: at(1, 10), exprs: [] }
+				body: { type: :block, tok: at(9, 1, 10), exprs: [] }
 			}]
 		)
 
@@ -953,11 +954,11 @@ fn run(t) {
 			parse('fn(x, y...) {}')
 			[{
 				type: :function
-				tok: at(1, 1)
+				tok: at(0, 1, 1)
 				name: ''
 				args: ['x']
 				restArg: 'y'
-				body: { type: :block, tok: at(1, 13), exprs: [] }
+				body: { type: :block, tok: at(12, 1, 13), exprs: [] }
 			}]
 		)
 
@@ -965,12 +966,12 @@ fn run(t) {
 			parse('with f(1, 2) 100')
 			[{
 				type: :fnCall
-				tok: at(1, 7)
-				function: { type: :identifier, tok: at(1, 6), val: 'f' }
+				tok: at(6, 1, 7)
+				function: { type: :identifier, tok: at(5, 1, 6), val: 'f' }
 				args: [
-					{ type: :int, tok: at(1, 8), val: 1 }
-					{ type: :int, tok: at(1, 11), val: 2 }
-					{ type: :int, tok: at(1, 14), val: 100 }
+					{ type: :int, tok: at(7, 1, 8), val: 1 }
+					{ type: :int, tok: at(10, 1, 11), val: 2 }
+					{ type: :int, tok: at(13, 1, 14), val: 100 }
 				]
 				restArg: ?
 			}]
@@ -980,29 +981,29 @@ fn run(t) {
 			parse('3 |> double() |> with add() 10')
 			[{
 				type: :fnCall
-				tok: at(1, 26)
+				tok: at(25, 1, 26)
 				function: {
 					type: :identifier
-					tok: at(1, 23)
+					tok: at(22, 1, 23)
 					val: 'add'
 				}
 				args: [
 					{
 						type: :fnCall
-						tok: at(1, 12)
+						tok: at(11, 1, 12)
 						function: {
 							type: :identifier
-							tok: at(1, 6)
+							tok: at(5, 1, 6)
 							val: 'double'
 						}
 						args: [{
 							type: :int
-							tok: at(1, 1)
+							tok: at(0, 1, 1)
 							val: 3
 						}]
 						restArg: ?
 					}
-					{ type: :int, tok: at(1, 29), val: 10 }
+					{ type: :int, tok: at(28, 1, 29), val: 10 }
 				]
 				restArg: ?
 			}]
@@ -1017,6 +1018,8 @@ fn run(t) {
 			']'
 			'}'
 			'!'
+			':_'
+			':?'
 			'{+}'
 			'+100'
 			'1 +'
@@ -1025,7 +1028,9 @@ fn run(t) {
 			'1 + [s'
 			'first second'
 			'{ a: }'
+			'100.fn'
 			'fn'
+			'fn name'
 			'fn (a, b)'
 			'if x'
 			'if { 100 }'
@@ -1036,6 +1041,7 @@ fn run(t) {
 			'with a'
 			'with with'
 			'with run(a, b)'
+			'with fn(a) b + c'
 		] |> with std.each() fn(prog) t.eq(
 			'parse does not crash: ' + prog
 			parse(prog)
