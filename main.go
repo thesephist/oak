@@ -9,8 +9,6 @@ import (
 	"github.com/chzyer/readline"
 )
 
-const version = "0.1"
-
 const helpMsg = `
 Oak is a small, dynamic, functional programming language.
 

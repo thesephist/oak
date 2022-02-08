@@ -4,5 +4,5 @@
 	println: println
 } := import('std')
 
-println('Oak v0.1')
+println('Oak v0.2')
 
