@@ -41,12 +41,13 @@ fn format(raw, values...) {
 				}
 				2 -> if c {
 					'}' -> {
-						buf << string(values.(int(key)))
+						if ? != index := int(key) ->
+							buf << string(values.(int(key)))
 						key <- ''
 						which <- 3
 					}
 					// ignore spaces in keys
-					' ' -> ?
+					' ', '\t' -> ?
 					_ -> key <- key + c
 				}
 				3 -> if c {

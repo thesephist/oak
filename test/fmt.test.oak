@@ -6,6 +6,10 @@ fn run(t) {
 	{
 		f := fmt.format
 
+		'Format empty string' |> t.eq(
+			'' |> f()
+			''
+		)
 		'Format string literally' |> t.eq(
 			'String literal' |> f()
 			'String literal'
@@ -13,6 +17,10 @@ fn run(t) {
 		'1 interpolated variable' |> t.eq(
 			'One {{ 0 }} Three' |> f('Two')
 			'One Two Three'
+		)
+		'Interpolation as whole string' |> t.eq(
+			'{{ 0 }}' |> f('First!')
+			'First!'
 		)
 		'Multiple interpolated variables' |> t.eq(
 			'One {{ 0 }} Three {{ 2 }}::{{ 1 }}' |> f('Two', 'Four', 'Five')
@@ -29,6 +37,32 @@ fn run(t) {
 		'Non-given variables show as ?' |> t.eq(
 			'Hello, {{ 0 }}!' |> f()
 			'Hello, ?!'
+		)
+		'Non-given indices become empty' |> t.eq(
+			'Hello, {{ }}!' |> f('World!')
+			'Hello, !'
+		)
+		'Interpolation without surrounding space' |> t.eq(
+			'{{1}}, {{0}}!' |> f('World', 'Hello')
+			'Hello, World!'
+		)
+		'Interpolation with extra surrounding space' |> t.eq(
+			'{{  1   }}, {{\t0\t}}!' |> f('World', 'Hello')
+			'Hello, World!'
+		)
+		'Formatting in \'{}\' to escape it' |> t.eq(
+			'Format using \'{{0}}\'' |> f('{}')
+			'Format using \'{}\''
+		)
+		'Formatting in format strings do not cause weird behavior' |> t.eq(
+			'1 {{ 0 }} 2 {{ 1 }}' |> f('{{', '{{ 0 }}')
+			'1 {{ 2 {{ 0 }}'
+		)
+
+		// failure cases
+		'Incomplete interpolation opening' |> t.eq(
+			'Hello, { 0 }}!' |> f('World!')
+			'Hello, { 0 }}!'
 		)
 	}
 }
