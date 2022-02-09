@@ -1,0 +1,75 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>crypto.oak | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay stdlib">
+            <h1>crypto.oak</h1>
+            <p class="stdlibLink">
+                <a href="/lib/">&larr; Standard library</a>
+                <a href="https://github.com/thesephist/oak/blob/main/lib/crypto.oak">See on GitHub ↗</a>
+            </p>
+            <pre><code><span class="oak-comment">// libcrypto provides utilities for working with cryptographic primitives and</span>
+<span class="oak-comment">// cryptographically safe sources of randomness.</span>
+
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">toHex</span><span class="oak-colon">: </span><span class="oak-identifier">toHex</span><span class="oak-newline">
+	</span><span class="oak-identifier">map</span><span class="oak-colon">: </span><span class="oak-identifier">map</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'std'</span><span class="oak-rightParen">)</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">split</span><span class="oak-colon">: </span><span class="oak-identifier">split</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'str'</span><span class="oak-rightParen">)</span>
+
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">uuid </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">ns </span><span class="oak-assign">:= </span><span class="oak-fnName">srand</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">16</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">split</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-identifier">codepoint</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-comment">// uuid v4 version bits</span><span class="oak-newline">
+	</span><span class="oak-identifier">ns</span><span class="oak-dot">.</span><span class="oak-numberLiteral">6 </span><span class="oak-assign">:= </span><span class="oak-leftParen">(</span><span class="oak-identifier">ns</span><span class="oak-dot">.</span><span class="oak-numberLiteral">6 </span><span class="oak-and">&amp; </span><span class="oak-numberLiteral">15</span><span class="oak-rightParen">) </span><span class="oak-or">| </span><span class="oak-numberLiteral">64</span><span class="oak-newline">
+	</span><span class="oak-identifier">ns</span><span class="oak-dot">.</span><span class="oak-numberLiteral">8 </span><span class="oak-assign">:= </span><span class="oak-leftParen">(</span><span class="oak-identifier">ns</span><span class="oak-dot">.</span><span class="oak-numberLiteral">8 </span><span class="oak-and">&amp; </span><span class="oak-numberLiteral">63</span><span class="oak-rightParen">) </span><span class="oak-or">| </span><span class="oak-numberLiteral">128</span>
+<span class="oak-newline">
+	</span><span class="oak-comment">// helper</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-identifier">b</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">s </span><span class="oak-assign">:= </span><span class="oak-fnName">toHex</span><span class="oak-leftParen">(</span><span class="oak-identifier">ns</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">b</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-numberLiteral">1 </span><span class="oak-branchArrow">-> </span><span class="oak-stringLiteral">'0' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">s</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">s</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+	</span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">2</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">3</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'-' </span><span class="oak-pushArrow">&lt;&lt;</span><span class="oak-newline">
+		</span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">4</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">5</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'-' </span><span class="oak-pushArrow">&lt;&lt;</span><span class="oak-newline">
+		</span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">6</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">7</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'-' </span><span class="oak-pushArrow">&lt;&lt;</span><span class="oak-newline">
+		</span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">8</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">9</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'-' </span><span class="oak-pushArrow">&lt;&lt;</span><span class="oak-newline">
+		</span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">10</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">11</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">12</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">13</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">14</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">x</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">15</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+</code></pre>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>

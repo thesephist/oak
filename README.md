@@ -33,7 +33,7 @@ with fs.readFile('./file.txt') fn(file) if file {
 }
 ```
 
-Oak also has a pragmatic standard library that comes built into the `oak` executable. For example, there's a built-in HTTP server and router in the `http` library.
+Oak also has a pragmatic [standard library](https://oaklang.org/lib/) that comes built into the `oak` executable. For example, there's a built-in HTTP server and router in the `http` library.
 
 ```js
 std := import('std')

@@ -92,6 +92,7 @@ h3 {
 }
 
 h1 {
+    margin-top: 1em;
     font-size: 2em;
 }
 
@@ -144,11 +145,14 @@ header {
 
 .home {
     font-weight: bold;
-    margin-right: 24px;
+    margin-right: 3ch;
+}
+
+nav {
+    gap: 2ch;
 }
 
 nav a {
-    margin-right: 12px;
     font-weight: normal;
 }
 
@@ -195,18 +199,18 @@ main {
 }
 
 details {
-	margin: 1em 0;
+    margin: 1em 0;
 }
 
 summary {
-	cursor: pointer;
+    cursor: pointer;
 }
 
 summary > h2,
 summary > h3,
 summary > h4 {
-	display: inline;
-	margin-left: 8px;
+    display: inline;
+    margin-left: 8px;
 }
 
 .meta {
@@ -271,7 +275,7 @@ p kbd,
 li code,
 li kbd {
     padding: 3px 5px;
-	border-radius: 4px;
+    border-radius: 4px;
 }
 
 blockquote {
@@ -331,6 +335,10 @@ blockquote {
     transform: translateY(-.2em);
 }
 
+.desktop {
+    display: none;
+}
+
 @media only screen and (max-width: 820px) {
     .split {
         flex-direction: column;
@@ -360,6 +368,7 @@ blockquote {
     }
 
     h1 {
+        margin-top: 1em;
         font-size: 3em;
     }
 
@@ -379,6 +388,14 @@ blockquote {
         margin: 1.5em 0;
         width: 100%;
         max-width: 700px;
+    }
+
+    .desktop {
+        display: initial;
+    }
+
+    .mobile {
+        display: none;
     }
 }
 

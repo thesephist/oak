@@ -52,6 +52,10 @@ site:
 site-w:
 	ls www/src/app.js.oak | entr -cr make site
 
+# generate static site pages
+site-gen:
+	oak www/src/gen.oak
+
 # install as "oak" binary
 install:
 	cp tools/oak.vim ~/.vim/syntax/oak.vim

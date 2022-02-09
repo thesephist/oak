@@ -1,0 +1,339 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>http.oak | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay stdlib">
+            <h1>http.oak</h1>
+            <p class="stdlibLink">
+                <a href="/lib/">&larr; Standard library</a>
+                <a href="https://github.com/thesephist/oak/blob/main/lib/http.oak">See on GitHub ↗</a>
+            </p>
+            <pre><code><span class="oak-comment">// libhttp offers utilities for writing HTTP server applications in Oak.</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// It contains functions and objects we need to implement basic HTTP serving</span>
+<span class="oak-comment">// and routing functionality.</span>
+
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">println</span><span class="oak-colon">: </span><span class="oak-identifier">println</span><span class="oak-newline">
+	</span><span class="oak-identifier">default</span><span class="oak-colon">: </span><span class="oak-identifier">default</span><span class="oak-newline">
+	</span><span class="oak-identifier">toHex</span><span class="oak-colon">: </span><span class="oak-identifier">toHex</span><span class="oak-newline">
+	</span><span class="oak-identifier">fromHex</span><span class="oak-colon">: </span><span class="oak-identifier">fromHex</span><span class="oak-newline">
+	</span><span class="oak-identifier">slice</span><span class="oak-colon">: </span><span class="oak-identifier">slice</span><span class="oak-newline">
+	</span><span class="oak-identifier">map</span><span class="oak-colon">: </span><span class="oak-identifier">map</span><span class="oak-newline">
+	</span><span class="oak-identifier">each</span><span class="oak-colon">: </span><span class="oak-identifier">each</span><span class="oak-newline">
+	</span><span class="oak-identifier">filter</span><span class="oak-colon">: </span><span class="oak-identifier">filter</span><span class="oak-newline">
+	</span><span class="oak-identifier">reduce</span><span class="oak-colon">: </span><span class="oak-identifier">reduce</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'std'</span><span class="oak-rightParen">)</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">checkRange</span><span class="oak-colon">: </span><span class="oak-identifier">checkRange</span><span class="oak-newline">
+	</span><span class="oak-identifier">cut</span><span class="oak-colon">: </span><span class="oak-identifier">cut</span><span class="oak-newline">
+	</span><span class="oak-identifier">join</span><span class="oak-colon">: </span><span class="oak-identifier">join</span><span class="oak-newline">
+	</span><span class="oak-identifier">contains?</span><span class="oak-colon">: </span><span class="oak-identifier">contains?</span><span class="oak-newline">
+	</span><span class="oak-identifier">digit?</span><span class="oak-colon">: </span><span class="oak-identifier">digit?</span><span class="oak-newline">
+	</span><span class="oak-identifier">upper?</span><span class="oak-colon">: </span><span class="oak-identifier">upper?</span><span class="oak-newline">
+	</span><span class="oak-identifier">lower?</span><span class="oak-colon">: </span><span class="oak-identifier">lower?</span><span class="oak-newline">
+	</span><span class="oak-identifier">word?</span><span class="oak-colon">: </span><span class="oak-identifier">word?</span><span class="oak-newline">
+	</span><span class="oak-identifier">upper</span><span class="oak-colon">: </span><span class="oak-identifier">upper</span><span class="oak-newline">
+	</span><span class="oak-identifier">lower</span><span class="oak-colon">: </span><span class="oak-identifier">lower</span><span class="oak-newline">
+	</span><span class="oak-identifier">split</span><span class="oak-colon">: </span><span class="oak-identifier">split</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'str'</span><span class="oak-rightParen">)</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">readFile</span><span class="oak-colon">: </span><span class="oak-identifier">readFile</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'fs'</span><span class="oak-rightParen">)</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">printf</span><span class="oak-colon">: </span><span class="oak-identifier">printf</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'fmt'</span><span class="oak-rightParen">)</span>
+
+<span class="oak-comment">// percent encoding, also known as URI encoding</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">_encodeChar</span><span class="oak-leftParen">(</span><span class="oak-identifier">uri?</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-fnName">word?</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-stringLiteral">'-_.!~*\'()' </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">contains?</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">uri? </span><span class="oak-and">&amp; </span><span class="oak-stringLiteral">';,/?:@&amp;=+$#' </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">contains?</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">c</span><span class="oak-newline">
+	</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-stringLiteral">'%' </span><span class="oak-plus">+ </span><span class="oak-fnName">codepoint</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">toHex</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">upper</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+<span class="oak-comment">// percentEncode encodes the string `s` in the "percent encoding" or URI</span>
+<span class="oak-comment">// encoding scheme. This function roughly corresponds to JavaScript's</span>
+<span class="oak-comment">// `encodeURIComponent` function.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">percentEncode</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-identifier">s </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-fnName">_encodeChar</span><span class="oak-leftParen">(</span><span class="oak-falseLiteral">false</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span>
+<span class="oak-comment">// percentEncodeURI encodes the string `s` in the "percent encoding" or URI</span>
+<span class="oak-comment">// encoding scheme, but preserves characters that are expected to appear in a</span>
+<span class="oak-comment">// URL. It roughly corresponds to JavaScript's `encodeURI` function.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">percentEncodeURI</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-identifier">s </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-fnName">_encodeChar</span><span class="oak-leftParen">(</span><span class="oak-trueLiteral">true</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span>
+
+<span class="oak-comment">// _hex? reports whether a particular character is a valid hexadecimal character</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">_hex?</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">) </span><span class="oak-fnName">digit?</span><span class="oak-leftParen">(</span><span class="oak-identifier">c</span><span class="oak-rightParen">) </span><span class="oak-or">| </span><span class="oak-leftParen">(</span><span class="oak-identifier">c </span><span class="oak-geq">>= </span><span class="oak-stringLiteral">'A' </span><span class="oak-and">&amp; </span><span class="oak-identifier">c </span><span class="oak-leq">&lt;= </span><span class="oak-stringLiteral">'F'</span><span class="oak-rightParen">) </span><span class="oak-or">| </span><span class="oak-leftParen">(</span><span class="oak-identifier">c </span><span class="oak-geq">>= </span><span class="oak-stringLiteral">'a' </span><span class="oak-and">&amp; </span><span class="oak-identifier">c </span><span class="oak-leq">&lt;= </span><span class="oak-stringLiteral">'f'</span><span class="oak-rightParen">)</span>
+<span class="oak-comment">// percentDecode decodes a URI-encoded value from `s`</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">percentDecode</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-comment">// possible values:</span><span class="oak-newline">
+	</span><span class="oak-comment">// :default</span><span class="oak-newline">
+	</span><span class="oak-comment">// :sawPercent</span><span class="oak-newline">
+	</span><span class="oak-comment">// :sawFirstHex</span><span class="oak-newline">
+	</span><span class="oak-identifier">stage </span><span class="oak-assign">:= </span><span class="oak-colon">:</span><span class="oak-identifier">default</span><span class="oak-newline">
+	</span><span class="oak-identifier">buf </span><span class="oak-assign">:= </span><span class="oak-qmark">?</span>
+<span class="oak-newline">
+	</span><span class="oak-identifier">s </span><span class="oak-pipeArrow">|> </span><span class="oak-withKeyword">with </span><span class="oak-fnName">reduce</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">''</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">decoded</span><span class="oak-comma">, </span><span class="oak-identifier">curr</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">stage </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-colon">:</span><span class="oak-identifier">default </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">curr </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-stringLiteral">'+' </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">decoded </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">' '</span><span class="oak-newline">
+			</span><span class="oak-stringLiteral">'%' </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-identifier">stage </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-colon">:</span><span class="oak-identifier">sawPercent</span><span class="oak-newline">
+				</span><span class="oak-identifier">decoded</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">decoded </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">curr</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-colon">:</span><span class="oak-identifier">sawPercent </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">_hex?</span><span class="oak-leftParen">(</span><span class="oak-identifier">curr</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-falseLiteral">false </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-identifier">stage </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-colon">:</span><span class="oak-identifier">default</span><span class="oak-newline">
+				</span><span class="oak-identifier">decoded </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'%' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">curr</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-identifier">stage </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-colon">:</span><span class="oak-identifier">sawFirstHex</span><span class="oak-newline">
+				</span><span class="oak-identifier">buf </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-identifier">curr</span><span class="oak-newline">
+				</span><span class="oak-identifier">decoded</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">last </span><span class="oak-assign">:= </span><span class="oak-identifier">buf</span><span class="oak-newline">
+			</span><span class="oak-identifier">stage </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-colon">:</span><span class="oak-identifier">default</span><span class="oak-newline">
+			</span><span class="oak-identifier">buf </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-qmark">?</span><span class="oak-newline">
+			</span><span class="oak-ifKeyword">if </span><span class="oak-fnName">_hex?</span><span class="oak-leftParen">(</span><span class="oak-identifier">curr</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-falseLiteral">false </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">decoded </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'%' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">last </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">curr</span><span class="oak-newline">
+				</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">decoded </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">lower</span><span class="oak-leftParen">(</span><span class="oak-identifier">last </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">curr</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">fromHex</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">char</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// Router constructs a router object, which encapsulates state for routing HTTP</span>
+<span class="oak-comment">// paths to request handlers.</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// Methods:</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// fn add(pattern, handler)     adds a handler for some path pattern.</span>
+<span class="oak-comment">//                              The pattern may contain :params to capture a part</span>
+<span class="oak-comment">//                              of the path, or *params to capture the rest of the</span>
+<span class="oak-comment">//                              remaining path. e.g. /:app/static/*staticPath</span>
+<span class="oak-comment">//                              The handler must be of type fn(params) fn(req, end).</span>
+<span class="oak-comment">// fn catch(handler)            adds a catch-all requeset handler</span>
+<span class="oak-comment">// fn match(path)               takes a path and invokes the correct registered</span>
+<span class="oak-comment">//                              request handler</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">Router </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">self </span><span class="oak-assign">:= </span><span class="oak-leftBracket">[</span><span class="oak-rightBracket">]</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">add</span><span class="oak-leftParen">(</span><span class="oak-identifier">pattern</span><span class="oak-comma">, </span><span class="oak-identifier">handler</span><span class="oak-rightParen">) </span><span class="oak-identifier">self </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-leftBracket">[</span><span class="oak-identifier">pattern</span><span class="oak-comma">, </span><span class="oak-identifier">handler</span><span class="oak-rightBracket">]</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">catch</span><span class="oak-leftParen">(</span><span class="oak-identifier">handler</span><span class="oak-rightParen">) </span><span class="oak-fnName">add</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">''</span><span class="oak-comma">, </span><span class="oak-identifier">handler</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">splitPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">url</span><span class="oak-rightParen">) </span><span class="oak-identifier">url </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">split</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'/'</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">filter</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-identifier">s </span><span class="oak-neq">!= </span><span class="oak-stringLiteral">''</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-comment">// if path matches pattern, return a hash of matched params. else, return ?</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">matchPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">pattern</span><span class="oak-comma">, </span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">params </span><span class="oak-assign">:= </span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+		</span><span class="oak-comment">// process query params</span><span class="oak-newline">
+		</span><span class="oak-leftBracket">[</span><span class="oak-identifier">path</span><span class="oak-comma">, </span><span class="oak-identifier">query</span><span class="oak-rightBracket">] </span><span class="oak-assign">:= </span><span class="oak-fnName">cut</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-comma">, </span><span class="oak-stringLiteral">'?'</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">query </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-stringLiteral">'' </span><span class="oak-branchArrow">-> </span><span class="oak-qmark">?</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">query </span><span class="oak-pipeArrow">|></span><span class="oak-newline">
+				</span><span class="oak-fnName">split</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'&amp;'</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|></span><span class="oak-newline">
+				</span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">pair</span><span class="oak-rightParen">) </span><span class="oak-identifier">pair </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">cut</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'='</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|></span><span class="oak-newline">
+				</span><span class="oak-withKeyword">with </span><span class="oak-fnName">each</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">pair</span><span class="oak-rightParen">) </span><span class="oak-identifier">params</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">pair</span><span class="oak-dot">.</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">) </span><span class="oak-assign">:= </span><span class="oak-fnName">percentDecode</span><span class="oak-leftParen">(</span><span class="oak-identifier">pair</span><span class="oak-dot">.</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+		</span><span class="oak-identifier">desired </span><span class="oak-assign">:= </span><span class="oak-fnName">splitPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">pattern</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-identifier">actual </span><span class="oak-assign">:= </span><span class="oak-fnName">splitPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+		</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">findMatchingParams</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">desired</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-comment">// if len(desired) = len(actual) everything is ok</span><span class="oak-newline">
+				</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">actual</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">params</span><span class="oak-newline">
+				</span><span class="oak-comment">// if pattern did not consume all of the path, there's no match</span><span class="oak-newline">
+				</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-qmark">?</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-identifier">desiredPart </span><span class="oak-assign">:= </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-identifier">desired</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-stringLiteral">''</span><span class="oak-rightParen">)</span><span class="oak-newline">
+				</span><span class="oak-identifier">actualPart </span><span class="oak-assign">:= </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-identifier">actual</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-stringLiteral">''</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+				</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">desiredPart</span><span class="oak-dot">.</span><span class="oak-numberLiteral">0 </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+					</span><span class="oak-stringLiteral">':' </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+						</span><span class="oak-identifier">params</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">desiredPart </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">slice</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-assign">:= </span><span class="oak-fnName">percentDecode</span><span class="oak-leftParen">(</span><span class="oak-identifier">actualPart</span><span class="oak-rightParen">)</span><span class="oak-newline">
+						</span><span class="oak-fnName">findMatchingParams</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+					</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+					</span><span class="oak-stringLiteral">'*' </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+						</span><span class="oak-identifier">params</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">desiredPart </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">slice</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-assign">:= </span><span class="oak-identifier">actual </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">slice</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-identifier">percentDecode</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">join</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'/'</span><span class="oak-rightParen">)</span><span class="oak-newline">
+					</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+					</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">desiredPart </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+						</span><span class="oak-identifier">actualPart </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">findMatchingParams</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+						</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-qmark">?</span><span class="oak-newline">
+					</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+				</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+		</span><span class="oak-ifKeyword">if </span><span class="oak-leftBracket">[</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">desired</span><span class="oak-rightParen">) </span><span class="oak-leq">&lt;= </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">actual</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">pattern</span><span class="oak-rightBracket">] </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-comment">// '' is used as a catch-all pattern</span><span class="oak-newline">
+			</span><span class="oak-leftBracket">[</span><span class="oak-underscore">_</span><span class="oak-comma">, </span><span class="oak-stringLiteral">''</span><span class="oak-rightBracket">] </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">params</span><span class="oak-newline">
+			</span><span class="oak-leftBracket">[</span><span class="oak-trueLiteral">true</span><span class="oak-comma">, </span><span class="oak-underscore">_</span><span class="oak-rightBracket">] </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">findMatchingParams</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-qmark">?</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">match</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">self</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">req</span><span class="oak-rightParen">) </span><span class="oak-identifier">req</span><span class="oak-dot">.</span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-identifier">status</span><span class="oak-colon">: </span><span class="oak-numberLiteral">200</span><span class="oak-newline">
+				</span><span class="oak-identifier">headers</span><span class="oak-colon">: </span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+				</span><span class="oak-identifier">body</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'dropped route. you should never see this in production'</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-leftBracket">[</span><span class="oak-identifier">pattern</span><span class="oak-comma">, </span><span class="oak-identifier">handler</span><span class="oak-rightBracket">] </span><span class="oak-assign">:= </span><span class="oak-identifier">self</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-newline">
+				</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">result </span><span class="oak-assign">:= </span><span class="oak-fnName">matchPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">pattern</span><span class="oak-comma">, </span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+					</span><span class="oak-qmark">? </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+					</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">handler</span><span class="oak-leftParen">(</span><span class="oak-identifier">result</span><span class="oak-rightParen">)</span><span class="oak-newline">
+				</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+	</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">add</span><span class="oak-colon">: </span><span class="oak-identifier">add</span><span class="oak-newline">
+		</span><span class="oak-identifier">catch</span><span class="oak-colon">: </span><span class="oak-identifier">catch</span><span class="oak-newline">
+		</span><span class="oak-identifier">match</span><span class="oak-colon">: </span><span class="oak-identifier">match</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-identifier">MimeTypes </span><span class="oak-assign">:= </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">blob</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'application/octet-stream'</span>
+<span class="oak-newline">
+	</span><span class="oak-identifier">html</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/html; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">txt</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/plain; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">md</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/plain; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">css</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/css; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">js</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'application/javascript; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">json</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'application/json; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">ink</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/plain; charset=utf-8'</span><span class="oak-newline">
+	</span><span class="oak-identifier">oak</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/plain; charset=utf-8'</span>
+<span class="oak-newline">
+	</span><span class="oak-identifier">jpg</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/jpeg'</span><span class="oak-newline">
+	</span><span class="oak-identifier">jpeg</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/jpeg'</span><span class="oak-newline">
+	</span><span class="oak-identifier">png</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/png'</span><span class="oak-newline">
+	</span><span class="oak-identifier">gif</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/gif'</span><span class="oak-newline">
+	</span><span class="oak-identifier">svg</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/svg+xml'</span><span class="oak-newline">
+	</span><span class="oak-identifier">webp</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'image/webp'</span>
+<span class="oak-newline">
+	</span><span class="oak-identifier">pdf</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'application/pdf'</span><span class="oak-newline">
+	</span><span class="oak-identifier">zip</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'application/zip'</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// mimeForPath takes a path and returns a likely MIME type string</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">mimeForPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">parts </span><span class="oak-assign">:= </span><span class="oak-identifier">path </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">split</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'.'</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">ending </span><span class="oak-assign">:= </span><span class="oak-identifier">parts</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">parts</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">MimeTypes</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">ending</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-identifier">MimeTypes</span><span class="oak-dot">.</span><span class="oak-identifier">blob</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// NotFound represents a 404 Not Found response</span>
+<span class="oak-identifier">NotFound </span><span class="oak-assign">:= </span><span class="oak-leftBrace">{ </span><span class="oak-identifier">status</span><span class="oak-colon">: </span><span class="oak-numberLiteral">404</span><span class="oak-comma">, </span><span class="oak-identifier">body</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'file not found' </span><span class="oak-rightBrace">}</span>
+<span class="oak-comment">// MethodNotAllowed represents a 405 Method Not Allowed response</span>
+<span class="oak-identifier">MethodNotAllowed </span><span class="oak-assign">:= </span><span class="oak-leftBrace">{ </span><span class="oak-identifier">status</span><span class="oak-colon">: </span><span class="oak-numberLiteral">405</span><span class="oak-comma">, </span><span class="oak-identifier">body</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'method not allowed' </span><span class="oak-rightBrace">}</span>
+
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">_hdr</span><span class="oak-leftParen">(</span><span class="oak-identifier">attrs</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">base </span><span class="oak-assign">:= </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-stringLiteral">'X-Served-By'</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'oak/libhttp'</span><span class="oak-newline">
+		</span><span class="oak-stringLiteral">'Content-Type'</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'text/plain'</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">keys</span><span class="oak-leftParen">(</span><span class="oak-identifier">attrs</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">each</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">k</span><span class="oak-rightParen">) </span><span class="oak-identifier">base</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">k</span><span class="oak-rightParen">) </span><span class="oak-assign">:= </span><span class="oak-identifier">attrs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">k</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">base</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// Server constructs an HTTP application server capable of routing.</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// Methods:</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// fn route(pattern, handler)       adds a handler for some path pattern.</span>
+<span class="oak-comment">//                                  The arguments are identical to Router.add.</span>
+<span class="oak-comment">// fn start(port)                   starts the server and begins listening for</span>
+<span class="oak-comment">//                                  requests to the specified local port.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">Server </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">router </span><span class="oak-assign">:= </span><span class="oak-fnName">Router</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">start</span><span class="oak-leftParen">(</span><span class="oak-identifier">port</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">router</span><span class="oak-dot">.</span><span class="oak-fnName">catch</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">params</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">req</span><span class="oak-comma">, </span><span class="oak-identifier">end</span><span class="oak-rightParen">) </span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">status</span><span class="oak-colon">: </span><span class="oak-numberLiteral">404</span><span class="oak-newline">
+			</span><span class="oak-identifier">body</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'service not found'</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+		</span><span class="oak-withKeyword">with </span><span class="oak-fnName">listen</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'0.0.0.0:' </span><span class="oak-plus">+ </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-identifier">port</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">evt</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">evt</span><span class="oak-dot">.</span><span class="oak-identifier">type </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-colon">:</span><span class="oak-identifier">error </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">println</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'server start error:'</span><span class="oak-comma">, </span><span class="oak-identifier">evt</span><span class="oak-dot">.</span><span class="oak-identifier">error</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">method</span><span class="oak-colon">: </span><span class="oak-identifier">method</span><span class="oak-comma">, </span><span class="oak-identifier">url</span><span class="oak-colon">: </span><span class="oak-identifier">url </span><span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-identifier">evt</span><span class="oak-dot">.</span><span class="oak-identifier">req</span><span class="oak-newline">
+				</span><span class="oak-fnName">printf</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'{{ 0 }}: {{ 1 }}'</span><span class="oak-comma">, </span><span class="oak-identifier">method</span><span class="oak-comma">, </span><span class="oak-identifier">url</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+				</span><span class="oak-withKeyword">with </span><span class="oak-identifier">router</span><span class="oak-dot">.</span><span class="oak-fnName">match</span><span class="oak-leftParen">(</span><span class="oak-identifier">url</span><span class="oak-rightParen">)</span><span class="oak-leftParen">(</span><span class="oak-identifier">evt</span><span class="oak-dot">.</span><span class="oak-identifier">req</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">resp</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+					</span><span class="oak-identifier">resp</span><span class="oak-dot">.</span><span class="oak-identifier">headers </span><span class="oak-assign">:= </span><span class="oak-fnName">_hdr</span><span class="oak-leftParen">(</span><span class="oak-identifier">resp</span><span class="oak-dot">.</span><span class="oak-identifier">headers </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-newline">
+					</span><span class="oak-identifier">evt</span><span class="oak-dot">.</span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-identifier">resp</span><span class="oak-rightParen">)</span><span class="oak-newline">
+				</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-newline">
+	</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">route</span><span class="oak-colon">: </span><span class="oak-identifier">router</span><span class="oak-dot">.</span><span class="oak-identifier">add</span><span class="oak-newline">
+		</span><span class="oak-identifier">start</span><span class="oak-colon">: </span><span class="oak-identifier">start</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// handleStatic is a pre-configured route handler for responding to requests</span>
+<span class="oak-comment">// for static files. Use like:</span>
+<span class="oak-comment">//</span>
+<span class="oak-comment">// server := Server()</span>
+<span class="oak-comment">// with server.route('/static/*staticPath') fn(params) {</span>
+<span class="oak-comment">//     serveStatic('./static/' + params.staticPath)</span>
+<span class="oak-comment">// }</span>
+<span class="oak-comment">// with server.route('/') fn serveStatic('./index.html')</span>
+<span class="oak-comment">// server.start(8080)</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">handleStatic</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">req</span><span class="oak-comma">, </span><span class="oak-identifier">end</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">req</span><span class="oak-dot">.</span><span class="oak-identifier">method </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-stringLiteral">'GET' </span><span class="oak-branchArrow">-> </span><span class="oak-withKeyword">with </span><span class="oak-fnName">readFile</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'./' </span><span class="oak-plus">+ </span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">file</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">file </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-qmark">? </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-identifier">NotFound</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">status</span><span class="oak-colon">: </span><span class="oak-numberLiteral">200</span><span class="oak-newline">
+			</span><span class="oak-identifier">headers</span><span class="oak-colon">: </span><span class="oak-leftBrace">{ </span><span class="oak-stringLiteral">'Content-Type'</span><span class="oak-colon">: </span><span class="oak-fnName">mimeForPath</span><span class="oak-leftParen">(</span><span class="oak-identifier">path</span><span class="oak-rightParen">) </span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-identifier">body</span><span class="oak-colon">: </span><span class="oak-identifier">file</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">end</span><span class="oak-leftParen">(</span><span class="oak-identifier">MethodNotAllowed</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+</code></pre>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>

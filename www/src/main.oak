@@ -13,6 +13,7 @@
 	printf: printf
 } := import('fmt')
 fs := import('fs')
+path := import('path')
 http := import('http')
 
 Port := 9898
@@ -22,6 +23,7 @@ server := http.Server()
 {
 	// explicit static paths
 	'/': './static/index.html'
+	'/lib/': './static/lib/index.html'
 	'/favicon.ico': './static/favicon.ico'
 } |> entries() |> with each() fn(entry) {
 	[reqPath, fsPath] := entry
@@ -38,6 +40,20 @@ server := http.Server()
 		}
 		_ -> end(http.MethodNotAllowed)
 	}
+}
+
+with server.route('/lib/:libName') fn(params) fn(req, end) if req.method {
+	'GET' -> with fs.readFile(path.join('./static/lib', params.libName + '.html')) fn(file) if file {
+		? -> end(http.NotFound)
+		_ -> end({
+			status: 200
+			headers: {
+				'Content-Type': http.MimeTypes.html
+			}
+			body: file
+		})
+	}
+	_ -> end(http.MethodNotAllowed)
 }
 
 with server.route('/*staticPath') fn(params) {

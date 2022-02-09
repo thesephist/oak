@@ -1,4 +1,4 @@
-// libsyntax implements a tokenier and parser for the Oak language
+// libsyntax implements a tokenizer, parser, and code formatter for Oak
 
 {
 	default: default

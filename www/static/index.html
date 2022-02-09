@@ -15,8 +15,9 @@
                 <a href="/">Oak</a>
             </div>
             <nav>
-                <a href="https://github.com/thesephist/oak" target="_blank">source</a>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
                 <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
             </nav>
         </div>
     </header>
@@ -65,7 +66,7 @@ server.start(9999)</code></pre>
             <p>The <code>oak</code> command-line tool ships an interpreter, but
             also includes:</p>
             <ul>
-                <li>a rich standard library</li>
+                <li>a rich <a href="/lib/">standard library</a></li>
                 <li>a code formatter</li>
                 <li>a bundler and an Oak-to-JavaScript compiler</li>
                 <li>a test runner</li>
@@ -452,12 +453,11 @@ std.println('Hello!')</code></pre>
                     there is no explicit <code>module.exports</code>
                     variable.</p>
                     <p>Standard libraries like <code>std</code>,
-                    <code>str</code>, and
-                    <a href="https://github.com/thesephist/oak/tree/main/lib">others</a>,
-                    can be referenced by their name directly in
-                    <code>import</code>. Other modules imported from your file
-                    system must be referenced by a relative path, beginning
-                    with <code>./</code>, as in
+                    <code>str</code>, and <a href="/lib/">others</a> can be
+                    referenced by their name directly in <code>import</code>.
+                    Other modules imported from your file system must be
+                    referenced by a relative path, beginning with
+                    <code>./</code>, as in
                     <code>utils&nbsp;:=&nbsp;import('./utils')</code>.</p>
                 </details>
 

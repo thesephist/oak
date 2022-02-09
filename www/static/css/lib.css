@@ -1,0 +1,83 @@
+article.stdlib pre,
+article.stdlib code {
+    background: var(--primary-bg);
+    padding: 0;
+    line-height: 1.375em;
+}
+
+.stdlibLink a {
+    color: var(--secondary-text);
+    text-decoration: none;
+    margin-right: 2ch;
+}
+
+.stdlibLink a:hover {
+    text-decoration: underline;
+}
+
+td {
+    line-height: 1.5em;
+    padding: 4px 0;
+    vertical-align: top;
+}
+
+td:first-child {
+    padding-right: 2ch;
+    font-weight: bold;
+}
+
+/* syntax highlighting */
+
+.oak-comment {
+    color: #8b95a1;
+}
+
+.oak-assign,
+.oak-nonlocalAssign,
+.oak-branchArrow,
+.oak-pushArrow,
+.oak-exclam,
+.oak-ifKeyword,
+.oak-plus,
+.oak-minus,
+.oak-times,
+.oak-divide,
+.oak-modulus,
+.oak-xor,
+.oak-and,
+.oak-or,
+.oak-greater,
+.oak-less,
+.oak-eq,
+.oak-geq,
+.oak-leq,
+.oak-neq {
+    color: #cf222e;
+}
+
+.oak-pipeArrow,
+.oak-ellipsis,
+.oak-fnKeyword {
+    color: #234fcd;
+}
+
+.oak-qmark,
+.oak-underscore,
+.oak-trueLiteral,
+.oak-falseLiteral {
+    color: #764cc5;
+}
+
+.oak-withKeyword,
+.oak-numberLiteral {
+    color: #07997f;
+}
+
+.oak-fnName {
+    color: #50910b;
+}
+
+.oak-stringLiteral {
+    color: #cf940c;
+}
+

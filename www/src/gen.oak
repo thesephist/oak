@@ -1,0 +1,34 @@
+// static site generator for oaklang.org
+
+{
+	println: println
+	each: each
+} := import('std')
+{
+	trimEnd: trimEnd
+} := import('str')
+fs := import('fs')
+fmt := import('fmt')
+path := import('path')
+
+// for every library file, generate a syntax-highlighted source page
+with fs.readFile('./www/static/lib/tpl.html') fn(tplFile) if tplFile {
+	? -> println('[www/gen] Could not read template')
+	_ -> with fs.listFiles('./lib') fn(files) files |> with each() fn(file) {
+		args := ['cat', path.join('./lib', file.name), '--html']
+		with exec('oak', args, '') fn(evt) if evt.type {
+			:error -> println('[www/gen] Could not syntax-highlight', file.name)
+			_ -> {
+				highlightedFile := evt.stdout
+
+				pageName := file.name |> trimEnd('.oak') + '.html'
+				pagePath := path.join('./www/static/lib', pageName)
+				page := fmt.format(tplFile, file.name, highlightedFile)
+				with fs.writeFile(pagePath, page) fn {
+					println('[www/gen] Generated', file.name)
+				}
+			}
+		}
+	}
+}
+
