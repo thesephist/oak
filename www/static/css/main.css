@@ -258,7 +258,8 @@ pre > code {
     flex-shrink: 0;
     display: block;
     padding: 1em;
-    font-size: .8em;
+    font-size: calc(1em - 2px);
+    -webkit-text-size-adjust: none;
 }
 
 code,
