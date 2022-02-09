@@ -30,9 +30,8 @@ fn _maybeOpt(part) if {
 // the '--' convention for signaling the start of purely positional arguments.
 fn parseArgv(argv) {
 	// if a flag is in the verb position, amend argv to have verb = ?
-	if _maybeOpt(default(argv.2, '')) {
-		? -> ?
-		_ -> argv <- slice(argv, 0, 2) |> join([?]) |> join(slice(argv, 2))
+	if _maybeOpt(default(argv.2, '')) != ? -> {
+		argv <- slice(argv, 0, 2) |> join([?]) |> join(slice(argv, 2))
 	}
 
 	opts := {}
@@ -64,10 +63,7 @@ fn parseArgv(argv) {
 	}
 
 	// if flag was queued, mark it as true
-	if lastOpt {
-		? -> ?
-		_ -> opts.(lastOpt) := true
-	}
+	if lastOpt != ? -> opts.(lastOpt) := true
 
 	{
 		exe: argv.0

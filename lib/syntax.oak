@@ -255,9 +255,7 @@ fn Tokenizer(source) {
 		// process or ignore shebang lines as necessary
 		if peek() = '#' & peekAhead(1) = '!' -> {
 			readUntilChar('\n')
-			if !eof?() {
-				true -> next()
-			}
+			if !eof?() -> next()
 		}
 
 		// snip whitespace before
@@ -563,16 +561,14 @@ fn Parser(tokens) {
 									with notError(expect(:comma)) fn {
 										entries := [{ key: firstExpr, val: valExpr }]
 
-										fn sub if eof?() {
-											false -> if peek().type {
-												:rightBrace -> ?
-												_ -> with notError(key := parseNode()) fn {
-													with notError(expect(:colon)) fn {
-														with notError(val := parseNode()) fn {
-															with notError(expect(:comma)) fn {
-																entries << { key: key, val: val }
-																sub()
-															}
+										fn sub if !eof?() -> if peek().type {
+											:rightBrace -> ?
+											_ -> with notError(key := parseNode()) fn {
+												with notError(expect(:colon)) fn {
+													with notError(val := parseNode()) fn {
+														with notError(expect(:comma)) fn {
+															entries << { key: key, val: val }
+															sub()
 														}
 													}
 												}
@@ -663,35 +659,33 @@ fn Parser(tokens) {
 						// optional argument list
 						next() // eat the leftParen
 
-						fn sub if eof?() {
-							false -> if peek().type {
-								:rightParen -> ?
-								_ -> {
-									arg := expect(:identifier)
-									if arg.type {
-										:error -> {
-											back() // try again
+						fn sub if !eof?() -> if peek().type {
+							:rightParen -> ?
+							_ -> {
+								arg := expect(:identifier)
+								if arg.type {
+									:error -> {
+										back() // try again
 
-											with notError(expect(:underscore)) fn {
-												args << '_'
-												with notError(expect(:comma)) fn {
-													sub()
-												}
+										with notError(expect(:underscore)) fn {
+											args << '_'
+											with notError(expect(:comma)) fn {
+												sub()
 											}
 										}
-										_ -> if peek().type {
-											:ellipsis -> {
-												restArg <- arg.val
-												next() // eat the ellipsis
-												with notError(expect(:comma)) fn {
-													sub()
-												}
+									}
+									_ -> if peek().type {
+										:ellipsis -> {
+											restArg <- arg.val
+											next() // eat the ellipsis
+											with notError(expect(:comma)) fn {
+												sub()
 											}
-											_ -> {
-												args << arg.val
-												with notError(expect(:comma)) fn {
-													sub()
-												}
+										}
+										_ -> {
+											args << arg.val
+											with notError(expect(:comma)) fn {
+												sub()
 											}
 										}
 									}
@@ -874,57 +868,51 @@ fn Parser(tokens) {
 	fn parseSubNode {
 		pushMinPrec(0)
 		with notError(node := parseUnit()) fn {
-			fn sub if eof?() {
-				false -> if peek().type {
-					:dot -> {
-						nxt := next() // eat the dot
-						with notError(right := parseUnit()) fn {
-							node <- {
-								type: :propertyAccess
-								tok: nxt
-								left: node
-								right: right
+			fn sub if !eof?() -> if peek().type {
+				:dot -> {
+					nxt := next() // eat the dot
+					with notError(right := parseUnit()) fn {
+						node <- {
+							type: :propertyAccess
+							tok: nxt
+							left: node
+							right: right
+						}
+						sub()
+					}
+				}
+				:leftParen -> {
+					nxt := next() // eat the leftParen
+
+					args := []
+					restArg := ?
+					fn subArg if !eof?() -> if peek().type {
+						:rightParen -> with notError(expect(:rightParen)) fn {}
+						_ -> with notError(arg := parseNode()) fn if peek().type {
+							:ellipsis -> {
+								next() // eat the ellipsis
+								with notError(expect(:comma)) fn {
+									restArg <- arg
+									subArg()
+								}
 							}
-							sub()
+							:comma -> {
+								next() // eat the comma
+								args << arg
+								subArg()
+							}
+							_ -> error(format('Expected comma after arg in argument list, got {{0}}', peek().type), peek().pos)
 						}
 					}
-					:leftParen -> {
-						nxt := next() // eat the leftParen
-
-						args := []
-						restArg := ?
-						fn subArg if eof?() {
-							false -> if peek().type {
-								:rightParen -> with notError(expect(:rightParen)) fn {
-									?
-								}
-								_ -> with notError(arg := parseNode()) fn if peek().type {
-									:ellipsis -> {
-										next() // eat the ellipsis
-										with notError(expect(:comma)) fn {
-											restArg <- arg
-											subArg()
-										}
-									}
-									:comma -> {
-										next() // eat the comma
-										args << arg
-										subArg()
-									}
-									_ -> error(format('Expected comma after arg in argument list, got {{0}}', peek().type), peek().pos)
-								}
-							}
+					with notError(subArg()) fn {
+						node <- {
+							type: :fnCall
+							function: node
+							args: args
+							restArg: restArg
+							tok: nxt
 						}
-						with notError(subArg()) fn {
-							node <- {
-								type: :fnCall
-								function: node
-								args: args
-								restArg: restArg
-								tok: nxt
-							}
-							sub()
-						}
+						sub()
 					}
 				}
 			}
@@ -937,67 +925,65 @@ fn Parser(tokens) {
 
 	// parseNode returns the next top-level astNode from the parser
 	fn parseNode with notError(node := parseSubNode()) fn {
-		fn sub if eof?() {
-			false -> if peek().type {
-				:comma -> ?
-				// whatever follows an assignment expr cannot bind to the
-				// assignment expression itself by syntax rule, so we simply
-				// return
-				:assign, :nonlocalAssign -> node <- parseAssignment(node)
-				// this case implements a mini Pratt parser threaded through
-				// the larger Oak syntax parser, using the parser struct itself
-				// to keep track of the power / precedence stack since other
-				// forms may be parsed in between, as in 1 + f(g(x := y)) + 2
-				:plus, :minus, :times, :divide, :modulus, :xor, :and, :or
-				:pushArrow, :greater, :less, :eq, :geq, :leq, :neq -> {
-					minPrec := lastMinPrec()
-					fn subBinary if eof?() {
-						true -> error('Incomplete binary expression', peek().pos)
-						_ -> {
-							peeked := peek()
-							op := peeked.type
-							prec := infixOpPrecedence(op)
-							if prec > minPrec -> {
-								next() // eat the operator
+		fn sub if !eof?() -> if peek().type {
+			:comma -> ?
+			// whatever follows an assignment expr cannot bind to the
+			// assignment expression itself by syntax rule, so we simply
+			// return
+			:assign, :nonlocalAssign -> node <- parseAssignment(node)
+			// this case implements a mini Pratt parser threaded through
+			// the larger Oak syntax parser, using the parser struct itself
+			// to keep track of the power / precedence stack since other
+			// forms may be parsed in between, as in 1 + f(g(x := y)) + 2
+			:plus, :minus, :times, :divide, :modulus, :xor, :and, :or
+			:pushArrow, :greater, :less, :eq, :geq, :leq, :neq -> {
+				minPrec := lastMinPrec()
+				fn subBinary if eof?() {
+					true -> error('Incomplete binary expression', peek().pos)
+					_ -> {
+						peeked := peek()
+						op := peeked.type
+						prec := infixOpPrecedence(op)
+						if prec > minPrec -> {
+							next() // eat the operator
 
-								if eof?() {
-									true -> error(format('Incomplete binary expression with {{0}}', { type: op }), peek().pos)
-									_ -> {
-										pushMinPrec(prec)
-										with notError(right := parseNode()) fn {
-											popMinPrec()
+							if eof?() {
+								true -> error(format('Incomplete binary expression with {{0}}', { type: op }), peek().pos)
+								_ -> {
+									pushMinPrec(prec)
+									with notError(right := parseNode()) fn {
+										popMinPrec()
 
-											node <- {
-												type: :binary
-												tok: peeked
-												op: op
-												left: node
-												right: right
-											}
-											subBinary()
+										node <- {
+											type: :binary
+											tok: peeked
+											op: op
+											left: node
+											right: right
 										}
+										subBinary()
 									}
 								}
 							}
 						}
 					}
-					with notError(subBinary()) fn {
-						// whatever follows a binary expr cannot bind to the
-						// binary expression by syntax rule, so we simply
-						// return
-						node
-					}
 				}
-				:pipeArrow -> {
-					pipe := next() // eat the pipe
-					with notError(pipeRight := parseSubNode()) fn if pipeRight.type {
-						:fnCall -> {
-							pipeRight.args := append([node], pipeRight.args)
-							node <- pipeRight
-							sub()
-						}
-						_ -> error(format('Expected function call after |>, got {{0}}', pipeRight), pipe.pos)
+				with notError(subBinary()) fn {
+					// whatever follows a binary expr cannot bind to the
+					// binary expression by syntax rule, so we simply
+					// return
+					node
+				}
+			}
+			:pipeArrow -> {
+				pipe := next() // eat the pipe
+				with notError(pipeRight := parseSubNode()) fn if pipeRight.type {
+					:fnCall -> {
+						pipeRight.args := append([node], pipeRight.args)
+						node <- pipeRight
+						sub()
 					}
+					_ -> error(format('Expected function call after |>, got {{0}}', pipeRight), pipe.pos)
 				}
 			}
 		}
@@ -1422,22 +1408,18 @@ fn Printer(tokens) {
 			_ -> if n < indents.(i - 1) -> {
 				// backtrack to the line immediately following the first line
 				// where indent > n
-				fn sub(j) {
-					if {
-						indents.(j) > n -> sub(j - 1)
-						_ -> j + 1
-					}
+				fn sub(j) if {
+					indents.(j) > n -> sub(j - 1)
+					_ -> j + 1
 				}
 				target := sub(i - 1)
 
 				// if the range from target to current line is indented by more
 				// than 1, de-dent them accordingly
-				if {
-					indents.(target) - n > 1 -> {
-						diff := indents.(target) - n
-						range(target, i) |> with each() fn(j) {
-							indents.(j) := indents.(j) - diff + 1
-						}
+				if indents.(target) - n > 1 -> {
+					diff := indents.(target) - n
+					range(target, i) |> with each() fn(j) {
+						indents.(j) := indents.(j) - diff + 1
 					}
 				}
 			}

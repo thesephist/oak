@@ -152,8 +152,7 @@ fn _splitNonEmpty(s, sep) {
 // it, and returns the result as a list of strings. If `sep` is not specified,
 // split returns a list of every character in the string in order.
 fn split(s, sep) if sep {
-	? -> s |> reduce([], fn(acc, c) acc << c)
-	'' -> s |> reduce([], fn(acc, c) acc << c)
+	?, '' -> s |> reduce([], fn(acc, c) acc << c)
 	_ -> _splitNonEmpty(s, sep)
 }
 

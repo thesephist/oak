@@ -141,18 +141,6 @@ fn clone(x) if type(x) {
 	_ -> x
 }
 
-// append joins two iterable values (strings or lists) together, mutating the
-// first argument. If mutation is not desired, use std.join.
-fn append(xs, ys) {
-	xlen := len(xs)
-	ys |> each(fn(y, i) xs.(xlen + i) := y)
-	xs
-}
-
-// join joins two iterable values (strings or lists) together, while mutating
-// neither values. If efficiency is desired, use std.append.
-fn join(xs, ys) clone(xs) |> append(ys)
-
 // functional iterators
 
 // range returns a list of numbers in range [start, end), incrementing by step.
@@ -285,6 +273,14 @@ fn every(xs, pred) {
 	pred := default(pred, identity)
 	xs |> reduce(true, fn(acc, x, i) acc & pred(x, i))
 }
+
+// append joins two iterable values (strings or lists) together, mutating the
+// first argument. If mutation is not desired, use std.join.
+fn append(xs, ys) ys |> with reduce(xs) fn(zs, y) zs << y
+
+// join joins two iterable values (strings or lists) together, while mutating
+// neither values. If efficiency is desired, use std.append.
+fn join(xs, ys) clone(xs) |> append(ys)
 
 // zip "zips" together each pair of items from two iterables. If the zipper
 // function is not given, each pair of items are put into a 2-element list.
@@ -423,12 +419,9 @@ fn merge(os...) if len(os) {
 // initialization logic runs exactly once.
 fn once(f) {
 	called? := false
-	fn(args...) if {
-		called? -> ?
-		_ -> {
-			called? <- true
-			f(args...)
-		}
+	fn(args...) if !called? -> {
+		called? <- true
+		f(args...)
 	}
 }
 
@@ -440,22 +433,15 @@ fn once(f) {
 fn loop(max, f) {
 	// allow passing just a callback with no loop count, implying an infinite
 	// loop with max = -1
-	if f = ? -> {
-		f <- max
-		max <- -1
-	}
+	if f = ? -> [max, f] <- [-1, max]
 
 	max := default(max, -1)
 	broken := false
 	fn breaker broken <- true
-	fn sub(count) if count {
-		max -> ?
-		_ -> if broken {
-			true -> ?
-			_ -> {
-				f(count, breaker)
-				sub(count + 1)
-			}
+	fn sub(count) if count != max -> {
+		if !broken -> {
+			f(count, breaker)
+			sub(count + 1)
 		}
 	}
 	sub(0)

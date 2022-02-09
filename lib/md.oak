@@ -72,9 +72,8 @@ fn Reader(s) {
 		}
 	}
 	fn readUntilPrefix(prefix) {
-		fn sub(index) if index + len(prefix) > len(s) {
-			true -> ?
-			_ -> if part := s |> slice(index, index + len(prefix)) {
+		fn sub(index) if index + len(prefix) <= len(s) -> {
+			if part := s |> slice(index, index + len(prefix)) {
 				prefix -> {
 					substr := s |> slice(i, index)
 					i <- index
