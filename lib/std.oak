@@ -76,7 +76,6 @@ fn fromHex(s) {
 	fn sub(i, acc) if {
 		i = len(s) -> acc
 		? != next := _hToN.(s.(i)) -> sub(i + 1, acc * 16 + next)
-		_ -> ?
 	}
 	sub(0, 0)
 }
@@ -150,8 +149,8 @@ fn range(start, end, step) {
 	step := default(step, 1)
 	if end = ? -> [start, end] <- [0, start]
 
-	if step = 0 {
-		true -> []
+	if step {
+		0 -> []
 		_ -> {
 			list := []
 

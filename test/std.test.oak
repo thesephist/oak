@@ -608,7 +608,7 @@ fn run(t) {
 			append([:a, :b], [:c, :d])
 			[:a, :b, :c, :d]
 		)
-		'append can be chained with |>' |> t.eq(
+		'append to list can be chained with |>' |> t.eq(
 			[10] |> append([20, 30]) |> append([40, 50, 60])
 			[10, 20, 30, 40, 50, 60]
 		)
@@ -621,6 +621,27 @@ fn run(t) {
 			[1, 2, 3, 10, 20]
 		)
 
+		'append to empty string' |> t.eq(
+			append('', 'abc')
+			'abc'
+		)
+		'append to string' |> t.eq(
+			append('ab', 'cd')
+			'abcd'
+		)
+		'append to string can be chained with |>' |> t.eq(
+			'a' |> append('bc') |> append('def')
+			'abcdef'
+		)
+		'append mutates original string' |> t.eq(
+			{
+				original := 'abc'
+				append(original, 'AB')
+				original
+			}
+			'abcAB'
+		)
+
 		'join to empty list' |> t.eq(
 			join([], [:a, :b, :c])
 			[:a, :b, :c]
@@ -629,7 +650,7 @@ fn run(t) {
 			join([:a, :b], [:c, :d])
 			[:a, :b, :c, :d]
 		)
-		'join can be chained with |>' |> t.eq(
+		'join to list can be chained with |>' |> t.eq(
 			[10] |> join([20, 30]) |> join([40, 50, 60])
 			[10, 20, 30, 40, 50, 60]
 		)
@@ -640,6 +661,27 @@ fn run(t) {
 				original
 			}
 			[1, 2, 3]
+		)
+
+		'join to empty string' |> t.eq(
+			join('', 'abc')
+			'abc'
+		)
+		'join to string' |> t.eq(
+			join('ab', 'cd')
+			'abcd'
+		)
+		'join to string can be chained with |>' |> t.eq(
+			'a' |> join('bc') |> join('def')
+			'abcdef'
+		)
+		'join does not mutate original string' |> t.eq(
+			{
+				original := 'abc'
+				join(original, 'AB')
+				original
+			}
+			'abc'
 		)
 	}
 
@@ -658,6 +700,7 @@ fn run(t) {
 		'range(start, end, step < 0)' |> t.eq(range(4, 10, -2), [])
 		'range(start > end, step < 0)' |> t.eq(range(10, -4, -2), [10, 8, 6, 4, 2, 0, -2])
 
+		'range(_, _, 0) always returns []' |> t.eq(range(100, 200, 0), [])
 		'range(start, end, step) with off-step end' |> t.eq(range(2, 10, 3), [2, 5, 8])
 	}
 

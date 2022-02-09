@@ -99,7 +99,6 @@ fn Reader(s) {
 			// currently only supports [] and () (for Markdown links)
 			'[' -> ']'
 			'(' -> ')'
-			_ -> ?
 		}
 
 		fn sub(index, stack) if stack {
