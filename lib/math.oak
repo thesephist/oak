@@ -77,6 +77,9 @@ fn orient(x0, y0, x1, y1) {
 // sum takes a sequence of values and returns their sum
 fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
 
+// prod takes a sequence of values and returns their product
+fn prod(xs...) xs |> reduce(1, fn(a, b) a * b)
+
 // min returns the minimum value of all given values
 fn min(xs...) xs |> reduce(xs.0, fn(acc, n) if n < acc {
 	true -> n

@@ -140,13 +140,20 @@ fn run(t) {
 		}
 	}
 
-	// sum
+	// sum, prod
 	{
-		{ sum: sum } := math
+		{
+			sum: sum
+			prod: prod
+		} := math
 
 		'sum of nothing' |> t.eq(sum(), 0)
 		'sum of 1' |> t.eq(sum(42), 42)
 		'sum of many' |> t.eq(sum(std.range(100)...), 4950)
+
+		'prod of nothing' |> t.eq(prod(), 1)
+		'prod of 1' |> t.eq(prod(42), 42)
+		'prod of many' |> t.eq(prod(std.range(1, 11)...), 3628800)
 	}
 
 	// min, max
