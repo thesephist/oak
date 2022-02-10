@@ -614,7 +614,8 @@ fn analyzeNode(node) {
 			sin: true, cos: true, tan: true, asin: true, acos: true
 			atan: true, pow: true, log: true
 
-			__runtime_lib: true, __runtime_lib?: true
+			___runtime_lib: true, ___runtime_lib?: true, ___runtime_gc: true
+			___runtime_mem: true
 		}
 		args: {}
 	}, false)
