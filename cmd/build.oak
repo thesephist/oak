@@ -957,8 +957,6 @@ function __oak_module_import(name) {
 // language primitives
 let __oak_empty_assgn_tgt;
 function __oak_eq(a, b) {
-	a = __as_oak_string(a);
-	b = __as_oak_string(b);
 	if (a === __Oak_Empty || b === __Oak_Empty) return true;
 
 	// match either null or undefined to compare correctly against undefined ?s
@@ -966,17 +964,22 @@ function __oak_eq(a, b) {
 	if (a == null && b == null) return true;
 	if (a === null || b === null) return false;
 
+	// match all other types that can be compared cheaply (without function
+	// calls for type coercion or recursive descent)
+	if (typeof a === \'boolean\' || typeof a === \'number\' ||
+		typeof a === \'symbol\' || typeof a === \'function\') {
+		return a === b;
+	}
+
+	// string equality check
+	a = __as_oak_string(a);
+	b = __as_oak_string(b);
 	if (typeof a !== typeof b) return false;
 	if (__is_oak_string(a) && __is_oak_string(b)) {
 		return a.valueOf() === b.valueOf();
 	}
-	if (typeof a === \'number\' || typeof a === \'boolean\' ||
-		typeof a === \'function\' || typeof a === \'symbol\') {
-		return a === b;
-	}
 
 	// deep equality check for composite values
-	if (!Array.isArray(a) && typeof a !== \'object\') return false;
 	if (len(a) !== len(b)) return false;
 	for (const key of keys(a)) {
 		if (!__oak_eq(a[key], b[key])) return false;
@@ -1058,7 +1061,6 @@ function __as_oak_string(x) {
 	return x;
 }
 const __Oak_String = s => {
-	if (__is_oak_string(s)) return s;
 	return {
 		__mark_oak_string: true,
 		assign(i, slice) {
@@ -1204,10 +1206,7 @@ function type(x) {
 	throw new Error(\'type() called on unknown type \' + x.toString());
 }
 function len(x) {
-	x = __as_oak_string(x);
-	if (__is_oak_string(x)) {
-		return x.length;
-	} else if (Array.isArray(x)) {
+	if (typeof x === \'string\' || __is_oak_string(x) || Array.isArray(x)) {
 		return x.length;
 	} else if (typeof x === \'object\' && x !== null) {
 		return Object.getOwnPropertyNames(x).length;
