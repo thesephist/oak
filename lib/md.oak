@@ -14,6 +14,7 @@
 	letter?: letter?
 	space?: space?
 	word?: word?
+	lower: lower
 	indexOf: indexOf
 	startsWith?: startsWith?
 	endsWith?: endsWith?
@@ -25,6 +26,9 @@
 {
 	format: format
 } := import('fmt')
+{
+	percentDecode: percentDecode
+} := import('http')
 
 // Type-generic Reader over an Oak iterable interface, i.e. strings and lists.
 // This Reader is generic so that we can read through either a string (a list
@@ -311,13 +315,13 @@ fn parseText(tokens) {
 
 fn uListItemLine?(line) if line {
 	? -> false
-	_ -> line |> trimStart(' ') |> trimStart('\t') |> startsWith?('- ')
+	_ -> line |> trimStart() |> startsWith?('- ')
 }
 
 fn oListItemLine?(line) if line {
 	? -> false
 	_ -> {
-		trimmedStart := line |> trimStart(' ') |> trimStart('\t')
+		trimmedStart := line |> trimStart()
 		if dotIdx := trimmedStart |> indexOf('. ') {
 			-1, 0 -> false
 			_ -> trimmedStart |> slice(0, dotIdx) |> split() |> every(digit?)
@@ -615,6 +619,27 @@ fn compile(nodes) nodes |> map(compileNode) |> join()
 
 fn wrap(tag, node) '<' << tag << '>' << compile(node.children) << '</' << tag << '>'
 
+fn sanitizeAttr(attr) {
+	attr |> map(fn(c) if c {
+		'<' -> '&lt;'
+		'\'' -> '&apos;'
+		'"' -> '&quot;'
+		_ -> c
+	})
+}
+
+fn sanitizeURL(url) {
+	encodedURL := url |> percentDecode() |> map(fn(c) if {
+		word?(c), c = '/', c = ':' -> c
+		_ -> ''
+	}) |> lower()
+	if {
+		encodedURL |> startsWith?('javascript:')
+		encodedURL |> startsWith?('data:') -> ''
+		_ -> sanitizeAttr(url)
+	}
+}
+
 // compileNode transforms an individual Markdown AST node into HTML
 fn compileNode(node) if type(node) {
 	:string -> node |> map(fn(c) if c {
@@ -626,12 +651,12 @@ fn compileNode(node) if type(node) {
 		:p, :em, :strong, :strike
 		:h1, :h2, :h3, :h4, :h5, :h6
 		:pre, :ul, :ol, :li, :blockquote -> wrap(node.tag |> string(), node)
-		:a -> '<a href="{{0}}">{{1}}</a>' |> format(node.href, compile(node.children))
-		:img -> '<img alt="{{0}}" src="{{1}}"/>' |> format(node.alt, node.src)
+		:a -> '<a href="{{0}}">{{1}}</a>' |> format(sanitizeURL(node.href), compile(node.children))
+		:img -> '<img alt="{{0}}" src="{{1}}"/>' |> format(sanitizeAttr(node.alt), sanitizeURL(node.src))
 		:code -> if node.lang {
 			'', ? -> wrap('code', node)
 			_ -> '<code data-lang="{{0}}">{{1}}</code>' |>
-				format(node.lang, compile(node.children))
+				format(sanitizeAttr(node.lang), compile(node.children))
 		}
 		:checkbox -> '<input type="checkbox" ' << if node.checked {
 			true -> 'checked'
@@ -640,7 +665,7 @@ fn compileNode(node) if type(node) {
 		:br -> '<br/>'
 		:hr -> '<hr/>'
 		:rawHTML -> node.children.0
-		_ -> '<span style="color:red">Unknown Markdown node {{0}}</span>' |> format(string(node))
+		_ -> '<span style="color:red">Unknown Markdown node {{0}}</span>' |> format(string(node) |> compileNode())
 	}
 }
 

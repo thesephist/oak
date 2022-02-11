@@ -1571,5 +1571,41 @@ fn run(t) {
 			'<h2>totally <a href="link">AWESOME</a></h2>'
 		)
 	}
+
+	// md.transform XSS and fuzz tests
+	{
+		transform := md.transform
+
+		[
+			['<script>', '<p>&lt;script></p>']
+			['[text](()', '<p>[text](()</p>']
+			['[text](<\'")', '<p><a href="&lt;&apos;&quot;">text</a></p>']
+			['[link]("<script>)', '<p><a href="&quot;&lt;script>">link</a></p>']
+			['[link](javascript:alert("XSS!"))', '<p><a href="">link</a></p>']
+			['[case-insensitive](    JaVaScRiPt:alert(\'XSS!\'))', '<p><a href="">case-insensitive</a></p>']
+			['[url-script](javascript://www.google.com%0Aalert(\'URL\'))', '<p><a href="">url-script</a></p>']
+			['![image onload](https://example.com/image.jpg"onload="alert(\'XSS!\'))'
+				'<p><img alt="image onload" src="https://example.com/image.jpg&quot;onload=&quot;alert(&apos;XSS!&apos;)"/></p>']
+			['![image onerror]("onerror="alert(\'XSS!\'))'
+				'<p><img alt="image onerror" src="&quot;onerror=&quot;alert(&apos;XSS!&apos;)"/></p>']
+			['[base64 data link](data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K)'
+				'<p><a href="">base64 data link</a></p>']
+			['![base64 data image](data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K)'
+				'<p><img alt="base64 data image" src=""/></p>']
+			['[uri encoded uri](http://google.com/test%22test%2522test%252522)'
+				'<p><a href="http://google.com/test%22test%2522test%252522">uri encoded uri</a></p>']
+			['[html encoded uri](http://google.com/test"e;test&quot;test&amp;quot;)'
+				'<p><a href="http://google.com/test&quot;e;test&quot;test&amp;quot;">html encoded uri</a></p>']
+			['```"onclick=alert() id="\ncode block language hijack\n```'
+				'<pre><code data-lang="&quot;onclick=alert() id=&quot;">code block language hijack</code></pre>']
+		] |> with std.each() fn(spec) {
+			[input, output] := spec
+			t.eq(
+				'Correctly sanitize: ' + input
+				transform(input)
+				output
+			)
+		}
+	}
 }
 
