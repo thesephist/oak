@@ -199,9 +199,12 @@ Oak (ab)uses GNU Make to run development workflows and tasks.
 - `make test-oak` or `make tk` runs the Oak test suite, which tests the standard libraries
 - `make test-bundle` runs the Oak test suite, bundled using `oak build`
 - `make test-js` runs the Oak test suite on the system's Node.js, compiled using `oak build --web`
+- `make build` generates release builds of Oak for various operating systems; `make build-<OS>` builds for a specific OS
 - `make install` installs the Oak interpreter on your `$GOPATH` as `oak`, and re-installs Oak's vim syntax file
+- `make site` builds an Oak bundle for the [oaklang.org](https://oaklang.org/) website, amd `make site-w` does it on every file save
+- `make site-gen` rebuilds the statically generated parts of the Oak website, like the standard library documentation
 
-To try Oak by building from source, clone the repository and run `make install` (or simply `go build`).
+To try Oak by building from source, clone the repository and run `make install` (or simply `go build .`).
 
 ## Unit and generative tests
 
