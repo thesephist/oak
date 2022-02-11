@@ -182,6 +182,15 @@ fn padEnd(s, n, pad) if len(s) >= n {
 	_ -> s + _extend(pad, n - len(s))
 }
 
+fn _trimStartSpace(s) {
+	fn subStart(i) if space?(s.(i)) {
+		true -> subStart(i + 1)
+		_ -> i
+	}
+	firstNonSpace := subStart(0)
+	slice(s, firstNonSpace)
+}
+
 fn _trimStartNonEmpty(s, prefix) {
 	max := len(s)
 	lpref := len(prefix)
@@ -200,7 +209,17 @@ fn _trimStartNonEmpty(s, prefix) {
 // `prefix` from the beginning of string `s`
 fn trimStart(s, prefix) if prefix {
 	'' -> s
+	? -> _trimStartSpace(s)
 	_ -> _trimStartNonEmpty(s, prefix)
+}
+
+fn _trimEndSpace(s) {
+	fn subEnd(i) if space?(s.(i)) {
+		true -> subEnd(i - 1)
+		_ -> i
+	}
+	lastNonSpace := subEnd(len(s) - 1)
+	slice(s, 0, lastNonSpace + 1)
 }
 
 fn _trimEndNonEmpty(s, suffix) {
@@ -220,33 +239,12 @@ fn _trimEndNonEmpty(s, suffix) {
 // `suffix` from the end of string `s`
 fn trimEnd(s, suffix) if suffix {
 	'' -> s
+	? -> _trimEndSpace(s)
 	_ -> _trimEndNonEmpty(s, suffix)
-}
-
-fn _trimSpace(s) if s {
-	'' -> s
-	_ -> {
-		fn subStart(i) if space?(s.(i)) {
-			true -> subStart(i + 1)
-			_ -> i
-		}
-		firstNonSpace := subStart(0)
-
-		fn subEnd(i) if space?(s.(i)) {
-			true -> subEnd(i - 1)
-			_ -> i
-		}
-		lastNonSpace := subEnd(len(s) - 1)
-
-		slice(s, firstNonSpace, lastNonSpace + 1)
-	}
 }
 
 // trim removes any (potentially repeated) ocucrrences of the string `part`
 // from either end of the string `s`. If `part` is not specified, trim removes
 // all whitespace from either end of the string `s`.
-fn trim(s, part) if part {
-	? -> _trimSpace(s)
-	_ -> trimStart(trimEnd(s, part), part)
-}
+fn trim(s, part) s |> trimStart(part) |> trimEnd(part)
 

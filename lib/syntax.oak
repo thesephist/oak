@@ -195,7 +195,7 @@ fn Tokenizer(source) {
 				'/' -> {
 					// line comment
 					next()
-					commentString := readUntilChar('\n') |> trimEnd(' ') |> trimEnd('\t')
+					commentString := readUntilChar('\n') |> trimEnd()
 					if commentString |> trim() = '' -> commentString <- ''
 					TokenAt(:comment, pos, commentString)
 				}
@@ -1147,7 +1147,7 @@ fn Printer(tokens) {
 		// shorthand for adding tokens and spaces to algorithm state
 		fn add(s, tabs) {
 			if last(lines) |> trim('\t') {
-				'' -> last(lines) << trimStart(s, ' ')
+				'' -> last(lines) << trimStart(s)
 				_ -> last(lines) << s
 			}
 			curr <- curr + tabs

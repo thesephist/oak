@@ -353,6 +353,14 @@ fn run(t) {
 			trimStart('aaaaaaaadef', 'aaa')
 			'aadef'
 		)
+		'trimStart is a no-op if no prefix match' |> t.eq(
+			trimStart('should be the same', '???')
+			'should be the same'
+		)
+		'trimStart trims whitespace if no delimiter' |> t.eq(
+			trimStart('   \t\nhello world!   \n\t   ')
+			'hello world!   \n\t   '
+		)
 
 		'trimEnd is a no-op with empty string' |> t.eq(
 			trimEnd('???????what???', '')
@@ -370,7 +378,19 @@ fn run(t) {
 			trimEnd('xxxyyyyyyyy', 'yyy')
 			'xxxyy'
 		)
+		'trimEnd is a no-op if no suffix match' |> t.eq(
+			trimEnd('should be the same', '???')
+			'should be the same'
+		)
+		'trimEnd trims whitespace if no delimiter' |> t.eq(
+			trimEnd('   \t\nhello world!   \n\t   ')
+			'   \t\nhello world!'
+		)
 
+		'trim is a no-op with empty string' |> t.eq(
+			trim('????what?????', '')
+			'????what?????'
+		)
 		'trim trims given string from both sides' |> t.eq(
 			trim('????what?????', '?')
 			'what'
@@ -382,6 +402,10 @@ fn run(t) {
 		'trim trims whole multiples of substring from both sides' |> t.eq(
 			trim('????what?????', '???')
 			'?what??'
+		)
+		'trim is a no-op if no match' |> t.eq(
+			trim('should be the same', '???')
+			'should be the same'
 		)
 		'trim trims whitespace on both sides if no delimiter' |> t.eq(
 			trim('   \t\nhello world!   \n\t   ')
