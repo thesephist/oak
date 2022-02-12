@@ -415,6 +415,13 @@ func (c *Context) ChildContext(rootPath string) Context {
 	}
 }
 
+func (c *Context) subScope(parent *scope) {
+	c.scope = scope{
+		parent: parent,
+		vars:   map[string]Value{},
+	}
+}
+
 func (c *Context) Lock() {
 	c.eng.Lock()
 }

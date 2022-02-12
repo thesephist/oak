@@ -175,6 +175,7 @@ func runPipe() {
 	ctx.LoadBuiltins()
 	ctx.mustLoadAllLibs()
 
+	rootScope := ctx.scope
 	stdin := bufio.NewReader(os.Stdin)
 	prog := strings.Join(os.Args[2:], " ")
 	for i := 0; ; i++ {
@@ -188,6 +189,8 @@ func runPipe() {
 
 		line = bytes.TrimSuffix(line, []byte{'\n'})
 		lineValue := StringValue(line)
+		// each line gets its own top-level subscope to avoid collisions
+		ctx.subScope(&rootScope)
 		ctx.scope.put("line", &lineValue)
 		ctx.scope.put("i", IntValue(i))
 
