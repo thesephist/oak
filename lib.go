@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -112,4 +113,21 @@ func (c *Context) LoadLib(name string) (Value, *runtimeError) {
 
 	c.eng.importMap[name] = ctx.scope
 	return ObjectValue(ctx.scope.vars), nil
+}
+
+func (c *Context) loadAllLibs() error {
+	for libname := range stdlibs {
+		_, err := c.Eval(strings.NewReader(fmt.Sprintf("%s := import('%s')", libname, libname)))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Context) mustLoadAllLibs() {
+	if err := c.loadAllLibs(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

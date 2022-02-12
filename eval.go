@@ -395,6 +395,15 @@ func NewContext(rootPath string) Context {
 	}
 }
 
+func NewContextWithCwd() Context {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Could not get working directory")
+		os.Exit(1)
+	}
+	return NewContext(cwd)
+}
+
 func (c *Context) ChildContext(rootPath string) Context {
 	return Context{
 		eng:      c.eng,
