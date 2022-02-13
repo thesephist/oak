@@ -20,6 +20,9 @@ General usage:
 where commands are:
 	version     print version information
 	help        print this message
+	repl        start the Oak repl
+	eval        evaluate command line args as a program
+	pipe        use Oak in a shell pipeline
 	cat         print syntax-highlighted Oak source
 	doc         generate or view documentation
 	fmt         autoformat Oak source code
@@ -28,7 +31,72 @@ where commands are:
 Run oak help <command> for more on each command.
 '
 
-Cat := 'Print syntax-highlighted Oak source files to supported terminals.
+Repl := 'Interactive programming environment for Oak
+
+The Oak REPL is also accessible by running `oak repl`. The REPL saves history
+to {{0}}/.oak_history.
+
+Special variables
+	__          last-evaluated result
+'
+
+Eval := 'Evaluate Oak programs from command line arguments
+
+Sometimes, it\'s useful to be able to run short Oak programs without opening a
+new file or entering an interactive prompt. It may be performing a quick
+numeric calculation, testing an API, or processing some one-off file. For these
+occasions, `oak eval` is designed to make it easy to run quick one-line
+scripts, including those that may operate on standard input.
+
+Usage
+	oak eval [program]
+
+Special variables
+	stdin       string representation of the standard input piped into the Oak
+	            CLI, if it exists; otherwise, this is not defined
+
+Examples
+	oak eval 1 + 2 + 3
+		Perform a simple calculation
+	oak eval "json.parse(stdin) |> debug.inspect()" < data.json
+		Visualize JSON data
+	oak eval "fs.listFiles(\'.\') |> std.filter(:dir) |> std.map(:name)"
+		List only directories in the working directory
+'
+
+Pipe := 'Use Oak to process data in pipelines
+
+Oak is often fit for writing string-processing scripts that may be useful
+within a UNIX pipeline. `oak pipe` lets a short Oak program act as a part of a
+UNIX pipeline, processing piped input line-by-line and emitting output in a
+streaming fashion. Unlike other similar tools, `oak pipe` lets programs harness
+the full power of Oak, including concurrent execution, I/O, and the entire Oak
+standard library.
+
+This command runs a short program, given as the command line arguments, for
+every line of the input stream. If the program returns a non-null (non-?)
+value, the return value of the program will be output; otherwise, the line will
+be filtered out. `oak pipe` is capable of processing unbuffered, continuously
+streaming input.
+
+Usage
+	oak pipe [program]
+
+Special variables
+	line        string representation of the current line, except any trailing
+	            newline characters
+	i           line number, starting at 1
+
+Examples
+	cat main.oak | oak pipe "\'{{0}}\\t{{1}}\' |> fmt.format(i, line)"
+		Print a file with its lines numbered
+	oak pipe "if str.startsWith?(line, \'fn \') -> string(i) + \' \' + line" < main.oak
+		Print top-level fn declarations in a file with its lines numbered
+	tail -f /var/log/access.log | oak pipe "if str.contains?(line, \'/about\') -> line"
+		Continuously filter logs to print only those that access "/about"
+'
+
+Cat := 'Print syntax-highlighted Oak source files
 
 Oak cat works much like the UNIX utility `cat`, except that `oak cat`
 syntax-highlights Oak source code in the process. This is useful when trying to
@@ -44,20 +112,12 @@ Options
 	            embedded as CSS classes, for syntax highlighting on the web.
 '
 
-Repl := 'Oak REPL is an interactive programming environment for Oak.
-
-The REPL saves history to {{0}}/.oak_history.
-
-Special variables
-	__          last-evaluated result
-'
-
-Doc := 'Generate or read documentation for the Oak language and libraries.
+Doc := 'Generate or read documentation for the Oak language and libraries
 
 [[ under construction ]]
 '
 
-Fmt := 'Automatically format Oak source files.
+Fmt := 'Automatically format Oak source files
 
 Usage
 	oak fmt [files] [options]
@@ -77,12 +137,12 @@ Options
 	            Using this option requires a system `git` to be installed.
 '
 
-Test := 'Run unit tests in *.test.oak files.
+Test := 'Run unit tests in *.test.oak files
 
 [[ under construction ]]
 '
 
-Build := 'Compile and bundle Oak programs to Oak or JavaScript.
+Build := 'Compile and bundle Oak programs to Oak or JavaScript
 
 Oak build will compile and bundle an Oak program, potentially with many
 dependencies, into a single, self-contained source file. This is useful when
@@ -108,6 +168,8 @@ Options
 if title := args().2 {
 	? -> Main
 	'repl' -> format(Repl, default(env().HOME, '$HOME'))
+	'eval' -> Eval
+	'pipe' -> Pipe
 	'cat' -> Cat
 	'doc' -> Doc
 	'fmt' -> Fmt
