@@ -158,7 +158,11 @@ func runEval() {
 
 	prog := strings.Join(os.Args[2:], " ")
 	if val, err := ctx.Eval(strings.NewReader(prog)); err == nil {
-		fmt.Println(val)
+		if stringVal, ok := val.(*StringValue); ok {
+			fmt.Println(string(*stringVal))
+		} else {
+			fmt.Println(val)
+		}
 	} else {
 		fmt.Println(err)
 		os.Exit(1)
