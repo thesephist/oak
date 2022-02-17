@@ -626,7 +626,7 @@ fn renderOakBundle(bundleNode) {
 	fn renderNode(node) if node.type {
 		:null -> '?'
 		:empty -> '_'
-		:string -> '\'' << (node.val |> replace('\\', '\\\\') |> replace('\'', '\\\'')) << '\''
+		:string -> '\'' << node.val |> replace('\\', '\\\\') |> replace('\'', '\\\'') << '\''
 		// NOTE: though not unexpected, it's worth noting that this is the only
 		// instance in codegen where the generated code depends on token
 		// information rather than AST node information.
@@ -634,10 +634,10 @@ fn renderOakBundle(bundleNode) {
 		:bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> ':' << node.val
-		:list -> '[' << (node.elems |> map(renderNode)) |> join(',') << ']'
-		:object -> '{' << (node.entries |> map(fn(entry) {
+		:list -> '[' << node.elems |> map(renderNode) |> join(',') << ']'
+		:object -> '{' << node.entries |> map(fn(entry) {
 			renderNode(entry.key) << ':' << renderNode(entry.val)
-		}) |> join(',')) << '}'
+		}) |> join(',') << '}'
 		:unary -> if node.op {
 			:minus -> '-' << renderNode(node.right)
 			:exclam -> '!' << renderNode(node.right)
@@ -666,9 +666,9 @@ fn renderOakBundle(bundleNode) {
 			_ -> '<-'
 		} << renderNode(node.right)
 		:propertyAccess -> renderNode(node.left) << '.' << renderNode(node.right)
-		:ifExpr -> 'if ' << renderNode(node.cond) << '{' << (node.branches |> map(fn(br) {
+		:ifExpr -> 'if ' << renderNode(node.cond) << '{' << node.branches |> map(fn(br) {
 			renderNode(br.target) << '->' << renderNode(br.body)
-		}) |> join(',')) << '}'
+		}) |> join(',') << '}'
 		:block -> '(' << if len(node.exprs) {
 			0 -> '?'
 			_ -> node.exprs |> map(renderNode) |> join(',')
@@ -703,8 +703,6 @@ fn renderOakBundle(bundleNode) {
 // renderJSNodes is also responsible for adding the JavaScript Oak runtime,
 // which provides language compatibility features.
 fn renderJSBundle(bundleNode) {
-	fn renderErr(msg) 'throw new Error(\'' << replace(msg, '\'', '\\\'') << '\')'
-
 	// symbols can appear in many places in JS, but they cannot appear as
 	// object keys without disrupting Oak's semantics. Whenever they appear as
 	// potential object keys, we need them to behave like strings.
@@ -721,19 +719,17 @@ fn renderJSBundle(bundleNode) {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
-		:list -> '[' << (node.elems |> map(renderAssignTarget) |> join(',')) << '=null]'
-		:object -> '{' << {
-			node.entries |> map(fn(entry) {
-				{ key: k, val: v } := entry
-				if k.type = :identifier & v.type = :identifier & k.val = v.val {
-					true -> formatIdent(k.val)
-					_ -> if k.type {
-						:identifier, :empty, :int, :float -> renderNode(k)
-						_ -> '[' << renderAsObjectKey(k) << ']'
-					} << ':' << renderAssignTarget(v) << '=null'
-				}
-			}) |> join(',')
-		} << '}'
+		:list -> '[' << node.elems |> map(renderAssignTarget) |> join(',') << '=null]'
+		:object -> '{' << node.entries |> map(fn(entry) {
+			{ key: k, val: v } := entry
+			if k.type = :identifier & v.type = :identifier & k.val = v.val {
+				true -> formatIdent(k.val)
+				_ -> if k.type {
+					:identifier, :empty, :int, :float -> renderNode(k)
+					_ -> '[' << renderAsObjectKey(k) << ']'
+				} << ':' << renderAssignTarget(v) << '=null'
+			}
+		}) |> join(',') << '}'
 	}
 
 	fn renderNode(node) if node.type {
@@ -743,25 +739,22 @@ fn renderJSBundle(bundleNode) {
 		:int, :float, :bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> 'Symbol.for(\'' << node.val << '\')'
-		:list -> '[' << (node.elems |> map(renderNode) |> join(',')) << ']'
+		:list -> '[' << node.elems |> map(renderNode) |> join(',') << ']'
 		// wrap object literals in (...) to avoid being mis-parsed as a lexical
 		// block when appearing in statement position
-		:object -> '({' << {
-			node.entries |> map(fn(entry) {
-				{ key: k, val: v } := entry
-				if k.type = :identifier & v.type = :identifier & k.val = v.val {
-					true -> formatIdent(k.val)
-					_ -> if k.type {
-						:identifier, :empty, :int, :float -> renderNode(k)
-						_ -> '[' << renderAsObjectKey(k) << ']'
-					} << ':' << renderNode(v)
-				}
-			}) |> join(',')
-		} << '})'
+		:object -> '({' << node.entries |> map(fn(entry) {
+			{ key: k, val: v } := entry
+			if k.type = :identifier & v.type = :identifier & k.val = v.val {
+				true -> formatIdent(k.val)
+				_ -> if k.type {
+					:identifier, :empty, :int, :float -> renderNode(k)
+					_ -> '[' << renderAsObjectKey(k) << ']'
+				} << ':' << renderNode(v)
+			}
+		}) |> join(',') << '})'
 		:unary -> if node.op {
 			:minus -> '-' << renderNode(node.right)
 			:exclam -> '!' << renderNode(node.right)
-			_ -> renderErr('Not implemented: unary op ' << string(node.type))
 		}
 		:binary -> if node.op {
 			:plus -> '__as_oak_string({{0}}+{{1}})' |> format(renderNode(node.left), renderNode(node.right))
@@ -878,7 +871,6 @@ fn renderJSBundle(bundleNode) {
 				_ -> node.args |> map(renderNode) |> append(['...' << renderNode(node.restArg)]) |> join(',')
 			}
 		)
-		_ -> renderErr('Not implemented: node ' << string(node.type))
 	}
 
 	'/* oak build --web */' << OakJSRuntime << renderNode(bundleNode)
