@@ -1022,6 +1022,14 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 			return nil, err
 		}
 
+		// short-circuit boolean comparisons
+		if leftBool, ok := leftComputed.(BoolValue); ok {
+			if leftBool && (n.op == or || n.op == plus) ||
+				!leftBool && (n.op == and || n.op == times) {
+				return leftBool, nil
+			}
+		}
+
 		rightComputed, err := c.evalExpr(n.right, sc)
 		if err != nil {
 			return nil, err

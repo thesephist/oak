@@ -258,6 +258,30 @@ fn run(t) {
 			]
 		)
 
+		'short-circuiting and operator' |> t.eq(
+			{
+				x := 3
+				[
+					false & 2
+					false & { x <- 10, true }
+					x
+				]
+			}
+			[false, false, 3]
+		)
+
+		'short-circuiting or operator' |> t.eq(
+			{
+				x := 3
+				[
+					true | 2
+					true | { x <- 10, false }
+					x
+				]
+			}
+			[true, true, 3]
+		)
+
 		'if expr with multi target' |> t.eq(
 			[11, 12, 13] |> with std.map() fn(i) if i {
 				10 -> :wrong

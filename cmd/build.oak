@@ -770,9 +770,11 @@ fn renderJSBundle(bundleNode) {
 			:divide -> '({{0}}/{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			:modulus -> '({{0}}%{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 
-			:and -> '__oak_and({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
+			:and -> '(__oak_left=>__oak_left===false?false:__oak_and(__oak_left,{{1}}))({{0}})' |>
+				format(renderNode(node.left), renderNode(node.right))
 			:xor -> '__oak_xor({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
-			:or -> '__oak_or({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
+			:or -> '(__oak_left=>__oak_left===true?true:__oak_or(__oak_left,{{1}}))({{0}})' |>
+				format(renderNode(node.left), renderNode(node.right))
 
 			:eq -> '__oak_eq({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			:neq -> '!__oak_eq({{0}},{{1}})' |> format(renderNode(node.left), renderNode(node.right))

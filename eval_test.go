@@ -451,6 +451,28 @@ func TestOrOperator(t *testing.T) {
 	))
 }
 
+func TestShortCircuitingAnd(t *testing.T) {
+	expectProgramToReturn(t, `
+	x := 3
+	[
+		false & 2
+		false & { x <- 10, true }
+		x
+	]
+	`, MakeList(oakFalse, oakFalse, IntValue(3)))
+}
+
+func TestShortCircuitingOr(t *testing.T) {
+	expectProgramToReturn(t, `
+	x := 3
+	[
+		true | 2
+		true | { x <- 10, false }
+		x
+	]
+	`, MakeList(oakTrue, oakTrue, IntValue(3)))
+}
+
 func TestEmptyIfExpr(t *testing.T) {
 	expectProgramToReturn(t, `if 100 {}`, null)
 }
