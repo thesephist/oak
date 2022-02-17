@@ -225,24 +225,18 @@ fn Tokenizer(source) {
 					'\\' -> sub(payload << '\\' << next())
 					_ -> sub(payload << charInString)
 				}
-				stringContent := sub('')
-				TokenAt(:stringLiteral, pos, stringContent)
+				TokenAt(:stringLiteral, pos, sub(''))
 			}
-			_ -> {
-				if digit?(c) {
-					true -> {
-						numberContent := c << readValidNumeral()
-						TokenAt(:numberLiteral, pos, numberContent)
-					}
-					_ -> if payload := c << readValidIdentifier() {
-						'_' -> TokenAt(:underscore, pos)
-						'if' -> TokenAt(:ifKeyword, pos)
-						'fn' -> TokenAt(:fnKeyword, pos)
-						'with' -> TokenAt(:withKeyword, pos)
-						'true' -> TokenAt(:trueLiteral, pos)
-						'false' -> TokenAt(:falseLiteral, pos)
-						_ -> TokenAt(:identifier, pos, payload)
-					}
+			_ -> if {
+				digit?(c) -> TokenAt(:numberLiteral, pos, c << readValidNumeral())
+				_ -> if payload := c << readValidIdentifier() {
+					'_' -> TokenAt(:underscore, pos)
+					'if' -> TokenAt(:ifKeyword, pos)
+					'fn' -> TokenAt(:fnKeyword, pos)
+					'with' -> TokenAt(:withKeyword, pos)
+					'true' -> TokenAt(:trueLiteral, pos)
+					'false' -> TokenAt(:falseLiteral, pos)
+					_ -> TokenAt(:identifier, pos, payload)
 				}
 			}
 		}
