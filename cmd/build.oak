@@ -1366,4 +1366,17 @@ function bind(target, fn) {
 function __oak_js_new(Constructor, ...args) {
 	return new Constructor(...args);
 }
+function __oak_js_try(fn) {
+	try {
+		return {
+			type: Symbol.for(\'ok\'),
+			ok: fn(),
+		}
+	} catch (e) {
+		return {
+			type: Symbol.for(\'error\'),
+			error: e,
+		}
+	}
+}
 '
