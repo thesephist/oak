@@ -86,7 +86,7 @@ fn new(title) {
 			expect: expect
 		}
 		approx: fn(name, result, expect, epsilon) {
-			epsilon := epsilon |> default(0.0000001)
+			epsilon := epsilon |> default(0.00000001)
 			fn similar?(a, b) if type(a) {
 				:list -> a |> every(fn(_, i) similar?(a.(i), b.(i)))
 				:object -> a |> keys() |> every(fn(k) similar?(a.(k), b.(k)))
@@ -100,9 +100,7 @@ fn new(title) {
 			}
 		}
 		assert: fn(name, result) self.eq(name, result, true)
-		skip: fn(name, result, expect) Skipped << {
-			name: name
-		}
+		skip: fn(name, result, expect) Skipped << { name: name }
 		reportFailed: fn {
 			if failedTests := Tests |> filter(fn(t) !t.passed?) {
 				[] -> ?
