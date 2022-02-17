@@ -805,12 +805,11 @@ fn renderJSBundle(bundleNode) {
 			_ -> '(' << renderAssignTarget(node.left) << '=' << renderNode(node.right) << ')'
 		}
 		:propertyAccess -> if node.right.type {
-			// accessing into string values with identifier properties is
-			// illegal/invalid. Therefore, we treat the case where
-			// __oak_acc_tgt is a string as "undefined behavior" and only
-			// generate code for the case when it's a list or object.
-			:identifier -> '((__oak_acc_tgt)=>__oak_acc_tgt.{{1}}!==undefined?__oak_acc_tgt.{{1}}:null)({{0}})' |>
-				format(renderNode(node.left), renderNode(node.right))
+			// accessing into string or list values with identifier keys is
+			// illegal/undefined. Therefore, we treat the case where the left
+			// operand is a string or list as "undefined behavior" and only
+			// generate code for the case when it's an object.
+			:identifier -> '({{0}}.{{1}}??null)' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '__oak_acc({{0}},{{1}})' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
 		:ifExpr -> '((__oak_cond)=>{{1}})({{0}})' |> format(
@@ -957,7 +956,7 @@ function __oak_eq(a, b) {
 	// match either null or undefined to compare correctly against undefined ?s
 	// appearing in places like optional arguments
 	if (a == null && b == null) return true;
-	if (a === null || b === null) return false;
+	if (a == null || b == null) return false;
 
 	// match all other types that can be compared cheaply (without function
 	// calls for type coercion or recursive descent)
@@ -982,11 +981,7 @@ function __oak_eq(a, b) {
 	return true;
 }
 function __oak_acc(tgt, prop) {
-	return __is_oak_string(tgt)
-		? __as_oak_string(tgt.valueOf()[prop]) || null
-		: tgt[prop] !== undefined
-		? tgt[prop]
-		: null;
+	return (__is_oak_string(tgt) ? __as_oak_string(tgt.valueOf()[prop]) : tgt[prop]) ?? null;
 }
 function __oak_obj_key(x) {
 	return typeof x === \'symbol\' ? Symbol.keyFor(x) : x;
@@ -1142,7 +1137,7 @@ function string(x) {
 		}
 		return string(x);
 	}
-	if (x === null) {
+	if (x == null) {
 		return \'?\';
 	} else if (typeof x === \'number\') {
 		return x.toString();
@@ -1175,7 +1170,7 @@ function char(n) {
 }
 function type(x) {
 	x = __as_oak_string(x);
-	if (x === null) {
+	if (x == null) {
 		return Symbol.for(\'null\');
 	} else if (typeof x === \'number\') {
 		// Many discrete APIs check for :int, so we consider all integer
