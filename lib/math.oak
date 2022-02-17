@@ -6,8 +6,12 @@
 
 {
 	default: default
+	map: map
 	reduce: reduce
 } := import('std')
+{
+	sort: sort
+} := import('sort')
 
 // Pi, the circle constant
 Pi := 3.14159265358979323846264338327950288419716939937510
@@ -91,6 +95,33 @@ fn max(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
 	true -> n
 	_ -> acc
 })
+
+// mean returns the arithmetic mean, or average, of all given values. If the
+// list is empty, mean returns ?.
+fn mean(xs) if len(xs) {
+	0 -> ?
+	_ -> sum(xs...) / len(xs)
+}
+
+// median returns the median, or "middle value", of all given values. If there
+// is an even number of values given, median computes the mean of the middle
+// two values in the list. If the list is empty, median returns ?.
+fn median(xs) {
+	xs := sort(xs)
+	count := len(xs)
+	half := int(count / 2)
+	if 0 {
+		count -> ?
+		count % 2 -> (xs.(half - 1) + xs.(half)) / 2
+		_ -> xs.(half)
+	}
+}
+
+// stddev returns the population standard deviation computed from the given
+// list of values. If the list is empty, stddev returns ?.
+fn stddev(xs) if ? != xmean := mean(xs) -> {
+	xs |> map(fn(x) pow(xmean - x, 2)) |> mean() |> sqrt()
+}
 
 // round takes a number `n` and returns a floating-point number that represents
 // `n` round to the nearest `decimals`-th decimal place. For negative values of
