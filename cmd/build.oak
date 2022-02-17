@@ -1351,6 +1351,12 @@ function ___runtime_lib() {
 function ___runtime_lib__oak_qm() {
 	throw new Error(\'___runtime_lib?() not implemented\');
 }
+function ___runtime_gc() {
+	throw new Error(\'___runtime_gc() not implemented\');
+}
+function ___runtime_mem() {
+	throw new Error(\'___runtime_mem() not implemented\');
+}
 
 // JavaScript interop
 function bind(target, fn) {
