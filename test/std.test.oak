@@ -282,6 +282,30 @@ fn run(t) {
 			[true, true, 3]
 		)
 
+		'empty if expr' |> t.eq(
+			if 100 {}
+			?
+		)
+
+		'empty if condition' |> t.eq(
+			if {
+				false -> 10
+				true -> 20
+				_ -> 30
+			}
+			20
+		)
+
+		'basic if expr' |> t.eq(
+			if 2 * 2 {
+				? -> 100
+				{ a: 'b' } -> 200
+				5 -> 'five'
+				4 -> 'four'
+			}
+			'four'
+		)
+
 		'if expr with multi target' |> t.eq(
 			[11, 12, 13] |> with std.map() fn(i) if i {
 				10 -> :wrong
