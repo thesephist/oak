@@ -719,7 +719,7 @@ fn renderJSBundle(bundleNode) {
 			:identifier -> '({{0}}.{{1}})' |> format(renderNode(node.left), renderNode(node.right))
 			_ -> '({{0}}[{{1}}])' |> format(renderNode(node.left), renderAsObjectKey(node.right))
 		}
-		:list -> '[' << node.elems |> map(renderAssignTarget) |> join(',') << '=null]'
+		:list -> '[' << node.elems |> map(fn(n) renderAssignTarget(n) << '=null') |> join(',') << ']'
 		:object -> '{' << node.entries |> map(fn(entry) {
 			{ key: k, val: v } := entry
 			if k.type = :identifier & v.type = :identifier & k.val = v.val {
@@ -814,21 +814,24 @@ fn renderJSBundle(bundleNode) {
 		}
 		:ifExpr -> '((__oak_cond)=>{{1}})({{0}})' |> format(
 			renderNode(node.cond)
-			node.branches |> reduce('', fn(branches, br, i) {
-				last? := i + 1 = len(node.branches)
-				if {
-					// optimized common case, where last branch is `_ -> body`
-					br.target.type = :empty & last? -> branches << renderNode(br.body)
-					_ -> {
-						branches << '__oak_eq(__oak_cond,{{0}})?{{1}}:' |> format(
-							renderNode(br.target)
-							renderNode(br.body)
-						)
-						if last? -> branches << 'null'
-						branches
+			if len(node.branches) {
+				0 -> 'null'
+				_ -> node.branches |> reduce('', fn(branches, br, i) {
+					last? := i + 1 = len(node.branches)
+					if {
+						// optimized common case, where last branch is `_ -> body`
+						br.target.type = :empty & last? -> branches << renderNode(br.body)
+						_ -> {
+							branches << '__oak_eq(__oak_cond,{{0}})?{{1}}:' |> format(
+								renderNode(br.target)
+								renderNode(br.body)
+							)
+							if last? -> branches << 'null'
+							branches
+						}
 					}
-				}
-			})
+				})
+			}
 		)
 		:block -> if len(node.exprs) {
 			0 -> 'null'
@@ -861,8 +864,17 @@ fn renderJSBundle(bundleNode) {
 			}
 		}
 		:fnCall -> '{{0}}({{1}})' |> format(
-			if node.function.type {
-				:function -> '(' << renderNode(node.function) << ')'
+			if {
+				node.function.type = :function -> '(' << renderNode(node.function) << ')'
+				// NOTE: a property access through an identifier in a function
+				// must mean that the function is a non-null value. We codegen
+				// this site specifically so that method calls in JavaScript
+				// that require a bound `this` can be called directly instead
+				// of through the `call(target, fn, args...)` built-in, which
+				// is required if we compute the function value and then call
+				// it using a variable reference.
+				node.function.type = :propertyAccess & node.function.right.type = :identifier ->
+					'({{0}}.{{1}})' |> format(renderNode(node.function.left), renderNode(node.function.right))
 				_ -> renderNode(node.function)
 			}
 			if node.restArg {
@@ -1346,9 +1358,8 @@ function ___runtime_mem() {
 }
 
 // JavaScript interop
-function bind(target, fn) {
-	const fnName = Symbol.keyFor(fn);
-	return target[fnName].bind(target);
+function call(target, fn, ...args) {
+	return target[Symbol.keyFor(fn)](...args);
 }
 function __oak_js_new(Constructor, ...args) {
 	return new Constructor(...args);
