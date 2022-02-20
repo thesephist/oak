@@ -1070,24 +1070,50 @@ fn run(t) {
 		'uniq string' |> t.eq(uniq('aaaabbbccd'), 'abcd')
 	}
 
-	// find, indexOf, and contains?
+	// first, last, take, takeLast
 	{
 		{
 			first: first
 			last: last
-			find: find
-			indexOf: indexOf
-			contains?: contains?
+			take: take
+			takeLast: takeLast
 		} := std
-
-
-		fn even?(n) n % 2 = 0
-		fn space?(c) c = ' '
 
 		'first of empty list' |> t.eq(first([]), ?)
 		'first of list' |> t.eq(first([:a, :b, :c]), :a)
 		'first of empty string' |> t.eq(first(''), ?)
 		'first of string' |> t.eq(first('abc'), 'a')
+
+		'last of empty list' |> t.eq(last([]), ?)
+		'last of list' |> t.eq(last([:a, :b, :c]), :c)
+		'last of empty string' |> t.eq(last(''), ?)
+		'last of string' |> t.eq(last('abc'), 'c')
+
+		'take from empty list' |> t.eq(take([], 3), [])
+		'take from list' |> t.eq(take([1, 2, 3, 4, 5], 3), [1, 2, 3])
+		'take from list beyond list length' |> t.eq(take([1, 2, 3], 5), [1, 2, 3])
+		'take from empty string' |> t.eq(take('', 3), '')
+		'take from string' |> t.eq(take('abcde', 3), 'abc')
+		'take from string beyond string length' |> t.eq(take('abc', 5), 'abc')
+
+		'takeLast from empty list' |> t.eq(takeLast([], 3), [])
+		'takeLast from list' |> t.eq(takeLast([1, 2, 3, 4, 5], 3), [3, 4, 5])
+		'takeLast from list beyond list length' |> t.eq(takeLast([1, 2, 3], 5), [1, 2, 3])
+		'takeLast from empty string' |> t.eq(takeLast('', 3), '')
+		'takeLast from string' |> t.eq(takeLast('abcde', 3), 'cde')
+		'takeLast from string beyond string length' |> t.eq(takeLast('abc', 5), 'abc')
+	}
+
+	// find, indexOf, and contains?
+	{
+		{
+			find: find
+			indexOf: indexOf
+			contains?: contains?
+		} := std
+
+		fn even?(n) n % 2 = 0
+		fn space?(c) c = ' '
 
 		'find empty list' |> t.eq(find([], even?), -1)
 		'find nonexistent item in list' |> t.eq(find([1, 3, 5], even?), -1)

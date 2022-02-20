@@ -367,6 +367,14 @@ fn first(xs) xs.0
 // in the stdlib for use in pipelines or iterators.
 fn last(xs) xs.(len(xs) - 1)
 
+// take accepts an iterable and returns a version of it containing the first N
+// elements.
+fn take(xs, n) xs |> slice(0, n)
+
+// takeLast accepts an iterable and returns a version of it containing the last
+// N elements.
+fn takeLast(xs, n) xs |> slice(len(xs) - n)
+
 // find returns the index of the first item in the iterable xs for which the
 // predicate returns true. If no match is found, find returns -1.
 fn find(xs, pred) {
