@@ -156,11 +156,12 @@ fn run(t) {
 		'prod of many' |> t.eq(prod(std.range(1, 11)...), 3628800)
 	}
 
-	// min, max
+	// min, max, clamp
 	{
 		{
 			min: min
 			max: max
+			clamp: clamp
 		} := math
 
 		'min of empty' |> t.eq(min(), ?)
@@ -176,6 +177,18 @@ fn run(t) {
 		same := std.range(10) |> std.map(fn 2)
 		'min of same' |> t.eq(min(same...), 2)
 		'max of same' |> t.eq(max(same...), 2)
+
+		'clamp when x < a' |> t.eq(clamp(5, 10, 20), 10)
+		'clamp when x = a' |> t.eq(clamp(10, 10, 20), 10)
+		'clamp when a < x < b' |> t.eq(clamp(12, 10, 20), 12)
+		'clamp when x = b' |> t.eq(clamp(20, 10, 20), 20)
+		'clamp when x > b' |> t.eq(clamp(50, 10, 20), 20)
+
+		'clamp string x < a' |> t.eq(clamp('a', 'e', 'g'), 'e')
+		'clamp string x = a' |> t.eq(clamp('e', 'e', 'g'), 'e')
+		'clamp string a < x < b' |> t.eq(clamp('f', 'e', 'g'), 'f')
+		'clamp string x = b' |> t.eq(clamp('g', 'e', 'g'), 'g')
+		'clamp string x > b' |> t.eq(clamp('s', 'e', 'g'), 'g')
 	}
 
 	// mean, median, stddev

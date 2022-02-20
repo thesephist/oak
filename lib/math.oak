@@ -96,6 +96,15 @@ fn max(xs...) xs |> reduce(xs.0, fn(acc, n) if n > acc {
 	_ -> acc
 })
 
+// clamp returns a value bounded by some upper and lower bounds a and b. If the
+// given x is between a and b, it is returned as-is; if it is outside the
+// bounds, the closer of the two bounds is returned.
+fn clamp(x, a, b) if {
+	x < a -> a
+	x > b -> b
+	_ -> x
+}
+
 // mean returns the arithmetic mean, or average, of all given values. If the
 // list is empty, mean returns ?.
 fn mean(xs) if len(xs) {
