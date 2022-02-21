@@ -9,6 +9,7 @@
 	contains?: contains?
 	map: map
 	each: each
+	last: last
 	filter: filter
 	reduce: reduce
 } := import('std')
@@ -366,7 +367,14 @@ fn Parser(tokens) {
 	}
 	fn back if index > 0 -> index <- index - 1
 	fn expect(type) if eof?() {
-		true -> error(format('Unexpected end of input, expected {{0}}', type))
+		true -> error(
+			format('Unexpected end of input, expected {{0}}', type)
+			// attempt to report location of last token, if possible
+			if lastTok := last(tokens) {
+				? -> ?
+				_ -> lastTok.pos
+			}
+		)
 		_ -> {
 			nextTok := next()
 			if nextTok.type {
@@ -887,7 +895,7 @@ fn Parser(tokens) {
 						:rightParen -> with notError(expect(:rightParen)) fn {}
 						_ -> with notError(arg := parseNode()) fn if eof?() {
 							true -> {
-								back() // NOTE: this currently sometimes corrupts position information
+								back()
 								error('Unexpected end of input inside argument list', next().pos)
 							}
 							_ -> if peek().type {
