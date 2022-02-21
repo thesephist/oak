@@ -587,7 +587,7 @@ fn Parser(tokens) {
 								exprs := [firstExpr]
 
 								fn sub if eof?() {
-									true -> error('Unexpected end of block or object', tok.pos)
+									true -> error('Unexpected end of input inside block or object', tok.pos)
 									_ -> if peek().type {
 										:rightBrace -> ?
 										_ -> with notError(expr := parseNode()) fn {
@@ -735,67 +735,70 @@ fn Parser(tokens) {
 					_ -> parseNode()
 				}
 
-				if peek().type {
-					:branchArrow -> {
-						arrowTok := next()
-						with notError(body := parseNode()) fn {
-							{
-								type: :ifExpr
-								tok: tok
-								cond: condNode
-								branches: [{
-									type: :ifBranch
-									target: {
-										type: :bool
-										val: true
-										tok: arrowTok
-									}
-									body: body
-								}]
+				if eof?() {
+					true -> error('Unexpected end of input in if expression', tok.pos)
+					_ -> if peek().type {
+						:branchArrow -> {
+							arrowTok := next()
+							with notError(body := parseNode()) fn {
+								{
+									type: :ifExpr
+									tok: tok
+									cond: condNode
+									branches: [{
+										type: :ifBranch
+										target: {
+											type: :bool
+											val: true
+											tok: arrowTok
+										}
+										body: body
+									}]
+								}
 							}
 						}
-					}
-					_ -> with notError(condNode) fn {
-						with notError(expect(:leftBrace)) fn {
-							fn subBranch(branches) if eof?() {
-								false -> if peek().type {
-									:rightBrace -> branches
-									_ -> {
-										fn subTarget(targets) if eof?() {
-											true -> targets
-											_ -> with notError(target := parseNode()) fn if peek().type {
-												:branchArrow -> targets << target
-												_ -> with notError(expect(:comma)) fn {
-													subTarget(targets << target)
+						_ -> with notError(condNode) fn {
+							with notError(expect(:leftBrace)) fn {
+								fn subBranch(branches) if eof?() {
+									false -> if peek().type {
+										:rightBrace -> branches
+										_ -> {
+											fn subTarget(targets) if eof?() {
+												true -> targets
+												_ -> with notError(target := parseNode()) fn if peek().type {
+													:branchArrow -> targets << target
+													_ -> with notError(expect(:comma)) fn {
+														subTarget(targets << target)
+													}
 												}
 											}
-										}
-										with notError(targets := subTarget([])) fn {
-											with notError(expect(:branchArrow)) fn {
-												with notError(body := parseNode()) fn {
-													with notError(expect(:comma)) fn {
-														subBranch(branches |> append(targets |> with map() fn(target) {
-															type: :ifBranch
-															target: target
-															body: body
-														}))
+											with notError(targets := subTarget([])) fn {
+												with notError(expect(:branchArrow)) fn {
+													with notError(body := parseNode()) fn {
+														with notError(expect(:comma)) fn {
+															subBranch(branches |> append(targets |> with map() fn(target) {
+																type: :ifBranch
+																target: target
+																body: body
+															}))
+														}
 													}
 												}
 											}
 										}
 									}
+									_ -> branches
 								}
-								_ -> branches
-							}
-							with notError(branches := subBranch([])) fn {
-								with notError(expect(:rightBrace)) fn {
-									popMinPrec()
+								with notError(branches := subBranch([])) fn {
+									with notError(expect(:rightBrace)) fn {
+										popMinPrec()
 
-									{
-										type: :ifExpr
-										tok: tok
-										cond: condNode
-										branches: branches
+										{
+											type: :ifExpr
+											tok: tok
+											cond: condNode
+											branches: branches
+										}
 									}
 								}
 							}
@@ -882,20 +885,26 @@ fn Parser(tokens) {
 					restArg := ?
 					fn subArg if !eof?() -> if peek().type {
 						:rightParen -> with notError(expect(:rightParen)) fn {}
-						_ -> with notError(arg := parseNode()) fn if peek().type {
-							:ellipsis -> {
-								next() // eat the ellipsis
-								with notError(expect(:comma)) fn {
-									restArg <- arg
+						_ -> with notError(arg := parseNode()) fn if eof?() {
+							true -> {
+								back() // NOTE: this currently sometimes corrupts position information
+								error('Unexpected end of input inside argument list', next().pos)
+							}
+							_ -> if peek().type {
+								:ellipsis -> {
+									next() // eat the ellipsis
+									with notError(expect(:comma)) fn {
+										restArg <- arg
+										subArg()
+									}
+								}
+								:comma -> {
+									next() // eat the comma
+									args << arg
 									subArg()
 								}
+								_ -> error(format('Expected comma after arg in argument list, got {{0}}', peek().type), peek().pos)
 							}
-							:comma -> {
-								next() // eat the comma
-								args << arg
-								subArg()
-							}
-							_ -> error(format('Expected comma after arg in argument list, got {{0}}', peek().type), peek().pos)
 						}
 					}
 					with notError(subArg()) fn {
