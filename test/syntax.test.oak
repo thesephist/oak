@@ -1050,8 +1050,9 @@ fn run(t) {
 			'with with'
 			'with run(a, b)'
 			'with fn(a) b + c'
-			'sum(zip(xs ys))'
+			'a + b(c'
 			'zip(xs, \'ys)'
+			'sum(zip(xs ys))'
 			'sum(zip(xs, \'ys))'
 		] |> with std.each() fn(prog) t.eq(
 			'parse does not crash: ' + prog

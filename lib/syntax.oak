@@ -366,15 +366,12 @@ fn Parser(tokens) {
 		tok
 	}
 	fn back if index > 0 -> index <- index - 1
+	fn lastTokenPos if lastTok := last(tokens) {
+		? -> ?
+		_ -> lastTok.pos
+	}
 	fn expect(type) if eof?() {
-		true -> error(
-			format('Unexpected end of input, expected {{0}}', type)
-			// attempt to report location of last token, if possible
-			if lastTok := last(tokens) {
-				? -> ?
-				_ -> lastTok.pos
-			}
-		)
+		true -> error(format('Unexpected end of input, expected {{0}}', type), lastTokenPos())
 		_ -> {
 			nextTok := next()
 			if nextTok.type {
@@ -515,7 +512,7 @@ fn Parser(tokens) {
 
 				itemNodes := []
 				fn sub if eof?() {
-					true -> error('Unexpected end of input inside list', tok.pos)
+					true -> error('Unexpected end of input inside list', lastTokenPos())
 					_ -> if peek().type {
 						:rightBracket -> ?
 						_ -> with notError(node := parseNode()) fn {
@@ -554,7 +551,7 @@ fn Parser(tokens) {
 						}
 					}
 					_ -> with notError(firstExpr := parseNode()) fn if eof?() {
-						true -> error('Unexpected end of input inside block or object', tok.pos)
+						true -> error('Unexpected end of input inside block or object', lastTokenPos())
 						_ -> if peek().type {
 							:colon -> {
 								// it's an object
@@ -595,7 +592,7 @@ fn Parser(tokens) {
 								exprs := [firstExpr]
 
 								fn sub if eof?() {
-									true -> error('Unexpected end of input inside block or object', tok.pos)
+									true -> error('Unexpected end of input inside block or object', lastTokenPos())
 									_ -> if peek().type {
 										:rightBrace -> ?
 										_ -> with notError(expr := parseNode()) fn {
@@ -744,7 +741,7 @@ fn Parser(tokens) {
 				}
 
 				if eof?() {
-					true -> error('Unexpected end of input in if expression', tok.pos)
+					true -> error('Unexpected end of input in if expression', lastTokenPos())
 					_ -> if peek().type {
 						:branchArrow -> {
 							arrowTok := next()
@@ -829,7 +826,7 @@ fn Parser(tokens) {
 				pushMinPrec(0)
 
 				fn subExpr(exprs) if eof?() {
-					true -> error('Unexpected end of input inside block', tok.pos)
+					true -> error('Unexpected end of input inside block', lastTokenPos())
 					_ -> if peek().type {
 						:rightParen -> exprs
 						_ -> with notError(expr := parseNode()) fn {
@@ -894,10 +891,7 @@ fn Parser(tokens) {
 					fn subArg if !eof?() -> if peek().type {
 						:rightParen -> with notError(expect(:rightParen)) fn {}
 						_ -> with notError(arg := parseNode()) fn if eof?() {
-							true -> {
-								back()
-								error('Unexpected end of input inside argument list', next().pos)
-							}
+							true -> error('Unexpected end of input inside argument list', lastTokenPos())
 							_ -> if peek().type {
 								:ellipsis -> {
 									next() // eat the ellipsis
@@ -950,7 +944,7 @@ fn Parser(tokens) {
 			:pushArrow, :greater, :less, :eq, :geq, :leq, :neq -> {
 				minPrec := lastMinPrec()
 				fn subBinary if eof?() {
-					true -> error('Incomplete binary expression', peek().pos)
+					true -> error('Incomplete binary expression', lastTokenPos())
 					_ -> {
 						peeked := peek()
 						op := peeked.type
