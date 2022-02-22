@@ -398,6 +398,14 @@
 <span class="oak-comment">// in the stdlib for use in pipelines or iterators.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">last</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span>
 
+<span class="oak-comment">// take accepts an iterable and returns a version of it containing the first N</span>
+<span class="oak-comment">// elements.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">take</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">n</span><span class="oak-rightParen">) </span><span class="oak-identifier">xs </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">slice</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-comma">, </span><span class="oak-identifier">n</span><span class="oak-rightParen">)</span>
+
+<span class="oak-comment">// takeLast accepts an iterable and returns a version of it containing the last</span>
+<span class="oak-comment">// N elements.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">takeLast</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">n</span><span class="oak-rightParen">) </span><span class="oak-identifier">xs </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">slice</span><span class="oak-leftParen">(</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-identifier">n</span><span class="oak-rightParen">)</span>
+
 <span class="oak-comment">// find returns the index of the first item in the iterable xs for which the</span>
 <span class="oak-comment">// predicate returns true. If no match is found, find returns -1.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">find</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">pred</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">

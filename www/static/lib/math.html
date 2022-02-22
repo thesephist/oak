@@ -127,6 +127,15 @@
 	</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">acc</span>
 <span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span>
 
+<span class="oak-comment">// clamp returns a value bounded by some upper and lower bounds a and b. If the</span>
+<span class="oak-comment">// given x is between a and b, it is returned as-is; if it is outside the</span>
+<span class="oak-comment">// bounds, the closer of the two bounds is returned.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">clamp</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-comma">, </span><span class="oak-identifier">a</span><span class="oak-comma">, </span><span class="oak-identifier">b</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">x </span><span class="oak-less">&lt; </span><span class="oak-identifier">a </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">a</span><span class="oak-newline">
+	</span><span class="oak-identifier">x </span><span class="oak-greater">> </span><span class="oak-identifier">b </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">b</span><span class="oak-newline">
+	</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">x</span>
+<span class="oak-rightBrace">}</span>
+
 <span class="oak-comment">// mean returns the arithmetic mean, or average, of all given values. If the</span>
 <span class="oak-comment">// list is empty, mean returns ?.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">mean</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
