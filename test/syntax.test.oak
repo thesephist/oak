@@ -1054,6 +1054,7 @@ fn run(t) {
 			'zip(xs, \'ys)'
 			'sum(zip(xs ys))'
 			'sum(zip(xs, \'ys))'
+			'with server.route(\'/hello/:name\''
 		] |> with std.each() fn(prog) t.eq(
 			'parse does not crash: ' + prog
 			parse(prog)

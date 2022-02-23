@@ -418,199 +418,202 @@ fn Parser(tokens) {
 	// parseUnit is responsible for parsing the smallest complete syntactic
 	// "units" of Oak's syntax, like literals including function literals,
 	// grouped expressions in blocks, and if/with expressions.
-	fn parseUnit {
-		tok := next()
-		if tok.type {
-			:qmark -> { type: :null, tok: tok }
-			:stringLiteral -> {
-				type: :string
-				tok: tok
-				val: {
-					verbatim := tok.val
-					fn sub(parsed, i) if c := verbatim.(i) {
-						? -> parsed
-						'\\' -> if escapedChar := verbatim.(i + 1) {
-							't' -> sub(parsed << '\t', i + 2)
-							'n' -> sub(parsed << '\n', i + 2)
-							'r' -> sub(parsed << '\r', i + 2)
-							'f' -> sub(parsed << '\f', i + 2)
-							'x' -> if c1 := verbatim.(i + 2) {
-								? -> sub(parsed << escapedChar, i + 2)
-								_ -> if c2 := verbatim.(i + 3) {
-									? -> sub(parsed << escapedChar << c1, i + 3)
-									_ -> if code := fromHex(c1 + c2) {
-										? -> sub(parsed << escapedChar << c1 << c2, i + 4)
-										_ -> sub(parsed << char(code), i + 4)
+	fn parseUnit if eof?() {
+		true -> error('Unexpected end of input', lastTokenPos())
+		_ -> {
+			tok := next()
+			if tok.type {
+				:qmark -> { type: :null, tok: tok }
+				:stringLiteral -> {
+					type: :string
+					tok: tok
+					val: {
+						verbatim := tok.val
+						fn sub(parsed, i) if c := verbatim.(i) {
+							? -> parsed
+							'\\' -> if escapedChar := verbatim.(i + 1) {
+								't' -> sub(parsed << '\t', i + 2)
+								'n' -> sub(parsed << '\n', i + 2)
+								'r' -> sub(parsed << '\r', i + 2)
+								'f' -> sub(parsed << '\f', i + 2)
+								'x' -> if c1 := verbatim.(i + 2) {
+									? -> sub(parsed << escapedChar, i + 2)
+									_ -> if c2 := verbatim.(i + 3) {
+										? -> sub(parsed << escapedChar << c1, i + 3)
+										_ -> if code := fromHex(c1 + c2) {
+											? -> sub(parsed << escapedChar << c1 << c2, i + 4)
+											_ -> sub(parsed << char(code), i + 4)
+										}
 									}
 								}
+								_ -> sub(parsed << escapedChar, i + 2)
 							}
-							_ -> sub(parsed << escapedChar, i + 2)
+							_ -> sub(parsed << c, i + 1)
 						}
-						_ -> sub(parsed << c, i + 1)
-					}
-					sub('', 0)
-				}
-			}
-			:numberLiteral -> if tok.val |> strContains?('.') {
-				true -> if parsed := float(tok.val) {
-					? -> error(format('Could not parse floating point number {{0}}', tok.val), tok.pos)
-					_ -> {
-						type: :float
-						tok: tok
-						val: parsed
+						sub('', 0)
 					}
 				}
-				_ -> if parsed := int(tok.val) {
-					? -> error(format('Could not parse integer number {{0}}', tok.val), tok.pos)
-					_ -> {
-						type: :int
-						tok: tok
-						val: parsed
+				:numberLiteral -> if tok.val |> strContains?('.') {
+					true -> if parsed := float(tok.val) {
+						? -> error(format('Could not parse floating point number {{0}}', tok.val), tok.pos)
+						_ -> {
+							type: :float
+							tok: tok
+							val: parsed
+						}
 					}
-				}
-			}
-			:trueLiteral -> {
-				type: :bool
-				tok: tok
-				val: true
-			}
-			:falseLiteral -> {
-				type: :bool
-				tok: tok
-				val: false
-			}
-			:colon -> if peek().type {
-				:identifier -> {
-					type: :atom
-					tok: tok
-					val: next().val
-				}
-				:ifKeyword -> {
-					next()
-					{ type: :atom, tok: tok, val: 'if' }
-				}
-				:fnKeyword -> {
-					next()
-					{ type: :atom, tok: tok, val: 'fn' }
-				}
-				:withKeyword -> {
-					next()
-					{ type: :atom, tok: tok, val: 'with' }
+					_ -> if parsed := int(tok.val) {
+						? -> error(format('Could not parse integer number {{0}}', tok.val), tok.pos)
+						_ -> {
+							type: :int
+							tok: tok
+							val: parsed
+						}
+					}
 				}
 				:trueLiteral -> {
-					next()
-					{ type: :atom, tok: tok, val: 'true' }
+					type: :bool
+					tok: tok
+					val: true
 				}
 				:falseLiteral -> {
-					next()
-					{ type: :atom, tok: tok, val: 'false' }
+					type: :bool
+					tok: tok
+					val: false
 				}
-				_ -> error(format('Expected identifier after ":", got {{0}}', renderToken(peek())), peek().pos)
-			}
-			:leftBracket -> {
-				pushMinPrec(0)
-
-				itemNodes := []
-				fn sub if eof?() {
-					true -> error('Unexpected end of input inside list', lastTokenPos())
-					_ -> if peek().type {
-						:rightBracket -> ?
-						_ -> with notError(node := parseNode()) fn {
-							with notError(err := expect(:comma)) fn {
-								itemNodes << node
-								sub()
-							}
-						}
+				:colon -> if peek().type {
+					:identifier -> {
+						type: :atom
+						tok: tok
+						val: next().val
 					}
+					:ifKeyword -> {
+						next()
+						{ type: :atom, tok: tok, val: 'if' }
+					}
+					:fnKeyword -> {
+						next()
+						{ type: :atom, tok: tok, val: 'fn' }
+					}
+					:withKeyword -> {
+						next()
+						{ type: :atom, tok: tok, val: 'with' }
+					}
+					:trueLiteral -> {
+						next()
+						{ type: :atom, tok: tok, val: 'true' }
+					}
+					:falseLiteral -> {
+						next()
+						{ type: :atom, tok: tok, val: 'false' }
+					}
+					_ -> error(format('Expected identifier after ":", got {{0}}', renderToken(peek())), peek().pos)
 				}
-				with notError(sub()) fn {
-					with notError(err := expect(:rightBracket)) fn {
-						popMinPrec()
+				:leftBracket -> {
+					pushMinPrec(0)
 
-						{
-							type: :list
-							tok: tok
-							elems: itemNodes
-						}
-					}
-				}
-			}
-			:leftBrace -> {
-				pushMinPrec(0)
-
-				// empty {} is always considered an object -- an empty block is illegal
-				if peek().type {
-					:rightBrace -> {
-						next() // eat the rightBrace
-						popMinPrec()
-
-						{
-							type: :object
-							tok: tok
-							entries: []
-						}
-					}
-					_ -> with notError(firstExpr := parseNode()) fn if eof?() {
-						true -> error('Unexpected end of input inside block or object', lastTokenPos())
+					itemNodes := []
+					fn sub if eof?() {
+						true -> error('Unexpected end of input inside list', lastTokenPos())
 						_ -> if peek().type {
-							:colon -> {
-								// it's an object
-								next() // eat the colon
-								with notError(valExpr := parseNode()) fn {
-									with notError(expect(:comma)) fn {
-										entries := [{ key: firstExpr, val: valExpr }]
+							:rightBracket -> ?
+							_ -> with notError(node := parseNode()) fn {
+								with notError(err := expect(:comma)) fn {
+									itemNodes << node
+									sub()
+								}
+							}
+						}
+					}
+					with notError(sub()) fn {
+						with notError(err := expect(:rightBracket)) fn {
+							popMinPrec()
 
-										fn sub if !eof?() -> if peek().type {
+							{
+								type: :list
+								tok: tok
+								elems: itemNodes
+							}
+						}
+					}
+				}
+				:leftBrace -> {
+					pushMinPrec(0)
+
+					// empty {} is always considered an object -- an empty block is illegal
+					if peek().type {
+						:rightBrace -> {
+							next() // eat the rightBrace
+							popMinPrec()
+
+							{
+								type: :object
+								tok: tok
+								entries: []
+							}
+						}
+						_ -> with notError(firstExpr := parseNode()) fn if eof?() {
+							true -> error('Unexpected end of input inside block or object', lastTokenPos())
+							_ -> if peek().type {
+								:colon -> {
+									// it's an object
+									next() // eat the colon
+									with notError(valExpr := parseNode()) fn {
+										with notError(expect(:comma)) fn {
+											entries := [{ key: firstExpr, val: valExpr }]
+
+											fn sub if !eof?() -> if peek().type {
+												:rightBrace -> ?
+												_ -> with notError(key := parseNode()) fn {
+													with notError(expect(:colon)) fn {
+														with notError(val := parseNode()) fn {
+															with notError(expect(:comma)) fn {
+																entries << { key: key, val: val }
+																sub()
+															}
+														}
+													}
+												}
+											}
+											with notError(sub()) fn {
+												with notError(expect(:rightBrace)) fn {
+													popMinPrec()
+
+													{
+														type: :object
+														tok: tok
+														entries: entries
+													}
+												}
+											}
+										}
+									}
+								}
+								_ -> with notError(expect(:comma)) fn {
+									// it's a block
+									exprs := [firstExpr]
+
+									fn sub if eof?() {
+										true -> error('Unexpected end of input inside block or object', lastTokenPos())
+										_ -> if peek().type {
 											:rightBrace -> ?
-											_ -> with notError(key := parseNode()) fn {
-												with notError(expect(:colon)) fn {
-													with notError(val := parseNode()) fn {
-														with notError(expect(:comma)) fn {
-															entries << { key: key, val: val }
-															sub()
-														}
-													}
-												}
-											}
-										}
-										with notError(sub()) fn {
-											with notError(expect(:rightBrace)) fn {
-												popMinPrec()
-
-												{
-													type: :object
-													tok: tok
-													entries: entries
+											_ -> with notError(expr := parseNode()) fn {
+												with notError(expect(:comma)) fn {
+													exprs << expr
+													sub()
 												}
 											}
 										}
 									}
-								}
-							}
-							_ -> with notError(expect(:comma)) fn {
-								// it's a block
-								exprs := [firstExpr]
+									with notError(sub()) fn {
+										with notError(expect(:rightBrace)) fn {
+											popMinPrec()
 
-								fn sub if eof?() {
-									true -> error('Unexpected end of input inside block or object', lastTokenPos())
-									_ -> if peek().type {
-										:rightBrace -> ?
-										_ -> with notError(expr := parseNode()) fn {
-											with notError(expect(:comma)) fn {
-												exprs << expr
-												sub()
+											{
+												type: :block
+												tok: tok
+												exprs: exprs
 											}
-										}
-									}
-								}
-								with notError(sub()) fn {
-									with notError(expect(:rightBrace)) fn {
-										popMinPrec()
-
-										{
-											type: :block
-											tok: tok
-											exprs: exprs
 										}
 									}
 								}
@@ -618,236 +621,236 @@ fn Parser(tokens) {
 						}
 					}
 				}
-			}
-			:fnKeyword -> {
-				pushMinPrec(0)
+				:fnKeyword -> {
+					pushMinPrec(0)
 
-				name := if peek().type {
-					// optional named fn
-					:identifier -> next().val
-					_ -> ''
-				}
-
-				args := []
-				restArg := ''
-
-				fn parseBody with notError(body := parseNode()) fn {
-					// Exception to the "{} is empty object" rule is that `fn
-					// {}` parses as a function with an empty block as a body.
-					if body {
-						{ type: :object, tok: _, entries: [] } -> body <- {
-							type: :block
-							tok: body.tok
-							exprs: []
-						}
+					name := if peek().type {
+						// optional named fn
+						:identifier -> next().val
+						_ -> ''
 					}
-					popMinPrec()
 
-					{
-						type: :function
-						name: name
-						tok: tok
-						args: args
-						restArg: restArg
-						body: body
-					}
-				}
+					args := []
+					restArg := ''
 
-				if peek().type {
-					:leftParen -> {
-						// optional argument list
-						next() // eat the leftParen
-
-						fn sub if !eof?() -> if peek().type {
-							:rightParen -> ?
-							_ -> {
-								arg := expect(:identifier)
-								if arg.type {
-									:error -> {
-										back() // try again
-
-										with notError(expect(:underscore)) fn {
-											args << '_'
-											with notError(expect(:comma)) fn {
-												sub()
-											}
-										}
-									}
-									_ -> if peek().type {
-										:ellipsis -> {
-											restArg <- arg.val
-											next() // eat the ellipsis
-											with notError(expect(:comma)) fn {
-												sub()
-											}
-										}
-										_ -> {
-											args << arg.val
-											with notError(expect(:comma)) fn {
-												sub()
-											}
-										}
-									}
-								}
+					fn parseBody with notError(body := parseNode()) fn {
+						// Exception to the "{} is empty object" rule is that `fn
+						// {}` parses as a function with an empty block as a body.
+						if body {
+							{ type: :object, tok: _, entries: [] } -> body <- {
+								type: :block
+								tok: body.tok
+								exprs: []
 							}
 						}
-						with notError(sub()) fn {
-							with notError(expect(:rightParen)) fn {
-								parseBody()
-							}
-						}
-					}
-					_ -> parseBody()
-				}
-			}
-			:underscore -> {
-				type: :empty
-				tok: tok
-			}
-			:identifier -> {
-				type: :identifier
-				tok: tok
-				val: tok.val
-			}
-			:minus, :exclam -> with notError(right := parseSubNode()) fn {
-				type: :unary
-				tok: tok
-				op: tok.type
-				right: right
-			}
-			:ifKeyword -> {
-				// We want to support multi-target branches, but don't want to
-				// incur the performance overhead in the interpreter/evaluator
-				// of keeping every single target as a Go slice, when the vast
-				// majority of targets will be single-value, which requires
-				// just a pointer to an astNode.
-				//
-				// So instead of doing that, we penalize the multi-value case
-				// by essentially considering it syntax sugar and splitting
-				// such branches into multiple AST branches, each with one
-				// target value.
-				pushMinPrec(0)
-
-				// if no explicit condition is provided (i.e. if the keyword is
-				// followed by a { ... }), we assume the condition is "true" to
-				// allow for the useful `if { case, case ... }` pattern.
-				condNode := if peek().type {
-					:leftBrace -> {
-						type: :bool
-						val: true
-						tok: tok
-					}
-					_ -> parseNode()
-				}
-
-				if eof?() {
-					true -> error('Unexpected end of input in if expression', lastTokenPos())
-					_ -> if peek().type {
-						:branchArrow -> {
-							arrowTok := next()
-							with notError(body := parseNode()) fn {
-								{
-									type: :ifExpr
-									tok: tok
-									cond: condNode
-									branches: [{
-										type: :ifBranch
-										target: {
-											type: :bool
-											val: true
-											tok: arrowTok
-										}
-										body: body
-									}]
-								}
-							}
-						}
-						_ -> with notError(condNode) fn {
-							with notError(expect(:leftBrace)) fn {
-								fn subBranch(branches) if eof?() {
-									false -> if peek().type {
-										:rightBrace -> branches
-										_ -> {
-											fn subTarget(targets) if eof?() {
-												true -> targets
-												_ -> with notError(target := parseNode()) fn if peek().type {
-													:branchArrow -> targets << target
-													_ -> with notError(expect(:comma)) fn {
-														subTarget(targets << target)
-													}
-												}
-											}
-											with notError(targets := subTarget([])) fn {
-												with notError(expect(:branchArrow)) fn {
-													with notError(body := parseNode()) fn {
-														with notError(expect(:comma)) fn {
-															subBranch(branches |> append(targets |> with map() fn(target) {
-																type: :ifBranch
-																target: target
-																body: body
-															}))
-														}
-													}
-												}
-											}
-										}
-									}
-									_ -> branches
-								}
-								with notError(branches := subBranch([])) fn {
-									with notError(expect(:rightBrace)) fn {
-										popMinPrec()
-
-										{
-											type: :ifExpr
-											tok: tok
-											cond: condNode
-											branches: branches
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			:withKeyword -> {
-				pushMinPrec(0)
-				with notError(base := parseNode()) fn if base.type {
-					:fnCall -> with notError(lastArg := parseNode()) fn {
 						popMinPrec()
-						base.args << lastArg
-						base
-					}
-					_ -> error(format('with keyword should be followed by a fn call, found {{0}}', base), tok.pos)
-				}
-			}
-			:leftParen -> {
-				pushMinPrec(0)
 
-				fn subExpr(exprs) if eof?() {
-					true -> error('Unexpected end of input inside block', lastTokenPos())
-					_ -> if peek().type {
-						:rightParen -> exprs
-						_ -> with notError(expr := parseNode()) fn {
-							with notError(expect(:comma)) fn {
-								subExpr(exprs << expr)
-							}
-						}
-					}
-				}
-				with notError(exprs := subExpr([])) fn {
-					with notError(expect(:rightParen)) fn {
-						popMinPrec()
 						{
-							type: :block
+							type: :function
+							name: name
 							tok: tok
-							exprs: exprs
+							args: args
+							restArg: restArg
+							body: body
+						}
+					}
+
+					if peek().type {
+						:leftParen -> {
+							// optional argument list
+							next() // eat the leftParen
+
+							fn sub if !eof?() -> if peek().type {
+								:rightParen -> ?
+								_ -> {
+									arg := expect(:identifier)
+									if arg.type {
+										:error -> {
+											back() // try again
+
+											with notError(expect(:underscore)) fn {
+												args << '_'
+												with notError(expect(:comma)) fn {
+													sub()
+												}
+											}
+										}
+										_ -> if peek().type {
+											:ellipsis -> {
+												restArg <- arg.val
+												next() // eat the ellipsis
+												with notError(expect(:comma)) fn {
+													sub()
+												}
+											}
+											_ -> {
+												args << arg.val
+												with notError(expect(:comma)) fn {
+													sub()
+												}
+											}
+										}
+									}
+								}
+							}
+							with notError(sub()) fn {
+								with notError(expect(:rightParen)) fn {
+									parseBody()
+								}
+							}
+						}
+						_ -> parseBody()
+					}
+				}
+				:underscore -> {
+					type: :empty
+					tok: tok
+				}
+				:identifier -> {
+					type: :identifier
+					tok: tok
+					val: tok.val
+				}
+				:minus, :exclam -> with notError(right := parseSubNode()) fn {
+					type: :unary
+					tok: tok
+					op: tok.type
+					right: right
+				}
+				:ifKeyword -> {
+					// We want to support multi-target branches, but don't want to
+					// incur the performance overhead in the interpreter/evaluator
+					// of keeping every single target as a Go slice, when the vast
+					// majority of targets will be single-value, which requires
+					// just a pointer to an astNode.
+					//
+					// So instead of doing that, we penalize the multi-value case
+					// by essentially considering it syntax sugar and splitting
+					// such branches into multiple AST branches, each with one
+					// target value.
+					pushMinPrec(0)
+
+					// if no explicit condition is provided (i.e. if the keyword is
+					// followed by a { ... }), we assume the condition is "true" to
+					// allow for the useful `if { case, case ... }` pattern.
+					condNode := if peek().type {
+						:leftBrace -> {
+							type: :bool
+							val: true
+							tok: tok
+						}
+						_ -> parseNode()
+					}
+
+					if eof?() {
+						true -> error('Unexpected end of input in if expression', lastTokenPos())
+						_ -> if peek().type {
+							:branchArrow -> {
+								arrowTok := next()
+								with notError(body := parseNode()) fn {
+									{
+										type: :ifExpr
+										tok: tok
+										cond: condNode
+										branches: [{
+											type: :ifBranch
+											target: {
+												type: :bool
+												val: true
+												tok: arrowTok
+											}
+											body: body
+										}]
+									}
+								}
+							}
+							_ -> with notError(condNode) fn {
+								with notError(expect(:leftBrace)) fn {
+									fn subBranch(branches) if eof?() {
+										false -> if peek().type {
+											:rightBrace -> branches
+											_ -> {
+												fn subTarget(targets) if eof?() {
+													true -> targets
+													_ -> with notError(target := parseNode()) fn if peek().type {
+														:branchArrow -> targets << target
+														_ -> with notError(expect(:comma)) fn {
+															subTarget(targets << target)
+														}
+													}
+												}
+												with notError(targets := subTarget([])) fn {
+													with notError(expect(:branchArrow)) fn {
+														with notError(body := parseNode()) fn {
+															with notError(expect(:comma)) fn {
+																subBranch(branches |> append(targets |> with map() fn(target) {
+																	type: :ifBranch
+																	target: target
+																	body: body
+																}))
+															}
+														}
+													}
+												}
+											}
+										}
+										_ -> branches
+									}
+									with notError(branches := subBranch([])) fn {
+										with notError(expect(:rightBrace)) fn {
+											popMinPrec()
+
+											{
+												type: :ifExpr
+												tok: tok
+												cond: condNode
+												branches: branches
+											}
+										}
+									}
+								}
+							}
 						}
 					}
 				}
+				:withKeyword -> {
+					pushMinPrec(0)
+					with notError(base := parseNode()) fn if base.type {
+						:fnCall -> with notError(lastArg := parseNode()) fn {
+							popMinPrec()
+							base.args << lastArg
+							base
+						}
+						_ -> error(format('with keyword should be followed by a fn call, found {{0}}', base), tok.pos)
+					}
+				}
+				:leftParen -> {
+					pushMinPrec(0)
+
+					fn subExpr(exprs) if eof?() {
+						true -> error('Unexpected end of input inside block', lastTokenPos())
+						_ -> if peek().type {
+							:rightParen -> exprs
+							_ -> with notError(expr := parseNode()) fn {
+								with notError(expect(:comma)) fn {
+									subExpr(exprs << expr)
+								}
+							}
+						}
+					}
+					with notError(exprs := subExpr([])) fn {
+						with notError(expect(:rightParen)) fn {
+							popMinPrec()
+							{
+								type: :block
+								tok: tok
+								exprs: exprs
+							}
+						}
+					}
+				}
+				_ -> error(format('Unexpected token {{0}} at start of unit', renderToken(tok)), tok.pos)
 			}
-			_ -> error(format('Unexpected token {{0}} at start of unit', renderToken(tok)), tok.pos)
 		}
 	}
 
