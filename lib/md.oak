@@ -4,6 +4,7 @@
 	slice: slice
 	map: map
 	each: each
+	take: take
 	filter: filter
 	reduce: reduce
 	every: every
@@ -593,12 +594,12 @@ fn parseParagraph(lineReader) {
 			text := next()
 			if [text |> endsWith?('  '), text.(len(text) - 1)] {
 				[true, _] -> {
-					lines |> append(text |> slice(0, len(text) - 2) |>
+					lines |> append(text |> take(len(text) - 2) |>
 						tokenizeText() |> parseText())
 					sub(lines << { tag: :br })
 				}
 				[_, '\\'] -> {
-					lines |> append(text |> slice(0, len(text) - 1) |>
+					lines |> append(text |> take(len(text) - 1) |>
 						tokenizeText() |> parseText())
 					sub(lines << { tag: :br })
 				}

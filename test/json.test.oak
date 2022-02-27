@@ -204,7 +204,7 @@ fn run(t) {
 		]
 
 		targets |> std.each(fn(target) {
-			fmt.format('2x round-trip {{ 0 }}...', string(target) |> std.slice(0, 20)) |> t.eq(
+			fmt.format('2x round-trip {{ 0 }}...', string(target) |> std.take(20)) |> t.eq(
 				target |> ser() |> par() |> ser() |> par()
 				target
 			)

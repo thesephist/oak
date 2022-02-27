@@ -6,6 +6,7 @@
 	clone: clone
 	map: map
 	each: each
+	take: take
 	filter: filter
 	reduce: reduce
 	append: append
@@ -272,7 +273,7 @@ fn commonPrefix(paths) {
 		len(first) -> first
 		_ -> if first.(i) {
 			last.(i) -> sub(i + 1)
-			_ -> first |> slice(0, i)
+			_ -> first |> take(i)
 		}
 	}
 	sub(0)

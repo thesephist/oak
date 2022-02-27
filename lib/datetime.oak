@@ -13,8 +13,9 @@
 
 {
 	default: default
-	slice: slice
 	map: map
+	take: take
+	slice: slice
 	merge: merge
 } := import('std')
 {
@@ -239,12 +240,12 @@ fn parse(s) if [date, clock] := s |> split('T') {
 	_ -> if [year, month, day] := date |> split('-') |> map(int) {
 		[], [_], [_, _]
 		[?, _, _], [_, ?, _], [_, _, ?] -> ?
-		_ -> if [hour, minute, second] := clock |> slice(0, 8) |> split(':') |> map(int) {
+		_ -> if [hour, minute, second] := clock |> take(8) |> split(':') |> map(int) {
 			[], [_], [_, _]
 			[?, _, _], [_, ?, _], [_, _, ?] -> ?
 			_ -> {
 				// milliseconds and time zones
-				[_, maybeMillis] := clock |> split('.') |> map(fn(s) s |> slice(0, 3)) |> map(int)
+				[_, maybeMillis] := clock |> split('.') |> map(fn(s) s |> take(3)) |> map(int)
 				tzOffset := if {
 					clock |> strContains?('+') ->
 						_parseTZOffset(clock |> slice(clock |> strIndexOf('+') + 1))

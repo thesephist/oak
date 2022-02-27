@@ -10,6 +10,7 @@
 	map: map
 	each: each
 	last: last
+	take: take
 	filter: filter
 	reduce: reduce
 } := import('std')
@@ -1172,9 +1173,9 @@ fn Printer(tokens) {
 			0 -> list
 			_ -> {
 				fn sub(i) if {
-					i = len(list) -> list |> slice(0, i)
+					i = len(list) -> list |> take(i)
 					list.(i - 1) > list.(i) -> sub(i + 1)
-					_ -> list |> slice(0, i)
+					_ -> list |> take(i)
 				}
 				sub(1)
 			}
