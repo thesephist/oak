@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -565,11 +566,24 @@ func (c *Context) oakExec(args []Value) (Value, *runtimeError) {
 	}, nil
 }
 
+var inputReaderInit sync.Once
+var inputReader *bufio.Reader
+
+func initInputReader() {
+	inputReader = bufio.NewReader(os.Stdin)
+}
+
 func (c *Context) oakInput(_ []Value) (Value, *runtimeError) {
-	reader := bufio.NewReader(os.Stdin)
-	str, err := reader.ReadString('\n')
+	inputReaderInit.Do(initInputReader)
+	str, err := inputReader.ReadString('\n')
 	if err == io.EOF {
-		return errObj("EOF"), nil
+		return ObjectValue{
+			"type":  AtomValue("error"),
+			"error": MakeString("EOF"),
+			// if any data was read before encountering EOF, ensure the caller
+			// still gets that data.
+			"data": MakeString(str),
+		}, nil
 	} else if err != nil {
 		return errObj(fmt.Sprintf("Could not read input: %s", err.Error())), nil
 	}
