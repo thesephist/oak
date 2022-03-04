@@ -1184,9 +1184,7 @@ func (c *Context) oakReq(args []Value) (Value, *runtimeError) {
 	// send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, &runtimeError{
-			reason: fmt.Sprintf("Could not send request: %s", err.Error()),
-		}
+		return errObj(fmt.Sprintf(fmt.Sprintf("Could not send request: %s", err.Error()))), nil
 	}
 	defer resp.Body.Close()
 
