@@ -505,6 +505,20 @@ fn debounce(duration, firstCall, f) {
 
 // OS interfaces
 
+// stdin reads and returns all data from standard input. It attempts to read
+// standard input with input() continuously until an EOF is encountered.
+fn stdin {
+	file := ''
+	with loop() fn(_, break) {
+		evt := input()
+		file << evt.data
+		if evt.type {
+			:error -> break(file)
+			_ -> file << '\n'
+		}
+	}
+}
+
 // println prints every value passed to it, in its default string
 // representation, separated by a space.
 //
