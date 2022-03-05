@@ -1314,6 +1314,18 @@ fn run(t) {
 			}
 			200
 		)
+		'loop that breaks without a return value returns ?' |> t.eq(
+			with loop() fn(count, break) {
+				if count = 100 -> break()
+			}
+			?
+		)
+		'loop that returns value through breaker' |> t.eq(
+			with loop() fn(count, break) {
+				if count = 100 -> break(:success)
+			}
+			:success
+		)
 	}
 }
 
