@@ -6,11 +6,11 @@ fn run(t) {
 	{
 		f := fmt.format
 
-		'Format empty string' |> t.eq(
+		'format empty string' |> t.eq(
 			'' |> f()
 			''
 		)
-		'Format string literally' |> t.eq(
+		'format string literally' |> t.eq(
 			'String literal' |> f()
 			'String literal'
 		)
@@ -18,49 +18,118 @@ fn run(t) {
 			'One {{ 0 }} Three' |> f('Two')
 			'One Two Three'
 		)
-		'Interpolation as whole string' |> t.eq(
+		'interpolation as whole string' |> t.eq(
 			'{{ 0 }}' |> f('First!')
 			'First!'
 		)
-		'Multiple interpolated variables' |> t.eq(
+		'multiple interpolated variables' |> t.eq(
 			'One {{ 0 }} Three {{ 2 }}::{{ 1 }}' |> f('Two', 'Four', 'Five')
 			'One Two Three Five::Four'
 		)
-		'A variable interpolated multiple times' |> t.eq(
+		'a variable interpolated multiple times' |> t.eq(
 			'One {{ 0 }} -- Two {{ 0 }}' |> f('hi')
 			'One hi -- Two hi'
 		)
-		'Non-string interpolated variables' |> t.eq(
+		'non-string interpolated variables' |> t.eq(
 			'abc {{ 0 }} xyz {{ 1 }}' |> f(:atoms, 100)
 			'abc atoms xyz 100'
 		)
-		'Non-given variables show as ?' |> t.eq(
+		'composite interpolated values' |> t.eq(
+			'debug -> {{ 0 }}' |> f({ name: 'Linus' })
+			'debug -> {name: \'Linus\'}'
+		)
+		'non-given variables show as ?' |> t.eq(
 			'Hello, {{ 0 }}!' |> f()
 			'Hello, ?!'
 		)
-		'Non-given indices become empty' |> t.eq(
+		'non-given indices become empty' |> t.eq(
 			'Hello, {{ }}!' |> f('World!')
 			'Hello, !'
 		)
-		'Interpolation without surrounding space' |> t.eq(
+		'interpolation without surrounding space' |> t.eq(
 			'{{1}}, {{0}}!' |> f('World', 'Hello')
 			'Hello, World!'
 		)
-		'Interpolation with extra surrounding space' |> t.eq(
+		'interpolation with extra surrounding space' |> t.eq(
 			'{{  1   }}, {{\t0\t}}!' |> f('World', 'Hello')
 			'Hello, World!'
 		)
-		'Formatting in \'{}\' to escape it' |> t.eq(
+		'formatting in \'{}\' to escape it' |> t.eq(
 			'Format using \'{{0}}\'' |> f('{}')
 			'Format using \'{}\''
 		)
-		'Formatting in format strings do not cause weird behavior' |> t.eq(
+		'formatting in format strings do not cause weird behavior' |> t.eq(
 			'1 {{ 0 }} 2 {{ 1 }}' |> f('{{', '{{ 0 }}')
 			'1 {{ 2 {{ 0 }}'
 		)
 
+		// named keys
+		'1 named variable' |> t.eq(
+			'One {{ two }} Three' |> f({ two: 'Two' })
+			'One Two Three'
+		)
+		'multiple named variables' |> t.eq(
+			'One {{ two }} Three {{ five }}::{{ four }}' |> f({
+				two: 'Two'
+				four: 'Four'
+				five: 'Five'
+			})
+			'One Two Three Five::Four'
+		)
+		'a named variable interpolated multiple times' |> t.eq(
+			'One {{ x }} -- Two {{ x }}' |> f({ x: 'hi' })
+			'One hi -- Two hi'
+		)
+		'non-string named variables' |> t.eq(
+			'abc {{ atom }} xyz {{ number }}' |> f({
+				atom: :atoms
+				number: 100
+			})
+			'abc atoms xyz 100'
+		)
+		'composite named variable values' |> t.eq(
+			'debug -> {{ user }}' |> f({
+				user: { name: 'Linus' }
+			})
+			'debug -> {name: \'Linus\'}'
+		)
+		'non-given named variables show as ?' |> t.eq(
+			'Hello, {{ name }}!' |> f({})
+			'Hello, ?!'
+		)
+		'named variables with no given values show as ?' |> t.eq(
+			'Hello, {{ name }}!' |> f()
+			'Hello, ?!'
+		)
+		'named variables without surrounding space' |> t.eq(
+			'{{greeting}}, {{name}}!' |> f({
+				greeting: 'Hello'
+				name: 'World'
+			})
+			'Hello, World!'
+		)
+		'named variables with extra surrounding space' |> t.eq(
+			'{{  greeting   }}, {{\tname\t}}!' |> f({
+				greeting: 'Hello'
+				name: 'World'
+			})
+			'Hello, World!'
+		)
+		'mixed use of numbered and named variable interpolation' |> t.eq(
+			'{{ name }} is an {{ desc }} {{ 1 }} {{ 2 }}.' |> f(
+				{ name: 'Oak', desc: :expressive }
+				'programming'
+				'language'
+			)
+			'Oak is an expressive programming language.'
+		)
+
 		// failure cases
-		'Incomplete interpolation opening' |> t.eq(
+		'using only one brace pair is a no-op' |> t.eq(
+			'Hello, { 0 }!' |> f('World!')
+			'Hello, { 0 }!'
+		)
+		'incomplete interpolation opening' |> t.eq(
 			'Hello, { 0 }}!' |> f('World!')
 			'Hello, { 0 }}!'
 		)

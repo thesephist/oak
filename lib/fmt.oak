@@ -2,6 +2,7 @@
 
 {
 	println: println
+	default: default
 } := import('std')
 
 // format returns the format string `raw`, where each substring of the form
@@ -20,6 +21,8 @@ fn format(raw, values...) {
 	key := ''
 	// result build-up buffer
 	buf := ''
+	// non-integer keys will key into this dict
+	value := values.0 |> default({})
 
 	fn sub(idx) if idx < len(raw) {
 		true -> {
@@ -41,8 +44,12 @@ fn format(raw, values...) {
 				}
 				2 -> if c {
 					'}' -> {
-						if ? != index := int(key) ->
-							buf << string(values.(int(key)))
+						index := int(key)
+						buf << if {
+							key = '' -> ''
+							index = ? -> value.(key)
+							_ -> values.(index)
+						} |> string()
 						key <- ''
 						which <- 3
 					}
