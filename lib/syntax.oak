@@ -11,6 +11,7 @@
 	each: each
 	last: last
 	take: take
+	first: first
 	filter: filter
 	reduce: reduce
 } := import('std')
@@ -18,6 +19,7 @@
 	digit?: digit?
 	word?: word?
 	space?: space?
+	cut: cut
 	contains?: strContains?
 	join: join
 	replace: replace
@@ -1453,7 +1455,7 @@ fn print(text) {
 	tokens := tokenize(text)
 	printer := Printer(tokens)
 	if shebang?(text) {
-		true -> Tokenizer(text).readUntilChar('\n') << '\n' << printer.print()
+		true -> text |> cut('\n') |> first() << '\n' << printer.print()
 		_ -> printer.print()
 	}
 }
