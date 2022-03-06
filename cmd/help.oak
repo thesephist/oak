@@ -110,6 +110,8 @@ Usage
 Options
 	--html      Format output to be an HTML string with token information
 	            embedded as CSS classes, for syntax highlighting on the web.
+	--stdin     Read text to highlight from standard input rather than from
+	            files passed to the command line arguments.
 '
 
 Doc := 'Generate or read documentation for the Oak language and libraries

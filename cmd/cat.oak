@@ -1,13 +1,16 @@
 // oak cat -- syntax highlighter
 
 {
+	stdin: stdin
 	map: map
 	each: each
+	first: first
 	slice: slice
 	append: append
 	compact: compact
 } := import('std')
 {
+	cut: cut
 	join: join
 } := import('str')
 fs := import('fs')
@@ -16,8 +19,8 @@ cli := import('cli')
 syntax := import('syntax')
 
 Cli := cli.parse()
-
 Html? := Cli.opts.html != ?
+Stdin? := Cli.opts.stdin != ?
 
 fn _ansiWrap(s, color) {
 	colorCode := if color {
@@ -92,36 +95,46 @@ fn _htmlColor(s, type, prev, next) if s {
 	}
 }
 
+fn _highlightAndPrintFile(file) {
+	tokens := []
+	// shebang is ignored by the tokenizer, so we treat it specially
+	if syntax.shebang?(file) -> tokens << {
+		type: :comment
+		pos: [0, 0, 0]
+		val: file |> cut('\n') |> first()
+	}
+	tokens |> append(file |> syntax.tokenize())
+	spans := tokens |> with map() fn(tok, i) {
+		type: tok.type
+		start: tok.pos.0
+		end: if nextTok := tokens.(i + 1) {
+			? -> len(file)
+			_ -> nextTok.pos.0
+		}
+	}
+	chunks := spans |> with map() fn(span, i) {
+		{
+			type: type
+			start: start
+			end: end
+		} := span
+		prevType := if ? != prev := spans.(i - 1) -> prev.type
+		nextType := if ? != next := spans.(i + 1) -> next.type
+		file |> slice(start, end) |> color(type, prevType, nextType)
+	}
+	chunks |> join() |> print()
+}
+
 color := if {
 	Html? -> _htmlColor
 	_ -> _ansiColor
 }
 
-Args := [Cli.verb] |> append(Cli.args) |> compact()
+if Stdin? -> stdin() |> _highlightAndPrintFile()
 
+Args := [Cli.verb] |> append(Cli.args) |> compact()
 Args |> with each() fn(path) if file := fs.readFile(path) {
 	? -> fmt.printf('[oak cat] Could not read file {{0}}', path)
-	_ -> {
-		tokens := file |> syntax.tokenize()
-		spans := tokens |> with map() fn(tok, i) {
-			type: tok.type
-			start: tok.pos.0
-			end: if nextTok := tokens.(i + 1) {
-				? -> len(file)
-				_ -> nextTok.pos.0
-			}
-		}
-		chunks := spans |> with map() fn(span, i) {
-			{
-				type: type
-				start: start
-				end: end
-			} := span
-			prevType := if ? != prev := spans.(i - 1) -> prev.type
-			nextType := if ? != next := spans.(i + 1) -> next.type
-			file |> slice(start, end) |> color(type, prevType, nextType)
-		}
-		chunks |> join() |> print()
-	}
+	_ -> _highlightAndPrintFile(file)
 }
 
