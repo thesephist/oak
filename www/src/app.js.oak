@@ -1,7 +1,6 @@
 // oaklang.org website
 
 {
-	println: println
 	each: each
 } := import('std')
 {
@@ -10,21 +9,15 @@
 
 UA := navigator.userAgent
 
-fn select(selector) {
-	bind(document, :querySelector)(selector)
-}
-
-fn selectAll(selector) {
-	bind(document, :querySelectorAll)(selector) |> bind(Array, :from)()
-}
-
 // open right download instruction section based on OS
-selectAll('.try-details') |> each(fn(el) el.open := false)
+document.querySelectorAll('.try-details') |>
+	Array.from() |>
+	each(fn(el) el.open := false)
 if {
 	UA |> contains?('Macintosh')
 	UA |> contains?('iPhone')
-	UA |> contains?('iPad') -> select('.try-details.os-macos').open := true
-	UA |> contains?('Linux') -> select('.try-details.os-linux').open := true
-	_ -> select('.try-details.os-other').open := true
+	UA |> contains?('iPad') -> document.querySelector('.try-details.os-macos').open := true
+	UA |> contains?('Linux') -> document.querySelector('.try-details.os-linux').open := true
+	_ -> document.querySelector('.try-details.os-other').open := true
 }
 
