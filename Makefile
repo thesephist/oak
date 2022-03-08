@@ -44,9 +44,10 @@ build-%:
 # build for all OS targets
 build: build-linux build-darwin build-windows build-openbsd
 
-# build Oak source for the website
+# build Oak sources for the website
 site:
 	oak build --entry www/src/app.js.oak --output www/static/js/bundle.js --web
+	oak build --entry www/src/highlight.js.oak --output www/static/js/highlight.js --web
 
 # build Oak source for the website on file change, using entr
 site-w:

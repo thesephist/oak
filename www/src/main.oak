@@ -4,19 +4,29 @@
 // main website for the Oak programming language.
 
 {
-	println: println
 	each: each
+	slice: slice
 	entries: entries
 } := import('std')
+{
+	split: split
+	join: join
+	replace: replace
+	endsWith?: endsWith?
+} := import('str')
 {
 	format: format
 	printf: printf
 } := import('fmt')
 fs := import('fs')
+fmt := import('fmt')
 path := import('path')
 http := import('http')
 
 Port := 9898
+OakExec := args().0
+HighlightTemplate := fs.readFile('./tpl/highlight.html')
+HighlightEmbedTemplate := fs.readFile('./tpl/highlight-embed.html')
 
 server := http.Server()
 
@@ -24,6 +34,8 @@ server := http.Server()
 	// explicit static paths
 	'/': './static/index.html'
 	'/lib/': './static/lib/index.html'
+	'/posts/': './static/posts/index.html'
+	'/highlight/': './static/highlight.html'
 	'/favicon.ico': './static/favicon.ico'
 } |> entries() |> with each() fn(entry) {
 	[reqPath, fsPath] := entry
@@ -42,16 +54,87 @@ server := http.Server()
 	}
 }
 
-with server.route('/lib/:libName') fn(params) fn(req, end) if req.method {
-	'GET' -> with fs.readFile(path.join('./static/lib', params.libName + '.html')) fn(file) if file {
-		? -> end(http.NotFound)
-		_ -> end({
-			status: 200
-			headers: {
-				'Content-Type': http.MimeTypes.html
+['lib', 'posts'] |> with each() fn(listName) {
+	with server.route('/{{0}}/:itemName' |> format(listName)) fn(params) fn(req, end) if req.method {
+		'GET' -> with fs.readFile(path.join('./static', listName, params.itemName + '.html')) fn(file) if file {
+			? -> end(http.NotFound)
+			_ -> end({
+				status: 200
+				headers: {
+					'Content-Type': http.MimeTypes.html
+				}
+				body: file
+			})
+		}
+		_ -> end(http.MethodNotAllowed)
+	}
+}
+
+with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if request.method {
+	'GET' -> {
+		// URL processing seems to collapse double-slashes
+		proxyPath := params.proxyPath |> replace('https:/', 'https://')
+		errorHeaders := {
+			'Content-Type': http.MimeTypes.txt
+		}
+
+		if proxyPath |> endsWith?('.oak') {
+			false -> end({
+				status: 400
+				headers: errorHeaders
+				body: 'cannot proxy resources not ending in .oak'
+			})
+			_ -> with req({ url: proxyPath }) fn(evt) if {
+				evt.type = :error
+				evt.resp.status != 200 -> end({
+					status: 500
+					headers: errorHeaders
+					body: 'could not fetch ' + proxyPath
+				})
+				_ -> {
+					sourceFile := evt.resp.body
+					sliced? := false
+					{ start: startOffset, end: endOffset } := params
+					if int(startOffset) != ? & int(endOffset) != ? -> {
+						sliced? <- true
+						sourceFile <- sourceFile |>
+							split('\n') |>
+							// start - 1 because offsets are 0-based but line
+							// numbers are 1-based indexes; not end - 1 because
+							// end is inclusive, not exclusive
+							slice(int(startOffset) - 1, int(endOffset)) |>
+							join('\n')
+					}
+
+					with exec(OakExec, ['cat', '--html', '--stdin'], sourceFile) fn(evt) if evt.type {
+						:error -> end({
+							status: 500
+							headers: errorHeaders
+							body: 'could not syntax highlight'
+						})
+						_ -> end({
+							status: 200
+							headers: {
+								'Content-Type': http.MimeTypes.html
+							}
+							body: if params.embed {
+								? -> HighlightTemplate
+								_ -> HighlightEmbedTemplate
+							} |> fmt.format({
+								href: proxyPath
+								name: path.base(proxyPath)
+								heading: path.base(proxyPath) + if {
+									sliced? -> ' <span style="color:var(--secondary-text);font-size:0.75em">L{{0}} - {{1}}</span>' |>
+										fmt.format(startOffset, endOffset)
+									_ -> ''
+								}
+								content: evt.stdout
+							})
+						})
+					}
+				}
 			}
-			body: file
-		})
+		}
 	}
 	_ -> end(http.MethodNotAllowed)
 }

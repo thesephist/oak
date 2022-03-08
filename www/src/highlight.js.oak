@@ -1,0 +1,52 @@
+// oak highlight proxy
+
+{
+	println: println
+	map: map
+	take: take
+	slice: slice
+} := import('std')
+{
+	cut: cut
+	join: join
+	split: split
+	trimStart: trimStart
+} := import('str')
+fmt := import('fmt')
+
+Form := document.querySelector('form')
+URLInput := document.querySelector('input')
+SubmitButton := document.querySelector('form button')
+
+
+fn inputURLToProxyPath(url) {
+	GitHubBlobPrefix := 'https://github.com/thesephist/oak/blob/main/samples/raw-fs-async.oak'
+	parts := url |> trimStart('https://') |> split('/')
+	println(parts)
+	if parts |> take(4) {
+		['github.com', _, _, 'blob'] -> {
+			[_, user, repo] := parts
+			branchAndFilePath := parts |> slice(4) |> join('/')
+
+			// determine if there's a #LXX-LYY marker
+			[branchAndFilePath, hash] := branchAndFilePath |> cut('#')
+			[startOffset, endOffset] := hash |> split('-') |> map(fn(s) {
+				if s.0 = 'L' & ? != lineNo := int(s |> slice(1)) -> lineNo
+			})
+
+			proxyPath := '/highlight/https://raw.githubusercontent.com/{{ user }}/{{ repo }}/{{ branchAndFilePath }}' |>
+				fmt.format({ user: user, repo: repo, branchAndFilePath: branchAndFilePath })
+			if startOffset != ? & endOffset != ? {
+				true -> proxyPath + '?start={{0}}&end={{1}}' |> fmt.format(startOffset, endOffset)
+				_ -> proxyPath
+			}
+		}
+		_ -> '/highlight/' + url
+	}
+}
+
+with Form.addEventListener('submit') fn(evt) {
+	evt.preventDefault()
+	window.location.href := inputURLToProxyPath(URLInput.value)
+}
+
