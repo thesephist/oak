@@ -72,7 +72,7 @@ server := http.Server()
 
 with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if request.method {
 	'GET' -> {
-		// URL processing seems to collapse double-slashes
+		// URL processing seems to collapse double-slashes, so restore it
 		proxyPath := params.proxyPath |> replace('https:/', 'https://')
 		errorHeaders := {
 			'Content-Type': http.MimeTypes.txt
@@ -93,15 +93,19 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 				})
 				_ -> {
 					sourceFile := evt.resp.body
+
 					sliced? := false
-					{ start: startOffset, end: endOffset } := params
+					{
+						start: startOffset
+						end: endOffset
+					} := params
 					if int(startOffset) != ? & int(endOffset) != ? -> {
 						sliced? <- true
 						sourceFile <- sourceFile |>
 							split('\n') |>
 							// start - 1 because offsets are 0-based but line
-							// numbers are 1-based indexes; not end - 1 because
-							// end is inclusive, not exclusive
+							// numbers are 1-based indexes; NOT end - 1 because
+							// end line number is inclusive, not exclusive
 							slice(int(startOffset) - 1, int(endOffset)) |>
 							join('\n')
 					}
@@ -110,7 +114,7 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 						:error -> end({
 							status: 500
 							headers: errorHeaders
-							body: 'could not syntax highlight'
+							body: 'could not syntax highlight ' + proxyPath
 						})
 						_ -> end({
 							status: 200

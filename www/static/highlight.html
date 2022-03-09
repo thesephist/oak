@@ -14,15 +14,15 @@
             border: 0;
             margin: 0;
             outline: 0;
-            padding: 6px 10px;
-            border-radius: 4px;
+            padding: .6em 1em;
+            border-radius: 6px;
             font-size: 1em;
         }
         form {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
+            gap: 16px;
             width: 100%;
             max-width: 64ch;
         }
@@ -63,7 +63,7 @@
             </div>
             <nav>
                 <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
-				<a href="/posts/">blog</a>
+                <a href="/posts/">blog</a>
                 <a href="#start">download</a>
                 <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
             </nav>
@@ -76,20 +76,20 @@
             elsewhere on the Web, for example on GitHub, using the same
             interface used to show the <a href="/lib/">standard library source</a>
             on this website.</p>
-            <p>The highlight proxy can also highlight a portion of a large
-            source file, by specifing a range of lines using either
+            <p>The highlight proxy can also highlight just a portion of a
+            larger source file, by specifing a range of lines using either
             <code>start=<span style="color:var(--secondary-text)">N</span>&amp;end=<span style="color:var(--secondary-text)">M</span></code>
             query parameters, or using line ranges specified in GitHub file
             URLs.</p>
             <p>For an example, try pasting in the URL to <a
             href="https://github.com/thesephist/oak/blob/main/samples/hello.oak">this "Hello World" Oak program</a>.</p>
-			<form action="">
-				<label>
+            <form action="">
+                <label>
                     <div class="labelText">URL to an Oak source file</div>
-					<input type="text" placeholder="https://github.com/user/repo/blob/path/to/file.oak#L12-42" autofocus>
-				</label>
-				<button>Highlight</button>
-			</form>
+                    <input type="text" placeholder="https://github.com/user/repo/blob/path/to/file.oak#L12-42" autofocus>
+                </label>
+                <button>Highlight</button>
+            </form>
         </article>
     </main>
     <footer>

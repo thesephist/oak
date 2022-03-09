@@ -1,7 +1,6 @@
 // oak highlight proxy
 
 {
-	println: println
 	map: map
 	take: take
 	slice: slice
@@ -18,17 +17,15 @@ Form := document.querySelector('form')
 URLInput := document.querySelector('input')
 SubmitButton := document.querySelector('form button')
 
-
 fn inputURLToProxyPath(url) {
-	GitHubBlobPrefix := 'https://github.com/thesephist/oak/blob/main/samples/raw-fs-async.oak'
 	parts := url |> trimStart('https://') |> split('/')
-	println(parts)
 	if parts |> take(4) {
 		['github.com', _, _, 'blob'] -> {
 			[_, user, repo] := parts
 			branchAndFilePath := parts |> slice(4) |> join('/')
 
-			// determine if there's a #LXX-LYY marker
+			// determine if there's a #LXX-LYY marker selecting line numbers in
+			// the GitHub link
 			[branchAndFilePath, hash] := branchAndFilePath |> cut('#')
 			[startOffset, endOffset] := hash |> split('-') |> map(fn(s) {
 				if s.0 = 'L' & ? != lineNo := int(s |> slice(1)) -> lineNo
