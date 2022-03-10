@@ -9,10 +9,11 @@ body {
 
     --primary-bg: #fdfeff;
     --primary-text: #111111;
-    --secondary-bg: #eeeef3;
+    --secondary-bg: #f1f1f8;
     --secondary-text: #9b9b9b;
     --hover-bg: #dde1e5;
     --active-bg: #cdcfd2;
+    --underline-bg: #aaafb5;
     --translucent: rgba(249, 250, 251, .8);
     --transparent: rgba(249, 250, 251, 0);
 }
@@ -24,6 +25,7 @@ body {
     --secondary-text: #a4a7a9;
     --hover-bg: #474c50;
     --active-bg: #626569;
+    --underline-bg: #6d7176;
     --translucent: rgba(47, 52, 55, .8);
     --transparent: rgba(47, 52, 55, 0);
 }
@@ -149,11 +151,12 @@ header {
 }
 
 nav {
-    gap: 2ch;
+    gap: 1.5ch;
 }
 
 nav a {
     font-weight: normal;
+    white-space: nowrap;
 }
 
 /* FOOTER */
@@ -213,19 +216,35 @@ summary > h4 {
     margin-left: 8px;
 }
 
+table a,
+article p a,
+article li a {
+    text-decoration-color: var(--underline-bg);
+    text-underline-offset: 1px;
+    text-decoration-thickness: 2px;
+    transition: text-decoration-color .2s;
+}
+
+table a:hover,
+article p a:hover,
+article li a:hover {
+    text-decoration-color: var(--secondary-text);
+}
+
 .meta {
     color: var(--secondary-text);
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    gap: 3ch;
 }
 
-.meta-item {
-    flex-grow: 1;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.meta a {
+    color: var(--secondary-text);
+    text-decoration: none;
+}
+
+.meta a:hover {
+    text-decoration: underline;
 }
 
 p img {
@@ -283,6 +302,25 @@ blockquote {
     font-style: italic;
 }
 
+blockquote em,
+blockquote pre {
+    font-style: normal;
+}
+
+hr {
+    border: 0;
+    margin: 2em 0;
+}
+
+hr::after {
+    content: '{{ * * * }}';
+    display: block;
+    width: 100%;
+    color: var(--secondary-text);
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
 /* AUXILIARY UI */
 
 .button {
@@ -336,6 +374,24 @@ blockquote {
     transform: translateY(-.2em);
 }
 
+/* BLOG POST LIST */
+
+ul.postlist {
+    padding-left: 0;
+}
+
+ul.postlist li {
+    list-style: none;
+}
+
+.postlist .dateBit {
+    margin-left: .25em;
+    color: var(--secondary-text);
+    font-size: calc(1em - 2px);
+    font-style: italic;
+    white-space: nowrap;
+}
+
 .desktop {
     display: none;
 }
@@ -353,6 +409,10 @@ blockquote {
 }
 
 @media only screen and (min-width: 600px) {
+    nav {
+        gap: 2ch;
+    }
+
     .overlay {
         width: calc(100% - 3rem);
     }
@@ -386,9 +446,10 @@ blockquote {
     }
 
     p img {
+        left: 0;
         margin: 1.5em 0;
-        width: 100%;
-        max-width: 700px;
+        max-width: 96ch;
+        width: calc(100vw - 3rem);
     }
 
     .desktop {

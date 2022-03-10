@@ -2,32 +2,163 @@
 
 {
 	println: println
+	default: default
+	map: map
 	each: each
+	take: take
+	slice: slice
+	filter: filter
+	reduce: reduce
+	compact: compact
+	reverse: reverse
 } := import('std')
 {
+	cut: cut
+	trim: trim
+	join: join
+	split: split
+	indexOf: indexOf
 	trimEnd: trimEnd
+	endsWith?: endsWith?
 } := import('str')
+sort := import('sort')
 fs := import('fs')
 fmt := import('fmt')
+datetime := import('datetime')
 path := import('path')
+md := import('md')
+
+OakExec := args().0
+
+// printlog wraps println with the [www/gen] command scope
+fn printlog(xs...) println('[www/gen]', xs...)
 
 // for every library file, generate a syntax-highlighted source page
-with fs.readFile('./www/static/lib/tpl.html') fn(tplFile) if tplFile {
-	? -> println('[www/gen] Could not read template')
-	_ -> with fs.listFiles('./lib') fn(files) files |> with each() fn(file) {
-		args := ['cat', path.join('./lib', file.name), '--html']
-		with exec('oak', args, '') fn(evt) if evt.type {
-			:error -> println('[www/gen] Could not syntax-highlight', file.name)
+with fs.readFile('./www/tpl/lib.html') fn(tplFile) if tplFile {
+	? -> printlog('Could not read template')
+	_ -> with fs.listFiles('./lib') fn(files) files |> with each() fn(file) if file.name.0 != '.' -> {
+		with exec(OakExec, ['cat', path.join('./lib', file.name), '--html'], '') fn(evt) if evt.type {
+			:error -> printlog('Could not syntax-highlight', file.name)
 			_ -> {
 				highlightedFile := evt.stdout
 
 				pageName := file.name |> trimEnd('.oak') + '.html'
 				pagePath := path.join('./www/static/lib', pageName)
-				page := fmt.format(tplFile, file.name, highlightedFile)
+				page := tplFile |> fmt.format({
+					name: file.name
+					content: highlightedFile
+				})
 				with fs.writeFile(pagePath, page) fn {
-					println('[www/gen] Generated', file.name)
+					printlog('Generated lib', file.name)
 				}
 			}
+		}
+	}
+}
+
+// generate a post page for every post in ./content, and generate a listing
+// page of every post on the site
+with fs.listFiles('./www/content') fn(files) {
+	fn dateString(iso, fmtString) {
+		fmtString := fmtString |> default('{{ day }} {{ monthName }} {{ year }}')
+		Months := [
+			_
+			'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'
+			'Oct', 'Nov', 'Dec'
+		]
+		if date := datetime.parse(iso) {
+			? -> {
+				printlog('Invalid date:', iso)
+				''
+			}
+			_ -> {
+				date.monthName := Months.(date.month)
+				date.shortYear := date.year % 100
+				fmtString |> fmt.format(date)
+			}
+		}
+	}
+
+	fn parsePostFile(postFile) {
+		meta := if postFile |> take(4) {
+			'---\n' -> {
+				endFrontMatter := postFile |> indexOf('\n---')
+				frontMatter := postFile |> slice(4, endFrontMatter)
+
+				postFile <- postFile |> slice(endFrontMatter + 4)
+				frontMatter |>
+					split('\n') |>
+					map(fn(line) line |> cut(':') |> map(fn(s) trim(s))) |>
+					reduce({}, fn(meta, pair) meta.(pair.0) := pair.1)
+			}
+			_ -> {}
+		}
+
+		meta.content := md.parse(postFile) |> map(fn(block) if {
+			// syntax highlight any Oak code blocks using `oak cat --html --stdin`
+			block.tag = :pre & block.children.(0).lang = 'oak' -> {
+				evt := exec(OakExec, ['cat', '--html', '--stdin'], block.children.(0).children.0)
+				if evt.type {
+					:error -> printlog('Could not syntax-highlight blog: ', meta.title)
+					_ -> block.children.(0).children.0 := {
+						tag: :rawHTML
+						children: [evt.stdout]
+					}
+				}
+				block
+			}
+			_ -> block
+		}) |> md.compile()
+	}
+
+	postNames := files |>
+		filter(fn(file) file.name.0 != '.') |>
+		filter(fn(file) endsWith?(file.name, '.md')) |>
+		map(fn(file) file.name |> trimEnd('.md'))
+
+	// NOTE: all posts are read and compiled synchronously, but in practice
+	// this is not a performance bottleneck ... yet.
+	posts := postNames |> map(fn(postName) {
+		postPath := './www/content/{{0}}.md' |> fmt.format(postName)
+		pagePath := './www/static/posts/{{0}}.html' |> fmt.format(postName)
+		if postFile := fs.readFile(postPath) {
+			? -> {
+				printlog('Could not read post:', postName)
+				?
+			}
+			_ -> {
+				post := parsePostFile(postFile)
+				post.name := postName
+				post.srcPath := postPath
+				post.destPath := pagePath
+				post.dateString := dateString(post.date)
+				post.shortDateString := dateString(post.date, '{{ day }} {{ monthName }} \'{{ shortYear }}')
+			}
+		}
+	}) |> compact() |> filter(fn(post) post.draft != 'true')
+
+	// generate and write post list
+	listTemplate := fs.readFile('./www/tpl/list.html')
+	renderedList := listTemplate |> fmt.format({
+		content: posts |>
+			sort.sort(:date) |>
+			reverse() |>
+			map(fn(post) '<li><a href="/posts/{{ name }}/">{{ title }}</a> <span class="dateBit">{{ shortDateString }}</span></li>' |> fmt.format(post)) |>
+			join('\n')
+	})
+	listPath := './www/static/posts/index.html'
+	with fs.writeFile(listPath, renderedList) fn(res) if res {
+		? -> printlog('Could not write file', listPath)
+		_ -> printlog('Generated', listPath)
+	}
+
+	// generate and write all posts
+	postTemplate := fs.readFile('./www/tpl/post.html')
+	posts |> with each() fn(post) {
+		renderedPost := postTemplate |> fmt.format(post)
+		with fs.writeFile(post.destPath, renderedPost) fn(res) if res {
+			? -> printlog('Could not write file', post.destPath)
+			_ -> printlog('Generated post', post.name)
 		}
 	}
 }
