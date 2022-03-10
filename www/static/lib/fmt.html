@@ -17,6 +17,7 @@
             </div>
             <nav>
                 <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
                 <a href="#start">download</a>
                 <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
             </nav>
@@ -25,14 +26,15 @@
     <main aria-role="main">
         <article class="overlay stdlib">
             <h1>fmt.oak</h1>
-            <p class="stdlibLink">
+            <p class="meta">
                 <a href="/lib/">&larr; Standard library</a>
                 <a href="https://github.com/thesephist/oak/blob/main/lib/fmt.oak">See on GitHub ↗</a>
             </p>
             <pre><code><span class="oak-comment">// libfmt is the string formatting library for Oak.</span>
 
 <span class="oak-leftBrace">{</span><span class="oak-newline">
-	</span><span class="oak-identifier">println</span><span class="oak-colon">: </span><span class="oak-identifier">println</span>
+	</span><span class="oak-identifier">println</span><span class="oak-colon">: </span><span class="oak-identifier">println</span><span class="oak-newline">
+	</span><span class="oak-identifier">default</span><span class="oak-colon">: </span><span class="oak-identifier">default</span>
 <span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'std'</span><span class="oak-rightParen">)</span>
 
 <span class="oak-comment">// format returns the format string `raw`, where each substring of the form</span>
@@ -50,7 +52,9 @@
 	</span><span class="oak-comment">// buffer for currently reading key</span><span class="oak-newline">
 	</span><span class="oak-identifier">key </span><span class="oak-assign">:= </span><span class="oak-stringLiteral">''</span><span class="oak-newline">
 	</span><span class="oak-comment">// result build-up buffer</span><span class="oak-newline">
-	</span><span class="oak-identifier">buf </span><span class="oak-assign">:= </span><span class="oak-stringLiteral">''</span>
+	</span><span class="oak-identifier">buf </span><span class="oak-assign">:= </span><span class="oak-stringLiteral">''</span><span class="oak-newline">
+	</span><span class="oak-comment">// non-integer keys will key into this dict</span><span class="oak-newline">
+	</span><span class="oak-identifier">value </span><span class="oak-assign">:= </span><span class="oak-identifier">values</span><span class="oak-dot">.</span><span class="oak-numberLiteral">0 </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span>
 <span class="oak-newline">
 	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">idx</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">idx </span><span class="oak-less">&lt; </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">raw</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
 		</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
@@ -72,8 +76,12 @@
 				</span><span class="oak-rightBrace">}</span><span class="oak-newline">
 				</span><span class="oak-numberLiteral">2 </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">c </span><span class="oak-leftBrace">{</span><span class="oak-newline">
 					</span><span class="oak-stringLiteral">'}' </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
-						</span><span class="oak-ifKeyword">if </span><span class="oak-qmark">? </span><span class="oak-neq">!= </span><span class="oak-identifier">index </span><span class="oak-assign">:= </span><span class="oak-fnName">int</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-></span><span class="oak-newline">
-							</span><span class="oak-identifier">buf </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-identifier">values</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-fnName">int</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-newline">
+						</span><span class="oak-identifier">index </span><span class="oak-assign">:= </span><span class="oak-fnName">int</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">)</span><span class="oak-newline">
+						</span><span class="oak-identifier">buf </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-ifKeyword">if </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+							</span><span class="oak-identifier">key </span><span class="oak-eq">= </span><span class="oak-stringLiteral">'' </span><span class="oak-branchArrow">-> </span><span class="oak-stringLiteral">''</span><span class="oak-newline">
+							</span><span class="oak-identifier">index </span><span class="oak-eq">= </span><span class="oak-qmark">? </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">value</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">)</span><span class="oak-newline">
+							</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">values</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">index</span><span class="oak-rightParen">)</span><span class="oak-newline">
+						</span><span class="oak-rightBrace">} </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
 						</span><span class="oak-identifier">key </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-stringLiteral">''</span><span class="oak-newline">
 						</span><span class="oak-identifier">which </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-numberLiteral">3</span><span class="oak-newline">
 					</span><span class="oak-rightBrace">}</span><span class="oak-newline">

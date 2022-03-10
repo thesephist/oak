@@ -17,6 +17,7 @@
             </div>
             <nav>
                 <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
                 <a href="#start">download</a>
                 <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
             </nav>
@@ -25,7 +26,7 @@
     <main aria-role="main">
         <article class="overlay stdlib">
             <h1>syntax.oak</h1>
-            <p class="stdlibLink">
+            <p class="meta">
                 <a href="/lib/">&larr; Standard library</a>
                 <a href="https://github.com/thesephist/oak/blob/main/lib/syntax.oak">See on GitHub ↗</a>
             </p>
@@ -42,6 +43,7 @@
 	</span><span class="oak-identifier">each</span><span class="oak-colon">: </span><span class="oak-identifier">each</span><span class="oak-newline">
 	</span><span class="oak-identifier">last</span><span class="oak-colon">: </span><span class="oak-identifier">last</span><span class="oak-newline">
 	</span><span class="oak-identifier">take</span><span class="oak-colon">: </span><span class="oak-identifier">take</span><span class="oak-newline">
+	</span><span class="oak-identifier">first</span><span class="oak-colon">: </span><span class="oak-identifier">first</span><span class="oak-newline">
 	</span><span class="oak-identifier">filter</span><span class="oak-colon">: </span><span class="oak-identifier">filter</span><span class="oak-newline">
 	</span><span class="oak-identifier">reduce</span><span class="oak-colon">: </span><span class="oak-identifier">reduce</span>
 <span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'std'</span><span class="oak-rightParen">)</span>
@@ -49,6 +51,7 @@
 	</span><span class="oak-identifier">digit?</span><span class="oak-colon">: </span><span class="oak-identifier">digit?</span><span class="oak-newline">
 	</span><span class="oak-identifier">word?</span><span class="oak-colon">: </span><span class="oak-identifier">word?</span><span class="oak-newline">
 	</span><span class="oak-identifier">space?</span><span class="oak-colon">: </span><span class="oak-identifier">space?</span><span class="oak-newline">
+	</span><span class="oak-identifier">cut</span><span class="oak-colon">: </span><span class="oak-identifier">cut</span><span class="oak-newline">
 	</span><span class="oak-identifier">contains?</span><span class="oak-colon">: </span><span class="oak-identifier">strContains?</span><span class="oak-newline">
 	</span><span class="oak-identifier">join</span><span class="oak-colon">: </span><span class="oak-identifier">join</span><span class="oak-newline">
 	</span><span class="oak-identifier">replace</span><span class="oak-colon">: </span><span class="oak-identifier">replace</span><span class="oak-newline">
@@ -1484,7 +1487,7 @@
 	</span><span class="oak-identifier">tokens </span><span class="oak-assign">:= </span><span class="oak-fnName">tokenize</span><span class="oak-leftParen">(</span><span class="oak-identifier">text</span><span class="oak-rightParen">)</span><span class="oak-newline">
 	</span><span class="oak-identifier">printer </span><span class="oak-assign">:= </span><span class="oak-fnName">Printer</span><span class="oak-leftParen">(</span><span class="oak-identifier">tokens</span><span class="oak-rightParen">)</span><span class="oak-newline">
 	</span><span class="oak-ifKeyword">if </span><span class="oak-fnName">shebang?</span><span class="oak-leftParen">(</span><span class="oak-identifier">text</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
-		</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">Tokenizer</span><span class="oak-leftParen">(</span><span class="oak-identifier">text</span><span class="oak-rightParen">)</span><span class="oak-dot">.</span><span class="oak-fnName">readUntilChar</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'\n'</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'\n' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">printer</span><span class="oak-dot">.</span><span class="oak-fnName">print</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">text </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">cut</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'\n'</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">first</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'\n' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">printer</span><span class="oak-dot">.</span><span class="oak-fnName">print</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
 		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">printer</span><span class="oak-dot">.</span><span class="oak-fnName">print</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
 	</span><span class="oak-rightBrace">}</span>
 <span class="oak-rightBrace">}</span>

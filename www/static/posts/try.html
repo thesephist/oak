@@ -1,0 +1,103 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Designing a try/catch interop API for Oak | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay blogpost">
+            <h1>Designing a try/catch interop API for Oak</h1>
+            <p class="meta">
+                <a href="/posts/">&larr; Posts</a>
+                <span class="date">17 Feb 2022</span>
+            </p>
+            <p>One of Oak's most useful features is its ability to be compiled to JavaScript using <code>oak build --web</code> to run on all the places JavaScript can run, like Node.js, web browsers, and even microcontrollers and games using <a href="https://duktape.org/">embedded</a> <a href="https://bellard.org/quickjs/">JS engine</a>. When writing Oak programs that run in a JavaScript context, one problem that was unsolved until recently is how Oak interacts with exceptions that are thrown in JavaScript contexts.</p><p>Oak can call naturally into JavaScript functions, but if the JavaScript function throws an exception somewhere, the calling Oak code can't catch or react to it appropriately. When this happens in code that updates a web UI or handles a web request, this can be a problem. <strong>Oak needs to be able to recover from and react appropriately to exceptions thrown in JavaScript</strong>. So I tried to design an Oak API around JavaScript's exceptions.</p><p>In the design process, I had two main goals for the Oak exceptions API:</p><ol><li>It should feel at home in an Oak program, especially with other error-handling primitives in Oak. Errors are values in Oak, usually using either a special <a href="https://en.wikipedia.org/wiki/Sentinel_value">sentinel value</a> like <code>?</code> or an error object like <code>{ type: :error, error: ... }</code>. Errors from JavaScript contexts should feel similar to manage.</li><li>It shouldn't add new constructs to the Oak language. Though errors are important, interoperation with JavaScript exceptions is only relevant in the compile-to-JavaScript context. Adding error handling facilities in this narrow context shouldn't disrupt the rest of the Oak language.</li></ol><p>To get started, I began with how JavaScript itself deals with exceptions: <em>checked exceptions</em>.</p><h2>Checked exceptions and <code>try</code>/<code>catch</code></h2><p>In checked exceptions, JavaScript code can set up a <code>try { }</code> block, which can rescue the program from thrown exceptions and move the program execution into a <code>catch</code> block.</p><pre><code>try {
+    somethingAwful()
+} catch (e) {
+    handleError(e)
+}</code></pre><p>This is quite a nice solution, and it's possible because the <code>try { } catch (e) { }</code> statement is a part of JavaScript's syntax. To introduce something similar in Oak would require inventing some similar novel syntax or otherwise doing something ugly with closures:</p><pre><code data-lang="oak"><span class="oak-withKeyword">with </span><span class="oak-fnName">try</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-fnName">somethingAwful</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">catch</span><span class="oak-leftParen">(</span><span class="oak-identifier">e</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-fnName">handleError</span><span class="oak-leftParen">(</span><span class="oak-identifier">e</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span></code></pre><p>That seems... okay, but certainly not great. My biggest objection to this kind of interface that emulated the "block-based" feeling of Java-style exceptions is that this obscures true control flow of code. In Oak, callbacks usually mean the callback function is either executed asynchronously, or somehow executed out-of-flow from the rest of the program, like in a loop in <code>std.loop</code>. But here, there's a very straightforward control flow: we run the main function, check it for errors, and if any errors occur, we handle it in the catch function. Using a callback to handle the error feels like a lot of machinery for a very confusing flow of control.</p><p>This problem gets worse if we want to use the return value from the function with a fallback value:</p><pre><code data-lang="oak"><span class="oak-identifier">number </span><span class="oak-assign">:= </span><span class="oak-withKeyword">with </span><span class="oak-fnName">try</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-fnName">somethingAwful</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">catch</span><span class="oak-leftParen">(</span><span class="oak-identifier">e</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-identifier">number </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-identifier">fallbackNumber</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-fnName">doSomethingWith</span><span class="oak-leftParen">(</span><span class="oak-identifier">number</span><span class="oak-rightParen">)</span></code></pre><p>This looks very awkward compared to what a more idiomatic Oak program may read like:</p><pre><code data-lang="oak"><span class="oak-identifier">result </span><span class="oak-assign">:= </span><span class="oak-fnName">somethingAwful</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">number </span><span class="oak-assign">:= </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">result</span><span class="oak-dot">.</span><span class="oak-identifier">type </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-colon">:</span><span class="oak-identifier">error </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">fallbackNumber</span><span class="oak-newline">
+    </span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">result</span><span class="oak-dot">.</span><span class="oak-identifier">value</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-fnName">doSomethingWith</span><span class="oak-leftParen">(</span><span class="oak-identifier">number</span><span class="oak-rightParen">)</span></code></pre><p>After a few of these sketches, it seemed clear to me that Oak should handle JavaScript exceptions in a way that <em>preserved a clear sense of control flow</em> in the resulting code, and that <em>let error handling code compose well with other Oak syntax</em> like <code>if</code> expressions.</p><h2>Lua to the rescue</h2><p>Lua's documentation covers a <a href="https://www.lua.org/pil/8.4.html">rather unique way of dealing with runtime errors in Lua</a>, using two builtin functions <code>error</code> and <code>pcall</code>.</p><blockquote><p>If you need to handle errors in Lua, you should use the <code>pcall</code> function (<em>protected call</em>) to encapsulate your code.</p><p>Suppose you want to run a piece of Lua code and to catch any error raised while running that code. Your first step is to encapsulate that piece of code in a function [...] Then, you call [it] with <code>pcall</code>.</p><pre><code>if pcall(foo) then
+  -- no errors while running `foo'
+  ...
+else
+  -- `foo' raised an error: take appropriate actions
+  ...
+end</code></pre><p>The <code>pcall</code> function calls its first argument in <em>protected mode</em>, so that it catches any errors while the function is running. If there are no errors, <code>pcall</code> returns <strong>true</strong>, plus any values returned by the call. Otherwise, it returns <strong>false</strong>, plus the error message.</p><pre><code>local status, err = pcall(function () error({code=121}) end)
+print(err.code)  -->  121</code></pre></blockquote><p>There were two appealing properties of Lua's method, using a special <code>pcall</code> function to invoke potentially error-throwing functions.</p><ol><li>Control flow is easily preserved. Rather than calling a function directly, we call it with <code>pcall</code>, and nothing else changes.</li><li>Errors are treated as normal values, rather than special things floating around in the aether of the program's runtime.</li></ol><p>Both of these seemed quite well-suited to Oak in my eyes. Further, I also liked that the <code>pcall</code> function marked a <em>clear boundary</em> in the source code between JavaScript-style thrown exceptions and Oak-style error values. So, this became the basis for Oak's try/catch interop API.</p><h2>Oak's solution: the <code>try()</code> function</h2><p><em>For the rest of this section, when I say "in Oak", I refer specifically to Oak programs compiled to JavaScript and running in a JavaScript engine like Node.js.</em></p><p>In Oak, exceptions raised by JavaScript code are handled by "trapping" any thrown exceptions and turning them into error values. We can trap thrown JavaScript errors using the <code>try()</code> function, which is built-in.</p><p>Let's say we have a function, <code>somethingVeryIllegal()</code>, that returns some number but may instead throw an exception. If we call it directly in Oak, this exception may bubble up through the stack and crash our Oak program.</p><pre><code data-lang="oak"><span class="oak-comment">// if this throws, the whole program crashes!</span>
+<span class="oak-identifier">number </span><span class="oak-assign">:= </span><span class="oak-fnName">somethingVeryIllegal</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span></code></pre><p>Instead, we can call the function using <code>try</code>. The <code>try</code> function catches any potential exceptions thrown within the called function, and returns either an <code>:ok</code> or <code>:error</code> object.</p><pre><code data-lang="oak"><span class="oak-identifier">result </span><span class="oak-assign">:= </span><span class="oak-fnName">try</span><span class="oak-leftParen">(</span><span class="oak-identifier">somethingVeryIllegal</span><span class="oak-rightParen">)</span>
+
+<span class="oak-comment">// result if no exception is thrown</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-identifier">type</span><span class="oak-colon">: </span><span class="oak-colon">:</span><span class="oak-identifier">ok</span><span class="oak-newline">
+    </span><span class="oak-identifier">ok</span><span class="oak-colon">: </span><span class="oak-numberLiteral">10 </span><span class="oak-comment">// or whatever somethingVeryIllegal returned</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// result if an exception was thrown</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-identifier">type</span><span class="oak-colon">: </span><span class="oak-colon">:</span><span class="oak-identifier">error</span><span class="oak-newline">
+    </span><span class="oak-identifier">error</span><span class="oak-colon">: </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+        </span><span class="oak-identifier">message</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'Error message'</span><span class="oak-newline">
+        </span><span class="oak-identifier">stack</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'Error message\n [...] /loader:822:12)'</span><span class="oak-newline">
+    </span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBrace">}</span></code></pre><p>The <code>try</code> function "wraps" the JavaScript exception and returns it as an object, which we can handle like any other Oak error object. Though we used an existing function here, we can use anonymous functions instead to simulate a try "block":</p><pre><code data-lang="oak"><span class="oak-identifier">result </span><span class="oak-assign">:= </span><span class="oak-withKeyword">with </span><span class="oak-fnName">try</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-numberLiteral">1 </span><span class="oak-plus">+ </span><span class="oak-identifier">iAmNotDefined</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// result</span>
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-identifier">type</span><span class="oak-colon">: </span><span class="oak-colon">:</span><span class="oak-identifier">error</span><span class="oak-newline">
+    </span><span class="oak-identifier">error</span><span class="oak-colon">: </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+        </span><span class="oak-identifier">message</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'iAmNotDefined is not defined'</span><span class="oak-newline">
+        </span><span class="oak-identifier">stack</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'ReferenceError: iAmNotDefined is not defined [...] at Function.Module._load (node:internal/modules/cjs/loader:822:12)'</span><span class="oak-newline">
+    </span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBrace">}</span></code></pre><p>The way we deal with errors from a <code>try()</code> call fits well among other error handling code in Oak, I think.</p><pre><code data-lang="oak"><span class="oak-identifier">result </span><span class="oak-assign">:= </span><span class="oak-fnName">try</span><span class="oak-leftParen">(</span><span class="oak-identifier">somethingMaybeIllegal</span><span class="oak-rightParen">)</span>
+<span class="oak-ifKeyword">if </span><span class="oak-identifier">result</span><span class="oak-dot">.</span><span class="oak-identifier">type </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+    </span><span class="oak-colon">:</span><span class="oak-identifier">error </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">reportErr</span><span class="oak-leftParen">(</span><span class="oak-identifier">result</span><span class="oak-dot">.</span><span class="oak-identifier">error</span><span class="oak-rightParen">)</span><span class="oak-newline">
+    </span><span class="oak-colon">:</span><span class="oak-identifier">ok </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">processInput</span><span class="oak-leftParen">(</span><span class="oak-identifier">result</span><span class="oak-dot">.</span><span class="oak-identifier">ok</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span></code></pre><p>This solution, using a <code>try()</code> function that wraps a potentially-throwing call, is clear about the chain of control flow, and returns error objects are familiar to Oak programmers from other built-in functions like <code>open</code> and <code>input</code>. It does all this without introducing any fundamentally new constructs into the language, and as a bonus, any call to the <code>try()</code> visibly marks the boundary between JavaScript-style error handling and Oak-style error handling.</p><p>There are still some open questions. The main unresolved problem I face today is how Oak's error-handling patterns and the <code>try()</code> function interacts with any exceptions that are thrown asynchronously, in a callback. Node.js, for example, will let programs catch any uncaught exceptions at the top level in the program (for logging or reporting purposes). Oak currently has no facility to handle asynchronous runtime errors, because errors in correct Oak programs are reported as values. How might Oak be able to handle these asynchronous runtime errors that bubble up from JavaScript? These questions, I think, are good topics for future investigations.</p>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>

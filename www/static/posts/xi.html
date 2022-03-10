@@ -1,0 +1,98 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Xi: thinking different with concatenative programming languages | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay blogpost">
+            <h1>Xi: thinking different with concatenative programming languages</h1>
+            <p class="meta">
+                <a href="/posts/">&larr; Posts</a>
+                <span class="date">23 Sep 2021</span>
+            </p>
+            <p><a href="https://github.com/thesephist/xi"><strong>Xi</strong></a> (pronounced <em>Zai</em>) is a little stack-based concatenative language, written in Oak and using Oak types and semantics. I wrote Xi over the 2021 Labor Day weekend as a learning exercise to understand how stack languages like <a href="https://en.wikipedia.org/wiki/Forth_(programming_language)">Forth</a> and <a href="https://factorcode.org/">Factor</a> work and why they're interesting.</p><p>Before diving in, here's a glimpse of what Xi programs look like.</p><pre><code data-lang="oak"><span class="oak-comment">// print factorials of every number up to 10</span>
+<span class="oak-identifier">factorial </span><span class="oak-colon">: </span><span class="oak-identifier">nat </span><span class="oak-identifier">prod</span>
+<span class="oak-numberLiteral">10 </span><span class="oak-leftParen">( </span><span class="oak-plus">+</span><span class="oak-plus">+ </span><span class="oak-identifier">factorial </span><span class="oak-identifier">print </span><span class="oak-rightParen">) </span><span class="oak-identifier">each</span><span class="oak-minus">-</span><span class="oak-identifier">integer</span>
+
+<span class="oak-comment">// Fibonacci sequence up to fib(25)</span>
+<span class="oak-leftParen">(</span><span class="oak-identifier">fib</span><span class="oak-rightParen">) </span><span class="oak-colon">: </span><span class="oak-identifier">dup </span><span class="oak-numberLiteral">2 </span><span class="oak-less">&lt; </span><span class="oak-leftParen">( </span><span class="oak-identifier">drop </span><span class="oak-identifier">swap </span><span class="oak-identifier">drop </span><span class="oak-rightParen">) </span><span class="oak-leftParen">( </span><span class="oak-leftParen">( </span><span class="oak-identifier">swap </span><span class="oak-identifier">over </span><span class="oak-plus">+ </span><span class="oak-rightParen">) </span><span class="oak-identifier">dip </span><span class="oak-minus">-</span><span class="oak-minus">- </span><span class="oak-leftParen">(</span><span class="oak-identifier">fib</span><span class="oak-rightParen">) </span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if</span>
+<span class="oak-identifier">fib </span><span class="oak-colon">: </span><span class="oak-numberLiteral">1 </span><span class="oak-numberLiteral">1 </span><span class="oak-fnName">rot </span><span class="oak-leftParen">(</span><span class="oak-identifier">fib</span><span class="oak-rightParen">)</span>
+<span class="oak-numberLiteral">25 </span><span class="oak-leftParen">( </span><span class="oak-identifier">fib </span><span class="oak-identifier">print </span><span class="oak-rightParen">) </span><span class="oak-identifier">each</span><span class="oak-minus">-</span><span class="oak-identifier">integer</span></code></pre><p>Xi is modeled mainly after the concatenative language Factor, but Xi's implementation is neither complete nor robust -- there's basically no error handling, for example, and Xi is not meant to be a faithful re-implementation of Factor. It should run correct programs correctly, but will often fail catastrophically on bad input. Nonetheless, building Xi and using it to write some basic programs has been an eye-opening experience that taught me a completely different way of structuring programs. This blog is my attempt to share some of those insights with you, but as with many interesting topics in programming languages, the best way to get a feel for why concatenative programming is interesting is to try it yourself. If you want to give it a shot yourself, you'll find some additional resources at the end of this post.</p><h2>Stack programming</h2><p>All Xi programs operate on a single global data structure called the <em>stack</em> (some sources call it the <em>data stack</em>, probably to avoid confusion with the function <em>call stack</em>). The stack contains all the values that a Xi program has access to at any given moment, in a <a href="https://en.wikipedia.org/wiki/Stack_(abstract_data_type)">stack</a> data structure. Xi is dynamically typed, and works with the same basic values as Oak (like <code>float</code>, <code>string</code>, <code>bool</code>, <code>list</code>), the only difference being that Xi represents all numbers with <code>float</code>s for simplicity. So the Xi data stack is populated with these values.</p><p>A Xi program starts with an empty stack.</p><pre><code data-lang="oak"><span class="oak-less">&lt; </span><span class="oak-greater">></span></code></pre><p>Like other concatenative programming languages, each statement (line) in a Xi program is a sequence of <em>words</em>, where each word manipulates the data stack in some way, usually by moving and changing a few values at the top of the stack. Literal values like numbers and strings simply move those values onto the stack.</p><p>For example, the word <code>+</code> pops the top two values off the stack, adds them together, and pushes the sum back on the stack.</p><pre><code data-lang="oak"><span class="oak-numberLiteral">1</span>
+<span class="oak-comment">// stack: &lt; 1 ></span>
+<span class="oak-numberLiteral">2 </span><span class="oak-numberLiteral">10</span>
+<span class="oak-comment">// stack: &lt; 1 2 10 ></span>
+<span class="oak-plus">+</span>
+<span class="oak-comment">// stack: &lt; 1 12 ></span>
+<span class="oak-plus">+</span>
+<span class="oak-comment">// stack: &lt; 13 ></span></code></pre><p>We can also write these words all next to each other, and have the same program.</p><pre><code data-lang="oak"><span class="oak-numberLiteral">1 </span><span class="oak-numberLiteral">2 </span><span class="oak-numberLiteral">10 </span><span class="oak-plus">+ </span><span class="oak-plus">+</span>
+<span class="oak-comment">// stack: &lt; 13 ></span></code></pre><p>This is where the name <em>concatenative</em> language comes from -- putting words next to each other composes those functions together in a predictable way.</p><p>Sometimes, we need to shuffle some items in the stack around to work on the right values without doing any other computation. These are called <em>stack shuffling</em> words. Xi provides 4 basic ones -- <code>dup</code>, <code>dip</code>, <code>drop</code>, and <code>swap</code> -- from which more complex words can be defined:</p><pre><code data-lang="oak"><span class="oak-numberLiteral">2 </span><span class="oak-identifier">dup</span>
+<span class="oak-comment">// stack: &lt; 2 2 > — duplicates the top value</span>
+
+<span class="oak-numberLiteral">1 </span><span class="oak-numberLiteral">2 </span><span class="oak-numberLiteral">3 </span><span class="oak-leftParen">( </span><span class="oak-plus">+ </span><span class="oak-rightParen">) </span><span class="oak-identifier">dip</span>
+<span class="oak-comment">// stack: &lt; 3 3 > — runs a quotation (words inside `( ... )`) underneath the</span>
+<span class="oak-comment">// topmost value on the stack</span>
+
+<span class="oak-numberLiteral">1 </span><span class="oak-numberLiteral">2 </span><span class="oak-identifier">drop</span>
+<span class="oak-comment">// stack: &lt; 1 > — simply drops the topmost value on the stack</span>
+
+<span class="oak-numberLiteral">10 </span><span class="oak-numberLiteral">20 </span><span class="oak-identifier">swap</span>
+<span class="oak-comment">// stack: &lt; 20 10 > — swaps the top 2 values' places on the stack</span></code></pre><p>Keeping all program state in a single data structure like this seems a little bizzare at first, and it can sometimes be cumbersome. For example, there's no obvious way to tell which data belongs to whicih "call" of a function, because the function abstraction doesn't really exist in concatenative languages like Xi. But one clear benefit of the stack-oriented programming style is that it's very easy to introspect and debug programs, because all state is always visible. You can, at any point, print the entire data stack and see the entire "universe" of the program.</p><h2>Composable assembly</h2><p>At first, writing concatenative code felt a bit like writing assembly. I was forced to think more about where my data was in the stack, and how my words and instructions moved and transformed them directly. But over time, I started to view programs less as "words manipulating data on the stack" and more as "words that string together to form longer instructions". In concatenative languages, words can compose very naturally together into longer "phrases" that do specific things.</p><p>As an example of basic composition, we can define <code>rot</code>, which rotates the top 3 items' places in the stack, like this.</p><pre><code data-lang="oak"><span class="oak-comment">// define the word "rot"</span>
+<span class="oak-identifier">rot </span><span class="oak-colon">: </span><span class="oak-leftParen">( </span><span class="oak-identifier">swap </span><span class="oak-rightParen">) </span><span class="oak-identifier">dip </span><span class="oak-identifier">swap</span>
+
+<span class="oak-numberLiteral">1 </span><span class="oak-numberLiteral">2 </span><span class="oak-numberLiteral">3 </span><span class="oak-identifier">rot</span>
+<span class="oak-comment">// stack: &lt; 2 3 1 ></span></code></pre><p>Now that we have this word <code>rot</code>, rather than typing <code>( swap ) dip swap</code> everywhere and trying to imagine what's happening on the stack, I can just type <code>rot</code> and think one level higher, knowing that the top three elements on the stack are just being "rotated". Even higher level constructs like looping and iteration words can be composed together in exactly the same way.</p><p>What makes composition unique in concatenative languages is that functions (words) are composed together without naming or mentioning their parameters explicitly, but only by naming which words come after which other words. This programming style, called <a href="https://en.wikipedia.org/wiki/Tacit_programming">"point-free" or "tacit" programming</a>, is possible in other languages, but pervasive and natural in concatenative languages. (Hence the name "concatenative" -- programs are just "concatenations" of words.)</p><p>Even with higher level abstractions, though, reading concatenative code takes some getting used to. Here's a more complex Xi program, the <a href="https://en.wikipedia.org/wiki/Fizz_buzz">FizzBuzz</a> program. Though each statement must be in a single line in Xi, I've broken them up here into multiple lines for readability.</p><pre><code data-lang="oak"><span class="oak-comment">// FizzBuzz in Xi</span>
+
+<span class="oak-identifier">fizzbuzz </span><span class="oak-colon">: </span><span class="oak-identifier">dup </span><span class="oak-numberLiteral">15 </span><span class="oak-fnName">divisible? </span><span class="oak-leftParen">(</span><span class="oak-newline">
+    </span><span class="oak-stringLiteral">'FizzBuzz' </span><span class="oak-identifier">print </span><span class="oak-identifier">drop</span>
+<span class="oak-rightParen">) </span><span class="oak-leftParen">(</span><span class="oak-newline">
+    </span><span class="oak-identifier">dup </span><span class="oak-numberLiteral">3 </span><span class="oak-identifier">divisible?</span><span class="oak-newline">
+    </span><span class="oak-leftParen">(</span><span class="oak-newline">
+        </span><span class="oak-stringLiteral">'Fizz' </span><span class="oak-identifier">print </span><span class="oak-identifier">drop</span><span class="oak-newline">
+    </span><span class="oak-rightParen">) </span><span class="oak-leftParen">(</span><span class="oak-newline">
+        </span><span class="oak-identifier">dup </span><span class="oak-numberLiteral">5 </span><span class="oak-identifier">divisible?</span><span class="oak-newline">
+        </span><span class="oak-leftParen">( </span><span class="oak-stringLiteral">'Buzz' </span><span class="oak-identifier">print </span><span class="oak-identifier">drop </span><span class="oak-rightParen">) </span><span class="oak-leftParen">( </span><span class="oak-identifier">print </span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if</span><span class="oak-newline">
+    </span><span class="oak-rightParen">)</span><span class="oak-newline">
+    </span><span class="oak-ifKeyword">if</span>
+<span class="oak-rightParen">) </span><span class="oak-ifKeyword">if</span>
+
+<span class="oak-comment">// main</span>
+<span class="oak-numberLiteral">100 </span><span class="oak-leftParen">( </span><span class="oak-plus">+</span><span class="oak-plus">+ </span><span class="oak-identifier">fizzbuzz </span><span class="oak-rightParen">) </span><span class="oak-identifier">each</span><span class="oak-minus">-</span><span class="oak-identifier">integer</span></code></pre><p>Here, the word <code>fizzbuzz</code> consumes a number at the top of the data stack and prints either 'Fizz', 'Buzz', 'FizzBuzz', or the number to output. The main program <code>100 ( ++ fizzbuzz ) each-integer</code> performs the quotation (<code>++ fizzbuzz</code>) for each integer counting up from 0 to 100, exclusive.</p><p>As a point of comparison, here's a solution to the same problem in Factor, from <a href="https://rosettacode.org/wiki/FizzBuzz#Factor">Rosetta Code</a>:</p><pre><code>USING: math kernel io math.functions math.parser math.ranges ;
+IN: fizzbuzz
+: fizz ( n -- str ) 3 divisor? "Fizz" "" ? ;
+: buzz ( n -- str ) 5 divisor? "Buzz" "" ? ;
+: fizzbuzz ( n -- str ) dup [ fizz ] [ buzz ] bi append [ number>string ] [ nip ] if-empty ;
+: main ( -- ) 100 [1,b] [ fizzbuzz print ] each ;
+MAIN: main</code></pre><p>You can see that the stack-manipulating words like <code>dup</code> and <code>nip</code> still appear, which makes it more difficult to get away completely from having to think about the low-level data stack.</p><h2>Pure abstraction</h2><p>// Programming is mostly writing something many times, realizing it's a pattern, and abstracting it out. This is made very concrete in Xi. the concatenative/point-free abstraction lets me abstract fearlessly, which is a kind of a nice freedom.</p><p>The sample program computes factorials of every number from 1 to 10, inclusive, and prints it. This program is a great demonstration of how elegant and concise well-designed concatenative programs can be, if the right primitives are composed well. This program is just two short lines:</p><pre><code data-lang="oak"><span class="oak-identifier">factorial </span><span class="oak-colon">: </span><span class="oak-identifier">nat </span><span class="oak-identifier">prod</span>
+<span class="oak-numberLiteral">10 </span><span class="oak-leftParen">( </span><span class="oak-plus">+</span><span class="oak-plus">+ </span><span class="oak-identifier">factorial </span><span class="oak-identifier">print </span><span class="oak-rightParen">) </span><span class="oak-identifier">each</span><span class="oak-minus">-</span><span class="oak-identifier">integer</span></code></pre><p>First, we define the word <code>factorial</code> that takes a number, generates a list of numbers counting up from 1 to that number (<code>nat</code>), and takes their total product (<code>prod</code>). Then we loop through every number from 1 to 10, and compute the factorial and print it.</p><hr/><p>// Constraint as a learning aid, problem-solving tool and creative guide. After coding in Xi, writing Oak code is ... much easier! But constraints about stack still affect how I view things.</p><h2>Further reading</h2><p>Learning about this completely new (to me) and esoteric topic, I found these resources to be particular helpful.</p><p><a href="https://factorcode.org/">Factor's website</a> is a good reference for broad information about Factor, which was the primary inspiration for Xi.</p><p><a href="https://andreaferretti.github.io/factor-tutorial/">A panoramic tour of Factor</a> is the most beginner-friendly treatment of Factor and concatenative programming I could find.</p><p><a href="http://useless-factor.blogspot.com/2007/09/survey-of-stack-shufflers.html">A survey of stack shufflers</a> helped me get a better sense of how to use stack shuffling words, and how to "think in Factor", i.e. think about programming by composing words together.</p><p><a href="https://www.youtube.com/watch?v=f_0QlhYlS8g">Google TechTalk on Factor by its creator Slava Pestov</a> gives a great high-level overview of what makes concatenative programming and Factor attractive.</p><p><a href="https://ph1lter.bitbucket.io/blog/2021-01-15-baremetal-x86-forth.html">Bare metal x86 Forth</a> is an advanced and insightful deep dive into bootstrapping a concatenative programming language from assembly.</p>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>
