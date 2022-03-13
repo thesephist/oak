@@ -1,5 +1,5 @@
 ---
-title: "Optimizing the Oak compiler for 30% smaller, 40% faster bundles"
+title: Optimizing the Oak compiler for 30% smaller, 40% faster bundles
 date: 2022-01-26T15:37:28-05:00
 ---
 
