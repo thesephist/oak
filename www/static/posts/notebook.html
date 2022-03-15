@@ -1,0 +1,48 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Oak Notebook: an experiment in dynamic, interactive documents | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay blogpost">
+            <h1>Oak Notebook: an experiment in dynamic, interactive documents</h1>
+            <p class="meta">
+                <a href="/posts/">&larr; Posts</a>
+                <span class="date">14 Mar 2022</span>
+            </p>
+            <p>On a whim this week, I decided to build a little experiment from some ideas I had simmering in my mind about a way to write documents with dynamic, interactive components interleaved into prose. I've published the experiment under the name <strong><a href="https://thesephist.github.io/x-oak-notebook/">Oak Notebook</a></strong>, but it's not really a complete project or even a complete idea, so much as just a playground onto which I've thrown some things that seemed interesting.</p><p>
+    <img src="/img/oak-notebook-demo.gif" alt="A demo of me scrolling through the Oak Notebook demo website"
+        style="border-radius: 1% / 1.5%;">
+</p><p>I'll quote at length from the demo site itself, since that's the best way I know of explaining what Oak Notebook is:</p><blockquote><p>Oak Notebook is an experimental tool for creating <a href="https://thesephist.com/posts/notation/#dynamic-notation">dynamic documents</a> with Markdown and <a href="https://oaklang.org/">Oak</a>. It's both a way of writing documents with interactive, programmable "panels" for explaining and exploring complex ideas, and a "compiler" script that transforms such Markdown documents into HTML web pages. It's a bit like <a href="https://mdxjs.com/">MDX</a>, if MDX was focused specifically on input widgets and interactive exploration of information.</p><p>I was inspired initially by <a href="https://docs.streamlit.io/library/api-reference">Streamlit</a> and <a href="http://worrydream.com/ScrubbingCalculator/">Bret Victor's Scrubbing Calculator</a> to explore ideas in this space, but what's here isn't a specific re-implementation of either of those concepts, and takes further inspirations from other products, experiments, and prior art.</p><p>Oak Notebook provides a way to embed these interactive panels into documents written in Markdown without worrying about styling user interfaces or managing rich user input components.</p></blockquote><p>I'm hoping that Oak Notebook will become a tool that I'll reach for to build little visualizations and interactive explorations to help me understand and think through situations; hopefully, in that process, Oak Notebook will improve slowly but surely to fit my use cases more and more. I also think this domain of interactive, dynamic documents is fascinating as a space for research, but it's always felt far too broad and deep for me to wade into comfortably. It's very difficult to even try to define an alphabet for the primitive components of dynamic data displays. Oak Notebook is a small and casual start to me cautiously exploring this domain of ideas with my favorite little toy language.</p><p>There are lots of question to answer, even for something as basic as what's on the demo site today. On the interface design side, some questions I face are:</p><ul><li>How do you clearly communicate what parts of the interactive embeds are inputs to be played with, and which are simply output display?</li><li>How tightly should interactivity be woven into prose? Should authors be able to embed arbitrary inline components right into prose? Should dynamic pieces be offset from normal paragraphs in some way?</li><li>Can we have an "alphabet" of basic input components from which more complex and situationally apt input mechanisms (rotatable knobs, color picker, 2D grid, text selection, time series input) can be built?</li><li>How can we make <a href="https://alpha.trycarbide.com/">"running a program backwards" with automatic differentiation of programs</a> easier to use for building explorable explanations?</li><li>How can we make interactive embeds programmable without letting the complexity of these mini-programs get out of hand and turn into fully-fledged pieces of software to maintain?</li><li>If there are errors in the program that runs each embed, how should they be reported to the user?</li></ul><p>On the technical implementation side, some questions I face are:</p><ul><li>How can we make these dynamic documents easier to build and share? Can we minimize the toolchain requirements? Simplify the APIs?</li><li>How might we take inherently computationally expensive simulations, like DL inference or long-running algorithms, and make them smooth to interact with? Can we use dynamic programming or caching to have the interface move faster than the underlying computation?</li></ul><p>At a higher level, here are some guiding principles I used to help direct my brainstorming, quoting again from the demo site:</p><blockquote><p><strong>Words first.</strong> Dynamic documents are still fundamentally documents, and in the spirit of <a href="https://en.wikipedia.org/wiki/Literate_programming">literate programming</a>, I think language is the most flexible and versatile tool we have to communicate ideas. Other dynamic, interactive components should augment prose rather than dominate them on the page.</p><p><strong>Direct representation, direct manipulation.</strong> When designing visualizations, we should favor representing quantities and concepts directly using shapes, graphs, animated motion, or whatever else is best suited for the idea that needs to be communicated. Likewise, when building input components, we should establish as direct a connection as possible between the user's manipulation of the controls and the data being fed into the simulation or visualization -- motion in time for time-series input, a rotating knob for angle input, a slider for size or magnitude, and so on.</p><p><strong>Embrace programming and programmability.</strong> What makes programming challenging is not the notation or syntax, but the toolchain and mental models that are often required to build software. I believe that with simple build steps and a well-designed API, the ability to express dynamic ideas with the full power of a general-purpose programming language can be a gift.</p><p><strong>Composability.</strong> Oak Notebook should come with a versatile set of inputs and widgets out of the box, but it should be easy and idiomatic to compose or combine these primitive building blocks together to make larger input components or reusable widgets that fit a given problem, like a color input with R/G/B controls or a reusable label for displaying dates.</p></blockquote><p>In particular, I think "words first" is a good grounding principle whenever I think about making documents more interactive or smarter or amenable to machine understanding. Text documents are the skeleton to which authors can add color and texture with data displays and interactive explorations, but if we try to collapse narratives and ideas in prose down to simple knobs and graphs, the whole house collapses.</p><p>At a technical level, the Oak Notebook compiler is a <a href="/highlight/https://raw.githubusercontent.com/thesephist/x-oak-notebook/da1513475af03504782040a448cc395c74b6263a/compile.oak?start=17&end=122">single Oak script that packs a serious punch</a>. It parses Markdown using Oak's <code>md</code> standard library module. It calls out to <code>oak cat</code> to syntax highlight any Oak code blocks. It also shells out to child processes of <code>oak build --web</code> to compile a dynamically generated Oak program to JavaScript that runs on the Oak Notebook page. It's a great testament to the hackability of Oak and Oak's self-hosted tools, and I had a lot of fun writing the script.</p><p>I don't really know where this Oak Notebook project will go. It may go nowhere, and become a little tool I occasionally reach for to make fun demos. I think it would be pretty cool if it can become a part of the standard Oak toolchain -- that would be one step on the path to making Oak itself an <a href="https://twitter.com/jessmartin/status/1451198781702111250">"erector set" for thinking</a>. Perhaps it would even become a starting for more interesting and creative work on how we can write and share living, programmable documents to communicate bigger ideas better.</p>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>
