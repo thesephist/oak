@@ -3,11 +3,11 @@ title: Oak and expressive power in programming languages
 date: 2022-02-26T15:37:28-05:00
 ---
 
-I've been interested in the idea of _expressiveness_ of programming languages since I read [_On the expressive power of programming languages_](https://doi.org/10.1016/0167-6423(91)90036-w) by Matthias Felleisen. Though I don't agree wholeheartedly with the way Felleisen co-opts the term _expressive power_ for his idea of capabilities in programming languages, I think it invites us to think more rigorously about expressiveness of languages, which I welcome wholeheartedly.
+I've been interested in the idea of _expressiveness_ of programming languages since I read [_On the expressive power of programming languages_](https://doi.org/10.1016/0167-6423(91)90036-w) by Matthias Felleisen. Though I don't agree wholeheartedly with the way Felleisen co-opts the term _expressive power_ for his idea of capabilities in programming languages, I think it invites us to think more rigorously about expressiveness of languages.
 
 _Expressiveness_ seems like a property universally sought after by programming language designers (Oak notwithstanding). Developers want to write programs in languages that are expressive. But what exactly does that quantify?
 
-Intuitively, for me to say a language is _expressive_, I want to feel that its **representation of a program faithfully models my personal abstractions and theories** about the problems and ideas the program models. In this post, I want to make that intuition a bit more rigorous, and lightly discuss some ways in which Oak is expressive, and some ways in which it's not, both in general terms as well as specifically compared to its predecessor language [Ink](https://dotink.co/), compared to which Oak tries to be much more expressive.
+Intuitively, for me to say a language is _expressive_, I want to feel that its **representation of a program faithfully models my personal abstractions and theories** about the problems and ideas the program models. In this post, I want to make that intuition a bit more rigorous, and lightly discuss some ways in which Oak is expressive, and some ways in which it's not, both in general terms as well as specifically compared to its predecessor language [Ink](https://dotink.co/).
 
 In the process, I want to show one way Felleisen's narrow definition of expressiveness falls short when we try to describe how programming languages feel to use day-to-day.
 
@@ -41,7 +41,7 @@ fn doSomethingDangerous(poison) {
 }
 ```
 
-There is no way to rewrite parts of this program that use the `goto` keyword so that we don't need that keyword with only simple, local changes. This kind of goto-based control flow is common in low-level error handling code in C-like languages with `goto` support, but there isn't a way to express the `goto` syntax in terms of other syntactic abstractions we have, like loops or conditionals. This suggests that languages with `goto` statements are more expressive -- those programming languages have syntax that are more capable, in a sense. The control flow construct `goto` _adds expressive power_ to languages.
+There is no way to rewrite parts of this program that use the `goto` keyword with only simple, local changes so that we don't need that keyword. This kind of goto-based control flow is common in low-level error handling code in C-like languages with `goto` support, but there isn't a way to express the `goto` syntax in terms of other syntactic abstractions we have, like loops or conditionals. This suggests that languages with `goto` statements are more expressive -- those programming languages have syntax that are more capable, in a sense. The control flow construct `goto` _adds expressive power_ to languages.
 
 As a counterexample, many languages including Oak have _pipeline operators_. Usually, this operator provides a way to express function composition (passing the return values of one function into another to build a "pipeline") so that it's easier to read. For example, in Oak, we may write a program to find unique words in some text like this.
 
@@ -91,7 +91,7 @@ Viewed through this lens, Oak gained many different syntax constructs beyond wha
 
 The **push operator** (`<<`). In Ink, we added new items to lists or strings by assigning to a new key. But because pushing new items onto lists or strings is such a common operation, having a new operator specifically for this concept makes a lot of sense.
 
-**Atoms (`:like_this`)**. Atoms in Oak are immutable strings that appear as if they were atomic tokens. Atoms used pervasively in Oak to represent types or kinds of data, like results of asynchronous operations (`:data`, `:error`, `:resp`) or runtime types of values (`:int`, `:string`, `:function`). Atoms are used in Oak for many of the use cases for which Ink used strings, but by using atoms, Oak programs can signal to the reader that these values aren't user-generated or arbitrary, but are atomic labels that denote some part of the program's design.
+**Atoms (`:like_this`)**. Atoms in Oak are immutable strings that appear as if they were atomic tokens. Atoms are used pervasively in Oak to represent types or kinds of data, like results of asynchronous operations (`:data`, `:error`, `:resp`) or runtime types of values (`:int`, `:string`, `:function`). Atoms are used in Oak for many of the use cases for which Ink used strings, but by using atoms, Oak programs can signal to the reader that these values aren't user-generated or arbitrary, but are atomic labels that denote some part of the program's design.
 
 The **`with` keyword**. The `with` keyword is pure syntactic sugar that allows Oak programmers to invoke functions that take callbacks in a nicer way, by placing the callback outside of the function argument list. Rather than writing
 
@@ -111,7 +111,7 @@ with fs.readFile('data.txt') fn(file) {
 
 Though these two notations are technically equivalent, and even visually quite similar, I like the way the `with` keyword visually separates information passed to `fs.readFile` (the file path) from _what happens after it_, in the callback function. It's an expression of _intent_, more than behavior. In the future, the `with` keyword may do something more (I'm a big fan of the way `with` statements work in Python), but even as pure syntactic sugar, I think this is a nice change.
 
-As with all design decisions, expressiveness has a tradeoff -- more expressive programming languages tend to have a larger "vocabulary" size, which makes the language more complex. So Oak sometimes foregoes new specific syntax in favor of simplicity. For example, Oak doesn't (yet?) have structured looping constructs like `for` or `while` loops in the language, instead relying on standard library functions like `std.each` and `std.loop` to fill in those gaps. So far, this has felt like a good choice. Rather than jumping straight to a basic loop, Oak programmers are guided to find an iteration abstraction that better describes the particular use case.
+As with all design decisions, expressiveness has a tradeoff -- more expressive programming languages tend to have a larger "vocabulary" size, which makes the language more complex. So Oak sometimes foregoes new specific syntax in favor of simplicity. For example, Oak doesn't have structured looping constructs like `for` or `while` loops in the language, instead relying on standard library functions like `std.each` and `std.loop` to fill in those gaps. So far, this has felt like a good choice. Rather than jumping straight to a basic loop, Oak programmers are guided to find an iteration abstraction that better describes their particular use case.
 
 ---
 

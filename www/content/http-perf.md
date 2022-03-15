@@ -17,7 +17,7 @@ Some people also often measure the **number of concurrent connections** the serv
 
 To make these measurements, I set up a _server_ program, whose only job will be to accept and respond to HTTP requests as quickly as possible, and a _hammer_ program, which will try to send as many HTTP requests as possible to the server program, sequentially.
 
-The _hammer_ program is straightforward: it sends as many requests as the server will respond, sequentially, in a loop every second, and reports the throughput and latency for that second.
+The _hammer_ program is straightforward: it sends as many requests as the server will respond to, sequentially, in a loop every second, and reports the throughput and latency for that second.
 
 ```oak
 std := import('std')
@@ -172,7 +172,7 @@ The second interesting finding from the Autocannon benchmarks was that, with HTT
 
 In the course of developing Oak, I've made lots of performance measurements, but all of my previous benchmarks that I can recall measured CPU performance or memory utilization, which are both straightforward to measure and understand -- if something took twice as long, it's twice as slow! Benchmarking I/O was a new and interesting experience. I learned about how to (and how not to) measure latency, HTTP keep-alive, concurrency, and even how to use [gnuplot](https://en.wikipedia.org/wiki/Gnuplot), which I used to draw the charts in this post.
 
-My main takeaway at the end of this process is that **Oak is more than fast enough for my use cases, and further performance improvements will probably involve speeding up the interpreter loop itself**. Oak's baseline performance, from the "Basic" benchmark, matches up well against production-grade servers like Node.js, because the Basic benchmark is mostly concerned with performance of the underlying TCP and HTTP connection-handling logic, which in Oak is written in Go with Go's excellent `net/http` standard library package. The benchmarks showed that Oak's throughput and latency degrades predictably as the server's response logic gets more and more complex, which signals that the bottleneck is probably not with the Oak runtime's HTTP request handling code, but instead with the speed of Oak's interpreter loop instead, and how quickly Oak can execute Oak code.
+My main takeaway at the end of this process is that **Oak is more than fast enough for my use cases, and further performance improvements will probably involve speeding up the interpreter loop itself**. Oak's baseline performance, from the "Basic" benchmark, matches up well against production-grade servers like Node.js, because the Basic benchmark is mostly concerned with performance of the underlying TCP and HTTP connection-handling logic, which in Oak is written in Go with Go's excellent `net/http` standard library package. The benchmarks showed that Oak's throughput and latency degrades predictably as the server's response logic gets more and more complex, which signals that the bottleneck is probably not with the Oak runtime's HTTP request handling code, but with the speed of Oak's interpreter loop instead, and how quickly Oak can execute Oak code.
 
 It was also very interesting to see the scaling behaviors of Oak's web server up close and in person, both as the number of requests-per-second increased, and as I added more connections to the server. It was satisfying to see the memory usage stay so stable, and educational to see exactly how latency suffered as the number of concurrent connections to servers increased to 100 and beyond.
 

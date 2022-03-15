@@ -3,7 +3,7 @@ title: Designing a try/catch interop API for Oak
 date: 2022-02-17T15:37:28-05:00
 ---
 
-One of Oak's most useful features is its ability to be compiled to JavaScript using `oak build --web` to run on all the places JavaScript can run, like Node.js, web browsers, and even microcontrollers and games using [embedded](https://duktape.org/) [JS engine](https://bellard.org/quickjs/). When writing Oak programs that run in a JavaScript context, one problem that was unsolved until recently is how Oak interacts with exceptions that are thrown in JavaScript contexts.
+One of Oak's most useful features is its ability to be compiled to JavaScript using `oak build --web` to run on all the places JavaScript can run, like Node.js, web browsers, and even microcontrollers and games using an [embedded](https://duktape.org/) [JS engine](https://bellard.org/quickjs/). When writing Oak programs that run in a JavaScript context, one problem that was unsolved until recently is how Oak interacts with exceptions that are thrown in JavaScript contexts.
 
 Oak can call naturally into JavaScript functions, but if the JavaScript function throws an exception somewhere, the calling Oak code can't catch or react to it appropriately. When this happens in code that updates a web UI or handles a web request, this can be a problem. **Oak needs to be able to recover from and react appropriately to exceptions thrown in JavaScript**. So I tried to design an Oak API around JavaScript's exceptions.
 
@@ -36,7 +36,7 @@ with try(fn {
 }
 ```
 
-That seems... okay, but certainly not great. My biggest objection to this kind of interface that emulated the "block-based" feeling of Java-style exceptions is that this obscures true control flow of code. In Oak, callbacks usually mean the callback function is either executed asynchronously, or somehow executed out-of-flow from the rest of the program, like in a loop in `std.loop`. But here, there's a very straightforward control flow: we run the main function, check it for errors, and if any errors occur, we handle it in the catch function. Using a callback to handle the error feels like a lot of machinery for a very confusing flow of control.
+That seems... okay, but certainly not great. It tries to emulate the "block-based" feeling of Java-style exceptions. My biggest objection to this kind of interface is that this obscures true control flow of code. In Oak, callbacks usually mean the callback function is either executed asynchronously, or somehow executed out-of-flow from the rest of the program, like in a loop in `std.loop`. But here, there's a very straightforward control flow: we run the main function, check it for errors, and if any errors occur, we handle it in the catch function. Using a callback to handle the error feels like a lot of machinery for a very confusing flow of control.
 
 This problem gets worse if we want to use the return value from the function with a fallback value:
 
@@ -158,5 +158,7 @@ if result.type {
 
 This solution, using a `try()` function that wraps a potentially-throwing call, is clear about the chain of control flow, and returns error objects are familiar to Oak programmers from other built-in functions like `open` and `input`. It does all this without introducing any fundamentally new constructs into the language, and as a bonus, any call to the `try()` visibly marks the boundary between JavaScript-style error handling and Oak-style error handling.
 
-There are still some open questions. The main unresolved problem I face today is how Oak's error-handling patterns and the `try()` function interacts with any exceptions that are thrown asynchronously, in a callback. Node.js, for example, will let programs catch any uncaught exceptions at the top level in the program (for logging or reporting purposes). Oak currently has no facility to handle asynchronous runtime errors, because errors in correct Oak programs are reported as values. How might Oak be able to handle these asynchronous runtime errors that bubble up from JavaScript? These questions, I think, are good topics for future investigations.
+There are still some open questions. The main unresolved problem I face today is how Oak's error-handling patterns and the `try()` function interact with any exceptions that are thrown asynchronously, in a callback. Node.js, for example, will let programs catch any uncaught exceptions at the top level in the program (for logging or reporting purposes). Oak currently has no facility to handle asynchronous runtime errors, because errors in correct Oak programs are reported as values. How might Oak be able to handle these asynchronous runtime errors that bubble up from JavaScript?
+
+These questions, I think, are good topics for future investigations.
 

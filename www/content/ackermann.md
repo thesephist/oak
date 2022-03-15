@@ -3,7 +3,7 @@ title: Playing with the Ackermann function: a tour of computational complexity
 date: 2022-03-10T15:34:17-05:00
 ---
 
-Once in a while, I like to play around with Oak to test new mathematical ideas I come across. Today, I was reminded of [Ackermann functions](https://en.wikipedia.org/wiki/Ackermann_function), and thought I'd write a small Oak program to get a feel for how the function behaved.
+Once in a while, I like to play around with Oak to test new mathematical ideas I come across. Today, I was reminded of the [Ackermann function](https://en.wikipedia.org/wiki/Ackermann_function), and thought I'd write a small Oak program to get a feel for how the function behaved.
 
 The Ackermann function is quite simple to write. It takes two integers and returns an integer.
 
@@ -130,10 +130,10 @@ ack(3, 10) = 8189 (157760.616ms)
 
 Not only do the numbers increase rapidly, the runtime increases even faster -- `ack(3, 10)` took over 2 minutes to compute. The runtime of the Ackermann function increases so quickly because the function changes its return value by 1 each iteration, and only sometimes. That means every increment of 1 in the function's return value corresponds to several invocations of the Ackermann function during its computation.
 
-Some facts about the next sequence, `ack(4, _)`
+Some facts about the next sequence, `ack(4, _)`:
 
 - I tried to compute a sequence for `ack(4, _)` but only got as far as `ack(4, 0) = 13 (0.574ms)`.
-- `ack(4, 1)` too long to compute, and I had to stop the program, but according to Wikipedia, its value should be `65533`.
+- `ack(4, 1)` took too long to compute, and I had to stop the program, but according to Wikipedia, its value should be `65533`.
 - `ack(4, 2)` is too large to even write down here, and is best described as `2^65536 − 3`.
 
 I expected the function itself to increase quickly, from its reputation, but I was surprised the run-time increased much faster than even the function itself.

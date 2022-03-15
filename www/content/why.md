@@ -3,7 +3,7 @@ title: Why Oak?
 date: 2021-09-08T15:37:28-05:00
 ---
 
-In mid-2019, I wrote my first programming language as a hobby learning project. It was called [Ink](https://dotink.co/), and was a very simple dynamically typed scripting language in the spirit of JavaScript and Lua. For the next two year, I built [lots and lots of projects and tools](https://dotink.co/docs/projects/) with Ink, and learned a lot about both building and using my own programming language.
+In mid-2019, I wrote my first programming language as a hobby learning project. It was called [Ink](https://dotink.co/), and was a very simple dynamically typed scripting language in the spirit of JavaScript and Lua. For the next two years, I built [lots and lots of projects and tools](https://dotink.co/docs/projects/) with Ink, and learned a lot about both building and using my own programming language.
 
 My biggest takeaway was this:
 
@@ -11,21 +11,29 @@ My biggest takeaway was this:
 
 This post, in addition to being an introduction to Oak, is my attempt to unravel this lesson and invite you to adopt it in your work. But before we get into that, I want you to meet Oak — a simple, expressive, friendly programming language I designed for building my personal projects and tools.
 
+```oak
+std := import('std')
+
+std.println('Hello, World!')
+```
+
 ## Inventing Oak
 
-Oak came to be as an evolution of Ink, which was my first toy programming language. It was a dynamically-typed scripting language that was bare (you might say _minimal_) in features, but had the essentials. I really enjoyed writing programs in Ink, but it had a handful of shortcomings and misfeatures that became more and more obvious over time as I used it.
+Oak came to be as an evolution of Ink, which was my first toy programming language. It was a dynamically typed scripting language that was bare (you might say _minimal_) in features, but had the essentials. I really enjoyed writing programs in Ink, but it had a handful of shortcomings and misfeatures that became more and more obvious over time as I used it.
 
-Oak is a sequel to Ink that tries to correct many of these early mistakes, while being [more expressive](/posts/expressive/) with much more robust tooling support. Oak is intentionally not "Ink 2.0" — it's not a simple upgrade or bug fix, but a different language with many well-considered updates in the details.
+Oak is a sequel to Ink that tries to correct many of these early mistakes, while being [more expressive](/posts/expressive/) with much more robust first-party tooling support. Oak is intentionally not "Ink 2.0" — it's not a simple upgrade or bug fix, but a different language with many well-considered updates in the details.
+
+I was never really proud to have other developers try to program in Ink, because it was a rough learning project; Oak, on the other hand, is something I can (with some chagrin) hand off to a fellow dev without being crushed under the weight of my own self-doubt.
 
 ### What Ink got right, and what it got wrong
 
-Ink was designed to be very minimal, partly because I prefer simplicity and partly because I didn't want to commit myself to build lots of language features for my first toy language. It had few basic data types, no classes or inheritance mechanism, and a small set of built-in operators. Every blocking operation (like reading files, working with timers) was fully asynchronous. In these was it was very "pure", but that simplicity and purity came at the cost of ergonomics and expressiveness. As I used Ink, I began to convince myself that some features and complexity that was left out of Ink _did_ earn their places in even a small, minimal language.
+Ink was designed to be very minimal, partly because I prefer simplicity and partly because I didn't want to commit myself to building lots of language features for my first toy language. It had few basic data types, no classes or inheritance mechanism, and a small set of built-in operators. Every blocking operation (like reading files, working with timers) was fully asynchronous. In these ways, Ink was very "pure", value-oriented, fully async, without any hidden details to learn. But that simplicity and purity came at the cost of ergonomics and expressiveness. As I used Ink, I began to convince myself that some features and complexity that was left out of Ink _did_ earn their places in even a small, minimal language. Let me walk you through a handful of them.
 
 #### Richer set of operators
 
 The most obvious kind of missing feature was operators. Oak has a richer set of operators than Ink, for things that I wanted to express in Ink programs but couldn't do so elegantly:
 
-The **nonlocal assignment operator** `<-` binds a value to a variable _without declaring the variable_, meaning it can update values that are in a parent scope of some block or function. This operation wasn't possible in Ink. This operator is similar to `:=`, with one difference:
+The **nonlocal assignment operator** `<-` binds a value to a variable _without declaring the variable in the local scope_, meaning it can update values that are in a parent scope of some block or function. This operation wasn't possible in Ink. This operator is similar to `:=`, with one difference:
 
 ```oak
 n := 10
@@ -69,14 +77,14 @@ fn add(a, b) a + b
 
 #### Better operator precedence rules
 
-Ink's syntax also suffered from bad operator precedence, which I didn't have a chance to go back and fix, because I was then just learning how to write parsers. In Ink, the dot `.` used for property access had lower precedence than function calls, which meant an expression like `stack.pop()` parsed as `(stack) . (pop())`, which it should really have been parsed as `(stack.pop) ()`. Oak corrects this mistake, so that object-oriented programming styles with methods defined on objects is much easier on the eyes.
+Ink's syntax also suffered from bad operator precedence, which I didn't have a chance to go back and fix, because I was then just learning how to write parsers. In Ink, the dot `.` used for property access had lower precedence than function calls, which meant an expression like `stack.pop()` parsed as `(stack) . (pop())`, when it should really have been parsed as `(stack.pop) ()`. Oak corrects this mistake, so that the object-oriented programming style of calling methods defined on objects is much easier on the eyes.
 
 #### Optional and variadic parameters
 
-Lastly, Ink didn't support optional function parameters, nor variadic functions, which meant that every function call had to be called with precisely the correct number of arguments. I didn't expect this to be so limiting, but over time, I discovered there are many, many places where a dynamic parameter list is useful:
+Lastly, Ink didn't support optional function parameters, nor variadic functions, which meant that every function call had to be called with precisely the correct number of arguments. I didn't expect this to be so limiting, but over time, I discovered there are many, many places where a parameter list of varying length is useful:
 
 - Without optional parameters, I was forced to sometimes write multiple versions of the same function, like `sort()` and `sortBy(predicate)`, one of which took some property to sort a list by.
-- It's often more natural for a function to take a variadic number of arguments than to take a list, like `math.sum(10, 20, 30, 40)`, but in Ink, I couldn't express it. I had to write `math.sum([10, 20, 30, 40])`.
+- It's often more natural for a function to take a variadic number of arguments than to take a list, like `math.sum(10, 20, 30, 40)`, but in Ink, I couldn't express it. I had to write `(math.sum)([10, 20, 30, 40])`.
 - Without variadic functions, anytime I wanted to give a function a varying number of arguments, I had to use a list. For example, `fmt.format('{{0}} {{1}}', 10, 12)` has a much more clunky signature in Ink: `(fmt.format)('{{0}} {{1}}', [10, 12])`.
 
 #### The good ideas that survived
@@ -91,8 +99,8 @@ I thought an emphasis on programming in a functional style was good, and I wante
 
 There were also a few more novel ideas in Ink that proved their worth. I expanded on these further when designing Oak.
 
-- The [_match operator_ `::`](https://dotink.co/docs/overview/#match-expressions), a kind of a versatile switch-case, was the only branching/conditional expression in Ink. It worked so well that Oak adopted the idea, but using a keyword `if` instead. Oak's `if` expression also has a few shorthand forms to make it easier to use, like `if condition? -> doSomething()`.
-- The _empty name_ `_` was equal to any other value (matched every other value, and `x = _` for any `x`). This simple idea made writing complex `if` expressions and other structural comparisions easy: for example, `result = { type: :error, error: _ }` checks if a result value is structured like an error value.
+- The [_match operator_ `::`](https://dotink.co/docs/overview/#match-expressions), a kind of a versatile switch-case, was the only branching/conditional construct in Ink. It worked so well that Oak adopted the idea, but using a keyword `if` instead. Oak's `if` expression also has a few shorthand forms to make it easier to use, like `if condition? -> doSomething()`.
+- The _empty name_ `_` was equal to any other value (matched every other value; `x = _` for any and all `x`). This simple idea made writing complex `if` expressions and other structural comparisions easy: for example, `result = { type: :error, error: _ }` checks if a result value is structured like an error value.
 - Asynchronous programming with callbacks, like in JavaScript, was a good idea. But sometimes, I wanted an escape hatch to write synchronous functions for reading and writing files or waiting on a timer. Oak improves on this by offering both synchronous and asynchronous versions of all the blocking built-in functions, and light syntax support with the `with` syntax sugar for callbacks.
 
 ## Inventing _with_ Oak
@@ -107,7 +115,7 @@ Andreas Kling, who created [SerenityOS](https://github.com/SerenityOS/serenity),
 >
 >**Andreas**: I still feel that nobody really does that better than Apple. They control the whole stack, and they really take advantage of that. Especially lately with putting out their own CPUs and everything now as well. That’s been really awesome. And I enjoyed learning from that environment what is really possible if you control more of the stack.
 
-I think Andreas makes a valuable observation here, that **owning and understanding further up and down your software stack can let you move faster and build things others couldn't have built**. Of course, there is a reason this isn't common in the industry -- for most software products and companies, it's simply not practical to build and own the full stack behind complex and ever-evolving products. But I think that calculus changes for personal projects or projects that we build to learn new ideas, and I think Andreas recognizes that as well, in his experience building SerenityOS from scratch as this kind of "full stack" system:
+I think Andreas makes a valuable observation here, that **owning and understanding further up and down your software stack can let you move faster and build things others couldn't have built**. Of course, there is a reason this isn't common in the industry -- for most software products and companies, it's simply not practical to build and own the full stack behind complex and ever-evolving products. But I think that calculus changes for personal projects or projects that we build to learn new ideas, and I think Andreas recognizes that as well, in his experience building SerenityOS from scratch as this kind of a "full stack" system:
 
 >Everything is just a piece of code that somebody writes. And if we just make all those pieces of code and stack them up, it’s going to work. I had no illusions about how an operating system looks once it is put together and works. Now I didn’t know how to get there, but I reasoned that if you just start building these components one by one, eventually you’ll have the full stack and it will just gel together. So that’s what I started doing.
 
@@ -129,5 +137,5 @@ When all of the supporting tools for a programming language are built together o
 
 The programming language we use to build projects and tools define the _vocabulary_ with which we speak these ideas into existence. Because most languages are extremely general-purpose, if I know my use case exactly, it turns out I can get a huge amount of leverage and learning by building a custom language and surrounding ecosystem for my exact purpose.
 
-With the language, libraries, and tools tailored to the way I want to work, I rarely have to fight then language to understand what went wrong or why something is behaving unexpectedly. The vocabulary of Oak lines up well with how I want to describe my problems and designs, working at the level of abstraction that feels right for me, with the concepts I'm familiar with. And unlike programming in Ink, where I had to often work around design flaws or deficiencies, Oak feels right under my fingers. I'm looking forward to building an ever wider universe of interesting projects and experiments on this new foundation.
+With the language, libraries, and tools tailored to the way I want to work, I rarely have to fight the language to understand what went wrong or why something is behaving unexpectedly. The vocabulary of Oak lines up well with how I want to describe my problems and designs, working at the level of abstraction that feels right for me, with the concepts I'm familiar with. And unlike programming in Ink, where I had to often work around design flaws or deficiencies, Oak feels just right under my fingers. I'm looking forward to building an ever wider universe of interesting projects and experiments on this new foundation.
 

@@ -3,7 +3,7 @@ title: Xi: thinking different with concatenative programming languages
 date: 2021-09-23T15:37:28-05:00
 ---
 
-[**Xi**](https://github.com/thesephist/xi) (pronounced _Zai_) is a little stack-based concatenative language, written in Oak and using Oak types and semantics. I wrote Xi over the 2021 Labor Day weekend as a learning exercise to understand how stack languages like [Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)) and [Factor](https://factorcode.org/) work and why they're interesting.
+[**Xi**](https://github.com/thesephist/xi) (pronounced _Zai_) is a little stack-based [concatenative language](https://en.wikipedia.org/wiki/Concatenative_programming_language), written in Oak and using Oak types and semantics. I wrote Xi over the 2021 Labor Day weekend as a learning exercise to understand how stack languages like [Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)) and [Factor](https://factorcode.org/) work and why they're interesting.
 
 Before diving in, here's a glimpse of what Xi programs look like.
 
@@ -131,24 +131,30 @@ You can see that the stack-manipulating words like `dup` and `nip` still appear,
 
 ## Pure abstraction
 
-// Programming is mostly writing something many times, realizing it's a pattern, and abstracting it out. This is made very concrete in Xi. the concatenative/point-free abstraction lets me abstract fearlessly, which is a kind of a nice freedom.
+In my view, much of programming is about writing something many times, realizing a pattern amongst the noise, and abstracting it out, whether directly and literally into a function or more abstractly into an architecture to reuse later. This kind of "abstraction and reuse" is made very concrete in Xi and other concatenative languages. The point-free style of programming lets us _abstract fearlessly_, because any consecutive words can be pulled out and renamed into a new word (a new abstraction) without disturbing the program itself. It's a very nice kind of freedom that I haven't experienced in any other programming language.
 
-The sample program computes factorials of every number from 1 to 10, inclusive, and prints it. This program is a great demonstration of how elegant and concise well-designed concatenative programs can be, if the right primitives are composed well. This program is just two short lines:
+For example, take this program that computes the factorials of every number through to 10.
+
+```oak
+10 ( ++ nat prod print ) each-integer
+```
+
+It loops from 0 through 9 (`10 ( ... ) each-integer`) and on each number, increments it with `++`, turns it into a list of numbers up to that number with `nat`, and computes the product of all numbers in that list with `prod` then prints the result.
+
+One piece of this code is `nat prod`, which takes a number and computes its factorial. We can do what's basically a simple find-and-replace to refactor this code out:
 
 ```oak
 factorial : nat prod
 10 ( ++ factorial print ) each-integer
 ```
 
-First, we define the word `factorial` that takes a number, generates a list of numbers counting up from 1 to that number (`nat`), and takes their total product (`prod`). Then we loop through every number from 1 to 10, and compute the factorial and print it.
+This program is a great demonstration of how elegant and concise well-designed concatenative programs can be, if the right primitives are composed well. Refactoring code in more state-heavy languages like Java or Go involve thinking about which variables are used where, and what state is still valid or no longer valid, even in the cleanest codebases. With point-free concatenative code, we have no such obstacles in our path to abstract fearlessly.
 
----
-
-// Constraint as a learning aid, problem-solving tool and creative guide. After coding in Xi, writing Oak code is ... much easier! But constraints about stack still affect how I view things.
+Above all, I found this property of concatenative code most refreshing. It's the feature for which I'm very envious of programmers who can write Factor or Forth programs fluently. I think it's one instance of a broad pattern in programming language design (and [design of notations](https://thesephist.com/posts/notation/#notation) in general): constraints often yield surprising advantages and capabilities. This brief stint with stack languages has influenced how I look at functional programming and composition in programming for a long time to come.
 
 ## Further reading
 
-Learning about this completely new (to me) and esoteric topic, I found these resources to be particular helpful.
+Learning about this completely new (to me) and esoteric topic, I found these resources to be particular helpful. Perhaps you will too.
 
 [Factor's website](https://factorcode.org/) is a good reference for broad information about Factor, which was the primary inspiration for Xi.
 
