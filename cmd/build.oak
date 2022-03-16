@@ -616,7 +616,7 @@ fn analyzeNode(node) {
 			atan: true, pow: true, log: true
 
 			___runtime_lib: true, ___runtime_lib?: true, ___runtime_gc: true
-			___runtime_mem: true
+			___runtime_mem: true, ___runtime_proc: true
 		}
 		args: {}
 	}, false)

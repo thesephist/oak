@@ -117,6 +117,7 @@ func (c *Context) LoadBuiltins() {
 	c.LoadFunc("___runtime_lib?", c.rtIsLib)
 	c.LoadFunc("___runtime_gc", c.rtGC)
 	c.LoadFunc("___runtime_mem", c.rtMem)
+	c.LoadFunc("___runtime_proc", c.rtProc)
 }
 
 func errObj(message string) ObjectValue {
@@ -1494,5 +1495,21 @@ func (c *Context) rtMem(_ []Value) (Value, *runtimeError) {
 		"virt": IntValue(memStats.HeapSys),
 		// total gc cycles count
 		"gcs": IntValue(memStats.NumGC),
+	}, nil
+}
+
+// ___runtime_proc returns metadata about the current process
+func (c *Context) rtProc(_ []Value) (Value, *runtimeError) {
+	var exeValue Value
+	execPath, err := os.Executable()
+	if err == nil {
+		exeValue = MakeString(execPath)
+	} else {
+		exeValue = null
+	}
+
+	return ObjectValue{
+		"pid": IntValue(os.Getpid()),
+		"exe": exeValue,
 	}, nil
 }
