@@ -112,10 +112,6 @@ p, li {
     max-width: 64ch;
 }
 
-li {
-    margin: .75em, 0;
-}
-
 p img.blend-multiply {
     mix-blend-mode: multiply;
 }
