@@ -1009,6 +1009,33 @@ fn run(t) {
 			}]
 		)
 
+		// string escape tests
+		[
+			// quoted string literal
+			['\'a\\\'b\'', 'a' + char(39) + 'b']
+			// quoting, escape, and overflow
+			['\'\\', '']
+			['\'\\\'', '\'']
+			['\'\\x\'', 'x']
+			['\'\\x1\'', 'x1']
+			['\'\\x1g\'', 'x1g']
+			// hex escapes
+			['\'a\\x!\'', 'ax!']
+			['\'a\\x1!\'', 'ax1!']
+			['\'a\\x0a!\'', 'a\n!']
+			['\'a\\x0A!\'', 'a\n!']
+			['\'a\\x1z!\'', 'ax1z!']
+			// out of ascii range
+			['\'\\x98\'', char(std.fromHex('98'))]
+		] |> with std.each() fn(spec) {
+			[prog, val] := spec
+			t.eq(
+				'parses string literal: ' + prog
+				parse(prog)
+				[{ type: :string, val: val, tok: at(0, 1, 1) }]
+			)
+		}
+
 		// parser robustness tests
 		[
 			'('

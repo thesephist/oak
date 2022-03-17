@@ -226,7 +226,10 @@ fn Tokenizer(source) {
 			'\'' -> {
 				fn sub(payload) if charInString := next() {
 					?, '\'' -> payload
-					'\\' -> sub(payload << '\\' << next())
+					'\\' -> if c := next() {
+						? -> payload
+						_ -> sub(payload << '\\' << c)
+					}
 					_ -> sub(payload << charInString)
 				}
 				TokenAt(:stringLiteral, pos, sub(''))
