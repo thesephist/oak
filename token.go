@@ -393,30 +393,16 @@ func (t *tokenizer) nextToken() token {
 		pos := t.currentPos()
 		payloadBuilder := strings.Builder{}
 		for !t.isEOF() && t.peek() != '\'' {
-			charInString := t.next()
-			if charInString == '\\' {
-				charInString = t.next()
-				switch charInString {
-				case 'n':
-					charInString = '\n'
-				case 'r':
-					charInString = '\r'
-				case 'f':
-					charInString = '\f'
-				case 't':
-					charInString = '\t'
-				case 'x':
-					charHexCode, err := strconv.ParseUint(string(t.peek())+string(t.peekAhead(1)), 16, 8)
-					if err == nil {
-						t.next() // 1st hex char
-						t.next() // 2nd hex char
-						charInString = rune(charHexCode)
-					} else {
-						charInString = 'x'
-					}
+			c := t.next()
+			if c == '\\' {
+				payloadBuilder.WriteRune(c)
+				if t.isEOF() {
+					break
+				} else {
+					c = t.next()
 				}
 			}
-			payloadBuilder.WriteRune(charInString)
+			payloadBuilder.WriteRune(c)
 		}
 		if t.isEOF() {
 			return token{

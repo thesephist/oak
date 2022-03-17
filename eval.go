@@ -639,7 +639,10 @@ func (c *Context) evalExprWithOpt(node astNode, sc scope, thunkable bool) (Value
 	case nullNode:
 		return null, nil
 	case stringNode:
-		return MakeString(n.payload), nil
+		payload := make([]byte, len(n.payload), len(n.payload))
+		copy(payload, n.payload)
+		v := StringValue(payload)
+		return &v, nil
 	case intNode:
 		return IntValue(n.payload), nil
 	case floatNode:

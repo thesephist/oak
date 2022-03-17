@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -16,7 +17,9 @@ func expectProgramToReturn(t *testing.T, program string, expected Value) {
 	if val == nil {
 		t.Errorf("Return value of program should not be nil")
 	} else if !val.Eq(expected) {
-		t.Errorf(fmt.Sprintf("Expected and returned values don't match: %s != %s", expected, val))
+		t.Errorf(fmt.Sprintf("Expected and returned values don't match: %s != %s",
+			strconv.Quote(expected.String()),
+			strconv.Quote(val.String())))
 	}
 }
 
@@ -54,13 +57,27 @@ func TestStringLiteral(t *testing.T) {
 	expectProgramToReturn(t, "'Hello, World!\\n'", MakeString("Hello, World!\n"))
 }
 
+func TestQuotedStringLiteral(t *testing.T) {
+	expectProgramToReturn(t, "'a\\'b'", MakeString("a'b"))
+}
+
+func TestStringLiteralOverflow(t *testing.T) {
+	expectProgramToReturn(t, "'\\", MakeString(""))
+	expectProgramToReturn(t, "'\\'", MakeString("'"))
+	expectProgramToReturn(t, "'\\x'", MakeString("x"))
+	expectProgramToReturn(t, "'\\x1'", MakeString("x1"))
+	expectProgramToReturn(t, "'\\x1g'", MakeString("x1g"))
+}
+
 func TestHexStringLiteral(t *testing.T) {
-	expectProgramToReturn(t, "'\\x'", MakeString("x")) // check for runtime overflow / underflow
 	expectProgramToReturn(t, "'a\\x!'", MakeString("ax!"))
 	expectProgramToReturn(t, "'a\\x1!'", MakeString("ax1!"))
 	expectProgramToReturn(t, "'a\\x0a!'", MakeString("a\n!"))
 	expectProgramToReturn(t, "'a\\x0A!'", MakeString("a\n!"))
 	expectProgramToReturn(t, "'a\\x1z!'", MakeString("ax1z!"))
+
+	nonAsciiStringValue := StringValue([]byte{0x98})
+	expectProgramToReturn(t, "'\\x98'", &nonAsciiStringValue) // test out of ascii range
 }
 
 func TestIntegerLiteral(t *testing.T) {
@@ -74,7 +91,7 @@ func TestFloatLiteral(t *testing.T) {
 
 func TestAtomLiteral(t *testing.T) {
 	atomNames := []string{
-		"_?", "_if", "not_found_404",
+		"_?", "if", "fn", "with", "true", "false", "_if", "not_found_404",
 	}
 
 	for _, atomName := range atomNames {

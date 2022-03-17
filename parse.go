@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -34,12 +35,12 @@ func (n nullNode) pos() pos {
 }
 
 type stringNode struct {
-	payload string
+	payload []byte
 	tok     *token
 }
 
 func (n stringNode) String() string {
-	return fmt.Sprintf("%s", strconv.Quote(n.payload))
+	return fmt.Sprintf("%s", strconv.Quote(string(n.payload)))
 }
 func (n stringNode) pos() pos {
 	return n.tok.pos
@@ -430,7 +431,48 @@ func (p *parser) parseUnit() (astNode, error) {
 	case qmark:
 		return nullNode{tok: &tok}, nil
 	case stringLiteral:
-		return stringNode{payload: tok.payload, tok: &tok}, nil
+		payloadBuilder := bytes.Buffer{}
+		runes := []rune(tok.payload)
+		for i := 0; i < len(runes); i++ {
+			c := runes[i]
+
+			if c == '\\' {
+				if i+1 >= len(runes) {
+					break
+				}
+				i++
+				c = runes[i]
+
+				switch c {
+				case 't':
+					_ = payloadBuilder.WriteByte('\t')
+				case 'n':
+					_ = payloadBuilder.WriteByte('\n')
+				case 'r':
+					_ = payloadBuilder.WriteByte('\r')
+				case 'f':
+					_ = payloadBuilder.WriteByte('\f')
+				case 'x':
+					if i+2 >= len(runes) {
+						_ = payloadBuilder.WriteByte('x')
+						continue
+					}
+
+					hexCode, err := strconv.ParseUint(string(runes[i+1])+string(runes[i+2]), 16, 8)
+					if err == nil {
+						i += 2
+						_ = payloadBuilder.WriteByte(uint8(hexCode))
+					} else {
+						_ = payloadBuilder.WriteByte('x')
+					}
+				default:
+					_, _ = payloadBuilder.WriteRune(c)
+				}
+			} else {
+				_, _ = payloadBuilder.WriteRune(c)
+			}
+		}
+		return stringNode{payload: payloadBuilder.Bytes(), tok: &tok}, nil
 	case numberLiteral:
 		if strings.ContainsRune(tok.payload, '.') {
 			f, err := strconv.ParseFloat(tok.payload, 64)
