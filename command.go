@@ -8,10 +8,13 @@ import (
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
 )
+
+const PackFileMagicBytes = "oak \x19\x98\x10\x15"
 
 //go:embed cmd/version.oak
 var cmdversion string
@@ -25,6 +28,9 @@ var cmdcat string
 //go:embed cmd/fmt.oak
 var cmdfmt string
 
+//go:embed cmd/pack.oak
+var cmdpack string
+
 //go:embed cmd/build.oak
 var cmdbuild string
 
@@ -33,6 +39,7 @@ var cliCommands = map[string]string{
 	"help":    cmdhelp,
 	"cat":     cmdcat,
 	"fmt":     cmdfmt,
+	"pack":    cmdpack,
 	"build":   cmdbuild,
 }
 
@@ -64,6 +71,68 @@ func performCommandIfExists(command string) bool {
 	ctx.LoadBuiltins()
 
 	if _, err := ctx.Eval(strings.NewReader(commandProgram)); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return true
+}
+
+func runPackFile() bool {
+	exeFilePath, err := os.Executable()
+	if err != nil {
+		// NOTE: os.Executable() isn't perfect, and fails in some less than
+		// ideal conditions (on certain operating systems, for example). So if
+		// we can't find an executable path we just bail.
+		return false
+	}
+
+	exeFile, err := os.Open(exeFilePath)
+	if err != nil {
+		return false
+	}
+	defer exeFile.Close()
+
+	info, err := exeFile.Stat()
+	if err != nil {
+		return false
+	}
+
+	exeFileSize := info.Size()
+	// 24 bundle size bytes, 8 magic bytes. See: cmd/pack.oak
+	readFrom := exeFileSize - 24 - 8
+	endOfFileBytes := make([]byte, 24+8, 24+8)
+	_, err = exeFile.ReadAt(endOfFileBytes, readFrom)
+	if err != nil {
+		return false
+	}
+	if !bytes.Equal(endOfFileBytes[24:], []byte(PackFileMagicBytes)) {
+		return false
+	}
+
+	bundleSizeString := bytes.TrimLeft(endOfFileBytes[0:24], " ")
+	bundleSize, err := strconv.ParseInt(string(bundleSizeString), 10, 64)
+	if err != nil {
+		// invalid bundle size
+		return false
+	}
+	if bundleSize > readFrom {
+		// bundle size too large
+		return false
+	}
+
+	readBundleFrom := readFrom - bundleSize
+	bundleBytes := make([]byte, bundleSize, bundleSize)
+	_, err = exeFile.ReadAt(bundleBytes, readBundleFrom)
+	if err != nil {
+		return false
+	}
+
+	ctx := NewContextWithCwd()
+	defer ctx.Wait()
+	ctx.LoadBuiltins()
+
+	if _, err := ctx.Eval(bytes.NewReader(bundleBytes)); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

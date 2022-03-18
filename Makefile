@@ -1,5 +1,6 @@
 RUN = go run -race .
 LDFLAGS = -ldflags="-s -w"
+INCLUDES = std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,http.test:test/http.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
 
 all: ci
 
@@ -24,17 +25,17 @@ tk: test-oak
 
 # run oak build tests
 test-bundle:
-	${RUN} build --entry test/main.oak \
-		-o /tmp/oak-test.oak \
-		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,http.test:test/http.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
+	${RUN} build --entry test/main.oak --output /tmp/oak-test.oak --include ${INCLUDES}
 	${RUN} /tmp/oak-test.oak
+
+# run oak pack tests
+test-pack:
+	${RUN} pack --entry test/main.oak --output /tmp/oak-pack --include ${INCLUDES}
+	/tmp/oak-pack
 
 # run oak build --web tests
 test-js:
-	${RUN} build --entry test/main.oak \
-		-o /tmp/oak-test.js \
-		--web \
-		--include std.test:test/std.test,str.test:test/str.test,math.test:test/math.test,sort.test:test/sort.test,random.test:test/random.test,fmt.test:test/fmt.test,json.test:test/json.test,datetime.test:test/datetime.test,path.test:test/path.test,http.test:test/http.test,debug.test:test/debug.test,cli.test:test/cli.test,md.test:test/md.test,crypto.test:test/crypto.test,syntax.test:test/syntax.test
+	${RUN} build --entry test/main.oak --output /tmp/oak-test.js --web --include ${INCLUDES}
 	node /tmp/oak-test.js
 
 # build for a specific GOOS target
@@ -63,4 +64,4 @@ install:
 	go build ${LDFLAGS} -o ${GOPATH}/bin/oak
 
 # ci in travis
-ci: tests test-oak test-bundle
+ci: tests test-oak test-bundle test-pack

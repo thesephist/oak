@@ -1,0 +1,102 @@
+// oak pack -- distribute Oak programs as stand-alone binaries
+
+{
+	default: default
+	append: append
+} := import('std')
+{
+	padStart: padStart
+} := import('str')
+{
+	printf: printf
+} := import('fmt')
+{
+	readFile: readFile
+	writeFile: writeFile
+	statFile: statFile
+} := import('fs')
+cli := import('cli')
+
+// these 8 magic bytes are appended to the end of any Oak executable that
+// includes a "bundle" at the end of the file, after the executable (e.g. ELF)
+// itself. "oak" is obvious, and 1998-10-15 is a special day. They happen to
+// fit neatly into 8 bytes, which is just luck.
+MagicBytes := 'oak \x19\x98\x10\x15'
+// MaxBundleSizeLen is the number of bytes used to store the length of the Oak
+// bundle itself in a packed executable. UINT64_MAX is 20 decimal digits, so 24
+// is sufficient. This also has the aesthetically pleasing property that 24 + 8
+// (magic bytes) = 32 bytes.
+MaxBundleSizeLen := 24
+
+Cli := cli.parse()
+
+// much of these options are inherited from `oak build`
+Entry := Cli.opts.entry
+Output := Cli.opts.output |> default(Cli.opts.o)
+Includes := Cli.opts.include
+Interp := Cli.opts.interp |>
+	// NOTE: we can't simply default to Cli.exe because we need an absolute,
+	// fully resolved path to be able to read from this file later.
+	default(___runtime_proc().exe) |>
+	default(Cli.exe)
+
+if Entry {
+	?, '', true -> {
+		printf('[oak pack] No --entry specified.')
+		exit(1)
+	}
+}
+if Output {
+	?, '', true -> {
+		printf('[oak pack] No --output specified.')
+		exit(1)
+	}
+}
+if Interp {
+	?, '', true -> {
+		printf('[oak pack] Invalid --interp specified.')
+		exit(1)
+	}
+}
+if statFile(Entry) = ? -> {
+	printf('[oak pack] {{0}} does not exist.', Entry)
+	exit(1)
+}
+
+with readFile(Interp) fn(packFile) if packFile {
+	? -> printf('[oak pack] Could not read oak executable.')
+	_ -> with exec(
+		Cli.exe
+		{
+			// We use Output as a temporary output file before writing the true
+			// packed binary out to the same location in the filesystem.
+			buildArgs := ['build', '--entry', Entry, '--output', Output]
+			if Includes {
+				?, '', true -> buildArgs
+				_ -> buildArgs |> append(['--include', Includes])
+			}
+		}
+		''
+	) fn(evt) if {
+		evt.type = :error -> printf('[oak pack] Could not bundle files.')
+		evt.status != 0 -> printf('[oak pack] Bundling failed:\n' + evt.stdout)
+		_ -> with readFile(Output) fn(oakBundleFile) if oakBundleFile {
+			? -> printf('[oak pack] Could not read Oak bundle')
+			_ -> {
+				oakBundleSizeString := string(len(oakBundleFile)) |> padStart(MaxBundleSizeLen, ' ')
+				with writeFile(
+					Output
+					packFile << oakBundleFile << oakBundleSizeString << MagicBytes
+				) fn(res) if res {
+					? -> printf('[oak pack] Could not save final pack file.')
+					_ -> with exec('chmod', ['+x', Output], '') fn(evt) if {
+						evt.type = :error
+						evt.status != 0 -> printf('[oak pack] Unable to mark binary as executable.')
+						_ -> printf('[oak pack] Executable binary saved to {{0}}', Output)
+					}
+				}
+			}
+		}
+	}
+}
+

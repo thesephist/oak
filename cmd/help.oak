@@ -27,6 +27,7 @@ where commands are:
 	doc         generate or view documentation
 	fmt         autoformat Oak source code
 	test        run tests in *.test.oak files
+	pack        build a static binary executable
 	build       compile to a single file, optionally to JS
 Run oak help <command> for more on each command.
 '
@@ -144,6 +145,29 @@ Test := 'Run unit tests in *.test.oak files
 [[ under construction ]]
 '
 
+Pack := 'Package Oak programs into statically distributable binaries
+
+Oak pack will compile and bundle an Oak program, then package it alongside the
+Oak interpreter itself so that the single executable binary that results can be
+distributed and run as a standalone program.
+
+Usage
+	oak pack --entry [src] --output [dest] [options]
+
+Options
+	--entry     Entrypoint for the bundle
+	--output    Path at which to save the final binary on disk, also -o
+	--include   Comma-separated list of modules to include explicitly in the
+	            binary, even if the static analyzer cannot find static imports
+	            to it from the entrypoint. Use this option to ensure modules
+	            loaded dynamically at runtime are bundled.
+	--interp    Path to the Oak interpreter that will be packed into the binary
+	            to execute the included bundle when it is run. The currently
+	            running interpreter is used by default. An alternative --interp
+	            may be used to pack an Oak program for a different platform or
+	            operating system.
+'
+
 Build := 'Compile and bundle Oak programs to Oak or JavaScript
 
 Oak build will compile and bundle an Oak program, potentially with many
@@ -156,7 +180,7 @@ Usage
 	oak build --entry [src] --output [dest] [options]
 
 Options
-	--entry     Entrypoint for the bundle (main.oak by default)
+	--entry     Entrypoint for the bundle
 	--output    Path at which to save the final bundle on disk, also -o
 	--web       Compile the bundle to JavaScript, suitable for running in
 	            JavaScript runtimes like web browsers, Node.js, and Deno
@@ -176,6 +200,7 @@ if title := args().2 {
 	'doc' -> Doc
 	'fmt' -> Fmt
 	'test' -> Test
+	'pack' -> Pack
 	'build' -> Build
 	_ -> format('No help message available for "{{ 0 }}"', title)
 } |> println()

@@ -907,7 +907,7 @@ postImport := with once() fn {
 		renderBundle()
 
 	with writeFile(Output, BundleFile) fn(res) if res {
-		? -> printf('[oak build] Could not write bundle to {{0}}.', Output)
+		? -> printf('[oak build] Could not write bundle to {{0}}', Output)
 		_ -> printf('[oak build] Bundle written to {{0}}', Output)
 	}
 }
