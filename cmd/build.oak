@@ -1357,6 +1357,9 @@ function ___runtime_gc() {
 function ___runtime_mem() {
 	throw new Error(\'___runtime_mem() not implemented\');
 }
+function ___runtime_proc() {
+	throw new Error(\'___runtime_proc() not implemented\');
+}
 
 // JavaScript interop
 function call(target, fn, ...args) {
