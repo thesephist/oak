@@ -1,0 +1,97 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Building a personal time zone CLI with Oak | Oak programming language</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/lib.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="overlay">
+            <div class="home">
+                <a href="/">Oak</a>
+            </div>
+            <nav>
+                <a href="/lib/"><span class="desktop">standard library</span><span class="mobile">stdlib</span></a>
+                <a href="/posts/">blog</a>
+                <a href="#start">download</a>
+                <a href="https://github.com/thesephist/oak" target="_blank">source ↗</a>
+            </nav>
+        </div>
+    </header>
+    <main aria-role="main">
+        <article class="overlay blogpost">
+            <h1>Building a personal time zone CLI with Oak</h1>
+            <p class="meta">
+                <a href="/posts/">&larr; Posts</a>
+                <span class="date">20 Mar 2022</span>
+            </p>
+            <p><code>times</code> is a little command-line utility I wrote to show me dates and times in all the time zones I care about quickly. It's the next in a series of <a href="http://localhost:9898/posts/ackermann/">toy Oak programs</a> I've been writing when I get bored, but what sets it apart is that I've used Oak's new <a href="/posts/pack/"><code>oak pack</code> feature</a> to install it as a stand-alone executable on my Mac, so I can call it with <code>times</code> anywhere, and share it with my friends, too.</p><p><code>times</code> takes no input or command-line arguments, and does exactly one thing: print this list:</p><pre><code>$ times
+US Eastern   0:52 3/20  -4h
+US Pacific  21:52 3/19  -7h
+     Korea  13:52 3/20  +9h
+   Ukraine   6:52 3/20  +2h
+    France   5:52 3/20  +1h
+   Germany   5:52 3/20  +1h
+        UK   4:52 3/20  +0h</code></pre><p>Though you can't see it here in the copy-pasted output, the terminal output also color-codes different parts of this table. The utility doesn't really interoperate with any other tools, and it's not particularly configurable, so it doesn't quite fit neatly into the UNIX philosophy. But hey — if I want to change the time format or add a new time zone, I can just dig into the Oak source code, re-compile, and re-install, all in under a minute.</p><p>Especially after shipping <code>oak pack</code>, I think Oak is turning out to be a really pleasant way for me to customize my desktop working environment with little utilities like this. Not only does it produce simple self-contained programs, but each program doesn't need too many dependencies, because the standard library contains most of the functionalities I routinely need in my tools, from date and time formatting to Markdown compilation. I've always maintained that even though Oak is a general purpose programming language, it isn't trying to fill every niche. It's trying to be a <a href="/posts/why/">tool for building personal tools and projects</a>, and I'm excited about the way Oak has been moving towards that vision steadily over time.</p><hr/><p>Here's the full <code>times.oak</code> program, for sake of completeness:</p><pre><code data-lang="oak"><span class="oak-identifier">std </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'std'</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">str </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'str'</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">math </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'math'</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">fmt </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'fmt'</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">datetime </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'datetime'</span><span class="oak-rightParen">)</span>
+
+<span class="oak-identifier">Zones </span><span class="oak-assign">:= </span><span class="oak-leftBracket">[</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'US Eastern'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-minus">-</span><span class="oak-numberLiteral">4 </span><span class="oak-rightBrace">} </span><span class="oak-comment">// Daylight Saving Time</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'US Pacific'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-minus">-</span><span class="oak-numberLiteral">7 </span><span class="oak-rightBrace">} </span><span class="oak-comment">// Daylight Saving Time</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'Korea'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-numberLiteral">9 </span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'Ukraine'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-numberLiteral">2 </span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'France'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-numberLiteral">1 </span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'Germany'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-numberLiteral">1 </span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{ </span><span class="oak-identifier">name</span><span class="oak-colon">: </span><span class="oak-stringLiteral">'UK'</span><span class="oak-comma">, </span><span class="oak-identifier">offset</span><span class="oak-colon">: </span><span class="oak-numberLiteral">0 </span><span class="oak-rightBrace">}</span>
+<span class="oak-rightBracket">]</span>
+
+<span class="oak-identifier">Now </span><span class="oak-assign">:= </span><span class="oak-fnName">int</span><span class="oak-leftParen">(</span><span class="oak-fnName">time</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span>
+<span class="oak-identifier">MaxNameLen </span><span class="oak-assign">:= </span><span class="oak-identifier">math</span><span class="oak-dot">.</span><span class="oak-fnName">max</span><span class="oak-leftParen">(</span><span class="oak-identifier">Zones </span><span class="oak-pipeArrow">|> </span><span class="oak-identifier">std</span><span class="oak-dot">.</span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-colon">:</span><span class="oak-identifier">name</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-identifier">std</span><span class="oak-dot">.</span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-identifier">len</span><span class="oak-rightParen">)</span><span class="oak-ellipsis">...</span><span class="oak-rightParen">)</span>
+
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">yellow</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-stringLiteral">'\x1b[0;33m' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">s </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'\x1b[0;0m'</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">gray</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-stringLiteral">'\x1b[0;90m' </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">s </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-stringLiteral">'\x1b[0;0m'</span>
+
+<span class="oak-identifier">Zones </span><span class="oak-pipeArrow">|> </span><span class="oak-withKeyword">with </span><span class="oak-identifier">std</span><span class="oak-dot">.</span><span class="oak-fnName">each</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">zone</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">month</span><span class="oak-colon">: </span><span class="oak-identifier">month</span><span class="oak-newline">
+		</span><span class="oak-identifier">day</span><span class="oak-colon">: </span><span class="oak-identifier">day</span><span class="oak-newline">
+		</span><span class="oak-identifier">hour</span><span class="oak-colon">: </span><span class="oak-identifier">hour</span><span class="oak-newline">
+		</span><span class="oak-identifier">minute</span><span class="oak-colon">: </span><span class="oak-identifier">minute</span><span class="oak-newline">
+		</span><span class="oak-identifier">second</span><span class="oak-colon">: </span><span class="oak-identifier">second</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-identifier">datetime</span><span class="oak-dot">.</span><span class="oak-fnName">describe</span><span class="oak-leftParen">(</span><span class="oak-identifier">Now </span><span class="oak-plus">+ </span><span class="oak-identifier">zone</span><span class="oak-dot">.</span><span class="oak-identifier">offset </span><span class="oak-times">* </span><span class="oak-numberLiteral">3600</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">fmt</span><span class="oak-dot">.</span><span class="oak-fnName">printf</span><span class="oak-leftParen">(</span><span class="oak-newline">
+		</span><span class="oak-stringLiteral">'{{0}}  {{1}}  {{2}}'</span><span class="oak-newline">
+		</span><span class="oak-identifier">zone</span><span class="oak-dot">.</span><span class="oak-identifier">name </span><span class="oak-pipeArrow">|> </span><span class="oak-identifier">str</span><span class="oak-dot">.</span><span class="oak-fnName">padStart</span><span class="oak-leftParen">(</span><span class="oak-identifier">MaxNameLen</span><span class="oak-comma">, </span><span class="oak-stringLiteral">' '</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-identifier">fmt</span><span class="oak-dot">.</span><span class="oak-fnName">format</span><span class="oak-leftParen">(</span><span class="oak-newline">
+			</span><span class="oak-stringLiteral">'{{0}}:{{1}} {{2}}/{{3}}'</span><span class="oak-newline">
+			</span><span class="oak-identifier">hour </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-identifier">str</span><span class="oak-dot">.</span><span class="oak-fnName">padStart</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">2</span><span class="oak-comma">, </span><span class="oak-stringLiteral">' '</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-identifier">minute </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-identifier">str</span><span class="oak-dot">.</span><span class="oak-fnName">padStart</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">2</span><span class="oak-comma">, </span><span class="oak-stringLiteral">'0'</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-identifier">month</span><span class="oak-newline">
+			</span><span class="oak-identifier">day</span><span class="oak-newline">
+		</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">yellow</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">zone</span><span class="oak-dot">.</span><span class="oak-identifier">offset </span><span class="oak-less">&lt; </span><span class="oak-numberLiteral">0 </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-stringLiteral">'-' </span><span class="oak-plus">+ </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-identifier">math</span><span class="oak-dot">.</span><span class="oak-fnName">abs</span><span class="oak-leftParen">(</span><span class="oak-identifier">zone</span><span class="oak-dot">.</span><span class="oak-identifier">offset</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-plus">+ </span><span class="oak-stringLiteral">'h'</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-stringLiteral">'+' </span><span class="oak-plus">+ </span><span class="oak-fnName">string</span><span class="oak-leftParen">(</span><span class="oak-identifier">zone</span><span class="oak-dot">.</span><span class="oak-identifier">offset</span><span class="oak-rightParen">) </span><span class="oak-plus">+ </span><span class="oak-stringLiteral">'h'</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">} </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">gray</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span></code></pre>
+        </article>
+    </main>
+    <footer>
+        <div class="split overlay">
+            <div class="left">
+            </div>
+            <div class="right">
+                - <a href="https://thesephist.com/">Linus</a>
+            </div>
+        </div>
+    </footer>
+</body>
