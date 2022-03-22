@@ -544,6 +544,10 @@ func (c *Context) evalNodes(nodes []astNode) (Value, *runtimeError) {
 	return returnVal, nil
 }
 
+var divisionByZeroErr = runtimeError{
+	reason: fmt.Sprintf("Division by zero"),
+}
+
 func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 	switch op {
 	case plus:
@@ -554,12 +558,13 @@ func intBinaryOp(op tokKind, left, right IntValue) (Value, *runtimeError) {
 		return IntValue(left * right), nil
 	case divide:
 		if right == 0 {
-			return nil, &runtimeError{
-				reason: fmt.Sprintf("Division by zero"),
-			}
+			return nil, &divisionByZeroErr
 		}
 		return FloatValue(FloatValue(left) / FloatValue(right)), nil
 	case modulus:
+		if right == 0 {
+			return nil, &divisionByZeroErr
+		}
 		return IntValue(left % right), nil
 	case xor:
 		return IntValue(left ^ right), nil
@@ -591,12 +596,13 @@ func floatBinaryOp(op tokKind, left, right FloatValue) (Value, *runtimeError) {
 		return FloatValue(left * right), nil
 	case divide:
 		if right == 0 {
-			return nil, &runtimeError{
-				reason: fmt.Sprintf("Division by zero"),
-			}
+			return nil, &divisionByZeroErr
 		}
 		return FloatValue(left / right), nil
 	case modulus:
+		if right == 0 {
+			return nil, &divisionByZeroErr
+		}
 		return FloatValue(math.Mod(float64(left), float64(right))), nil
 	case greater:
 		return BoolValue(left > right), nil
