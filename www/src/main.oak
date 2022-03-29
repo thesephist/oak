@@ -4,8 +4,10 @@
 // main website for the Oak programming language.
 
 {
+	map: map
 	each: each
 	slice: slice
+	merge: merge
 	entries: entries
 } := import('std')
 {
@@ -78,18 +80,25 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 			'Content-Type': http.MimeTypes.txt
 		}
 
+		queryParams := '?' + merge({}, params, { start: _, end: _, embed: _ }) |>
+			entries() |>
+			map(fn(pair) http.percentEncode(pair.0) + '=' + http.percentEncode(pair.1)) |>
+			join('&')
+		if queryParams = '?' -> queryParams <- ''
+		proxyURL := proxyPath + queryParams
+
 		if proxyPath |> endsWith?('.oak') {
 			false -> end({
 				status: 400
 				headers: errorHeaders
 				body: 'cannot proxy resources not ending in .oak'
 			})
-			_ -> with req({ url: proxyPath }) fn(evt) if {
+			_ -> with req({ url: proxyURL }) fn(evt) if {
 				evt.type = :error
 				evt.resp.status != 200 -> end({
 					status: 500
 					headers: errorHeaders
-					body: 'could not fetch ' + proxyPath
+					body: 'could not fetch ' + proxyURL
 				})
 				_ -> {
 					sourceFile := evt.resp.body
@@ -114,7 +123,7 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 						:error -> end({
 							status: 500
 							headers: errorHeaders
-							body: 'could not syntax highlight ' + proxyPath
+							body: 'could not syntax highlight ' + proxyURL
 						})
 						_ -> end({
 							status: 200
@@ -125,7 +134,7 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 								? -> HighlightTemplate
 								_ -> HighlightEmbedTemplate
 							} |> fmt.format({
-								href: proxyPath
+								href: proxyURL
 								name: path.base(proxyPath)
 								heading: path.base(proxyPath) + if {
 									sliced? -> ' <span style="color:var(--secondary-text);font-size:0.75em">L{{0}} - {{1}}</span>' |>
