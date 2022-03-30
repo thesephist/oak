@@ -80,7 +80,7 @@ with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if reques
 			'Content-Type': http.MimeTypes.txt
 		}
 
-		queryParams := '?' + merge({}, params, { start: _, end: _, embed: _ }) |>
+		queryParams := '?' + merge({}, params, { start: _, end: _, embed: _, proxyPath: _ }) |>
 			entries() |>
 			map(fn(pair) http.percentEncode(pair.0) + '=' + http.percentEncode(pair.1)) |>
 			join('&')
