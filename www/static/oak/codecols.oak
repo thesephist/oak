@@ -1,0 +1,108 @@
+// codecols designed after Rasmus Andersson's linelen_hist.sh
+// https://gist.github.com/rsms/36bda3b5c8ab83d951e45ed788a184f4
+
+{
+	println: println
+	default: default
+	map: map
+	stdin: stdin
+	range: range
+	filter: filter
+	reduce: reduce
+	append: append
+	values: values
+	identity: identity
+	partition: partition
+} := import('std')
+{
+	split: split
+	join: join
+	padEnd: padEnd
+} := import('str')
+sort := import('sort')
+math := import('math')
+cli := import('cli')
+
+// adjust libcli for (1) oak pack and (2) no verb in this CLI
+argv := ['_exe', '_main'] |> append(args())
+Cli := cli.parseArgv(argv)
+
+if Cli.opts.h = true | Cli.opts.help = true -> {
+	println('codecols counts columns in source code given to its standard input.
+
+Usage
+    codecols [options] < your/code/*.c
+    cat *.c | codecols [options]
+
+Options
+    --max-cols, -c     Maximum number of columsn of code to display in the
+                       output table
+    --histo-width, -w  If the column counts are high enough that the histogram
+                       must be scaled down to fit on a terminal screen, the
+                       bars will be scaled such that the longest one is this
+                       long. 60 by default.')
+	exit(0)
+}
+
+// histo returns a histogram bar of a given length
+fn histo(n) {
+	whole := int(n / 8)
+	rem := n % 8
+	graph := range(whole) |> map(fn '█') |> join() + if int(rem) {
+		0 -> ''
+		1 -> '▏'
+		2 -> '▎'
+		3 -> '▍'
+		4 -> '▌'
+		5 -> '▋'
+		6 -> '▊'
+		7 -> '▉'
+	}
+	if graph = '' & n > 0 {
+		true -> '▏'
+		_ -> graph
+	}
+}
+
+// list of number of non-zero column counts
+cols := stdin() |>
+	split('\n') |>
+	filter(fn(s) s != '') |>
+	// round up to the nearest even number
+	map(fn(line) len(line) + len(line) % 2)
+// same data as above, but in frequency map
+freqs := cols |>
+	sort.sort!() |>
+	partition(identity) |>
+	reduce({}, fn(freq, ns) freq.(ns.0) := len(ns))
+
+min := 0
+max := math.max(keys(freqs) |> map(int)...)
+maxCount := math.max(values(freqs)...)
+maxHisto := int(Cli.opts.'histo-width' |> default(Cli.opts.w)) |>
+	default(60) |>
+	math.min(maxCount)
+maxListedCols := int(Cli.opts.'max-cols' |> default(Cli.opts.c)) |>
+	default(max)
+
+colWidth := math.max(
+	len('cols')
+	len(string(max))
+)
+countWidth := math.max(
+	len('count')
+	len(string(maxCount))
+)
+
+println(
+	'cols' |> padEnd(colWidth, ' ')
+	'count' |> padEnd(countWidth, ' ')
+)
+range(2, maxListedCols + 1, 2) |> map(
+	fn(n) println(
+		string(n) |> padEnd(colWidth, ' ')
+		freqs.(n) |> default(0) |> string() |> padEnd(countWidth, ' ')
+		histo(freqs.(n) |> default(0) |> math.scale(0, maxCount, 0, maxHisto * 8))
+	)
+)
+println('average columns per line:', math.mean(cols) |> math.round(2))
