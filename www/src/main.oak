@@ -75,7 +75,8 @@ server := http.Server()
 with server.route('/highlight/*proxyPath') fn(params) fn(request, end) if request.method {
 	'GET' -> {
 		// URL processing seems to collapse double-slashes, so restore it
-		proxyPath := params.proxyPath |> replace('https:/', 'https://')
+		proxyPath := params.proxyPath |>
+			replace('http:/', 'http://') |> replace('https:/', 'https://')
 		errorHeaders := {
 			'Content-Type': http.MimeTypes.txt
 		}
