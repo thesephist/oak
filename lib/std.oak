@@ -6,6 +6,12 @@
 // identity returns its first argument
 fn identity(x) x
 
+// is returns a predicate that reports whether its argument is equal to x
+fn is(x) fn(y) x = y
+
+// constantly returns a function that always returns x
+fn constantly(x) fn() x
+
 // _baseIterator is a helper function that returns the "base iterator" of a
 // type, or the "zero value" version of the type.
 fn _baseIterator(v) if type(v) {

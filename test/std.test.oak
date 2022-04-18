@@ -474,6 +474,39 @@ fn run(t) {
 		)
 	}
 
+	// identity, is, constantly
+	{
+		{
+			identity: id
+			is: is
+			constantly: constantly
+		} := std
+
+		'identity of a value' |> t.eq(id(42), 42)
+		'identity respects reference equality of fns' |> t.eq(id(id), id)
+
+		'is returns a predicate that returns true if values match' |>
+			t.assert(is(42)(42))
+		'is returns a predicate that returns false if values mismatch' |>
+			t.assert(!is(42)(32))
+
+		'constantly returns a fn that always returns its argument' |>
+			t.eq(constantly([1, 2, 3])(), [1, 2, 3])
+		'constantly returns the same reference every time' |> t.eq(
+			{
+				xs := [:a, :b, :c]
+				getList := constantly(xs)
+				xs << :xyz
+				[getList(), getList(), getList()]
+			}
+			[
+				[:a, :b, :c, :xyz]
+				[:a, :b, :c, :xyz]
+				[:a, :b, :c, :xyz]
+			]
+		)
+	}
+
 	// default
 	{
 		default := std.default
