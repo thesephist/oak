@@ -161,7 +161,11 @@ fn run(t) {
 			resolve('./src/editor.ts', '/home/thesephist')
 			'/home/thesephist/src/editor.ts'
 		)
-		'resolve absolute path is a no-op' |> t.eq(
+		'resolve absolute path cleans up path' |> t.eq(
+			resolve('/var/../etc/./nginx.default', '/var/log/nginx')
+			'/etc/nginx.default'
+		)
+		'resolve absolute path is a no-op for clean paths' |> t.eq(
 			resolve('/etc/nginx.default', '/var/log/nginx')
 			'/etc/nginx.default'
 		)

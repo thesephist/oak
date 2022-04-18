@@ -101,7 +101,7 @@ fn split(path) if path |> trimEnd('/') {
 // the given base path as the root, or using the current working directory if
 // no base path is given.
 fn resolve(path, base) if abs?(path) {
-	true -> path
+	true -> clean(path)
 	_ -> join(base |> default(env().PWD), path)
 }
 
