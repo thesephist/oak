@@ -785,8 +785,8 @@ fn run(t) {
 		'range(start, end, step) with off-step end' |> t.eq(range(2, 10, 3), [2, 5, 8])
 	}
 
-	// array iterating functions -- reverse, map, each, filter, reduce,
-	// flatten, compact, some, every, zip, partition, uniq
+	// iterator functions -- reverse, map, each, filter, exclude, separate,
+	// reduce, flatten, compact, some, every, zip, partition, uniq
 	{
 		{
 			clone: clone
@@ -795,6 +795,8 @@ fn run(t) {
 			map: map
 			each: each
 			filter: filter
+			exclude: exclude
+			separate: separate
 			reduce: reduce
 			flatten: flatten
 			compact: compact
@@ -830,6 +832,8 @@ fn run(t) {
 		ensureDoesNotMutate('reverse', reverse)
 		ensureDoesNotMutate('map(f)', fn(xs) map(xs, double))
 		ensureDoesNotMutate('filter(f)', fn(xs) filter(xs, even?))
+		ensureDoesNotMutate('exclude(f)', fn(xs) exclude(xs, even?))
+		ensureDoesNotMutate('separate(f)', fn(xs) separate(xs, even?))
 		ensureDoesNotMutate('flatten(f)', flatten, [[1, 2], [10, 20]])
 		ensureDoesNotMutate('compact(f)', compact, [1, ?, 5, ?, ?, 10, ?])
 
@@ -969,6 +973,131 @@ fn run(t) {
 			{
 				nums := []
 				filter('sixth', fn(_, i) {
+					nums << i
+					true
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+
+		'exclude empty list' |> t.eq(exclude([], even?), [])
+		'exclude list' |> t.eq(exclude(arr, even?), [1, 3])
+		'exclude with atom predicate' |> t.eq(
+			exclude([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], :show)
+			[
+				{ name: 'Linus', show: false }
+				{ name: 'Button', show: false }
+			]
+		)
+		'exclude with string predicate' |> t.eq(
+			exclude([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], 'show')
+			[
+				{ name: 'Linus', show: false }
+				{ name: 'Button', show: false }
+			]
+		)
+		'exclude with int predicate' |> t.eq(
+			exclude([[1, true], [2, false], [3, true], [10, false]], 1)
+			[[2, false], [10, false]]
+		)
+		'exclude empty string' |> t.eq(exclude('', isX?), '')
+		'exclude string' |> t.eq(exclude('axbCXingx', isX?), 'abCing')
+		'exclude callback gets index' |> t.eq(
+			{
+				nums := []
+				exclude(arr, fn(_, i) {
+					nums << i
+					true
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+		'exclude string callback gets index' |> t.eq(
+			{
+				nums := []
+				exclude('sixth', fn(_, i) {
+					nums << i
+					true
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+
+		'separate empty list' |> t.eq(separate([], even?), [[], []])
+		'separate list' |> t.eq(separate(arr, even?), [[2, 4, 10], [1, 3]])
+		'separate with atom predicate' |> t.eq(
+			separate([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], :show)
+			[
+				[
+					{ name: 'Mozzie', show: true }
+					{ name: 'Marvin', show: true }
+				]
+				[
+					{ name: 'Linus', show: false }
+					{ name: 'Button', show: false }
+				]
+			]
+		)
+		'separate with string predicate' |> t.eq(
+			separate([
+				{ name: 'Linus', show: false }
+				{ name: 'Mozzie', show: true }
+				{ name: 'Marvin', show: true }
+				{ name: 'Button', show: false }
+			], 'show')
+			[
+				[
+					{ name: 'Mozzie', show: true }
+					{ name: 'Marvin', show: true }
+				]
+				[
+					{ name: 'Linus', show: false }
+					{ name: 'Button', show: false }
+				]
+			]
+		)
+		'separate with int predicate' |> t.eq(
+			separate([[1, true], [2, false], [3, true], [10, false]], 1)
+			[
+				[[1, true], [3, true]]
+				[[2, false], [10, false]]
+			]
+		)
+		'separate empty string' |> t.eq(separate('', isX?), ['', ''])
+		'separate string' |> t.eq(separate('axbCXingx', isX?), ['xXx', 'abCing'])
+		'separate callback gets index' |> t.eq(
+			{
+				nums := []
+				separate(arr, fn(_, i) {
+					nums << i
+					true
+				})
+				nums
+			}
+			[0, 1, 2, 3, 4]
+		)
+		'separate string callback gets index' |> t.eq(
+			{
+				nums := []
+				separate('sixth', fn(_, i) {
 					nums << i
 					true
 				})

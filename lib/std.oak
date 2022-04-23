@@ -239,6 +239,40 @@ fn filter(xs, f) {
 	sub(_baseIterator(xs), 0)
 }
 
+// exclude produces an iterable containing only the elements of xs that return
+// false when passed to the exclude predicate f. If f is a function, it
+// receives arguments (element, index).
+fn exclude(xs, f) {
+	f := _asPredicate(f)
+
+	fn sub(acc, i) if i {
+		len(xs) -> acc
+		_ -> {
+			if !f(x := xs.(i), i) -> acc << x
+			sub(acc, i + 1)
+		}
+	}
+	sub(_baseIterator(xs), 0)
+}
+
+// separate produces a pair of two iterables [is, isnt], where is contains the
+// result of filter(xs, f) and isnt contains the result of exclude(xs, f).
+fn separate(xs, f) {
+	f := _asPredicate(f)
+
+	fn sub(is, isnt, i) if i {
+		len(xs) -> [is, isnt]
+		_ -> {
+			if f(x := xs.(i), i) {
+				true -> is << x
+				_ -> isnt << x
+			}
+			sub(is, isnt, i + 1)
+		}
+	}
+	sub(_baseIterator(xs), _baseIterator(xs), 0)
+}
+
 // reduce accumulates elements of the iterable xs on a value, starting with
 // seed and passing it to the reducer function f. The reducer receives
 // arguments (accumulator, element, index).
