@@ -1325,42 +1325,45 @@ fn run(t) {
 		'contains? duplicate char in string' |> t.eq(contains?('oaklang', 'a'), true)
 	}
 
-	// object operators: values, entries, merge
+	// object operators: values, entries, fromEntries, merge
 	{
 		{
 			values: values
 			entries: entries
+			fromEntries: fromEntries
 			merge: merge
 		} := std
 
 		'values of empty obj' |> t.eq(values({}), [])
-		'values of obj' |> t.eq(
+		'values of obj' |> t.assert(
 			{ a: :ay, b: 2, c: [1, 2] } |>
 				values() |>
 				with std.every() fn(x) [:ay, 2, [1, 2]] |> std.contains?(x)
-			true
 		)
 		'values of empty list' |> t.eq(values([]), [])
-		'values of list' |> t.eq(
+		'values of list' |> t.assert(
 			std.range(10) |>
 				values() |>
 				with std.every() fn(x) std.range(10) |> std.contains?(x)
-			true
 		)
 
 		'entries of empty obj' |> t.eq(entries({}), [])
-		'entries of obj' |> t.eq(
+		'entries of obj' |> t.assert(
 			{ a: :ay, b: 2, c: [1, 2] } |>
 				entries() |>
 				with std.every() fn(x) [['a', :ay], ['b', 2], ['c', [1, 2]]] |> std.contains?(x)
-			true
 		)
 		'entries of empty list' |> t.eq(entries([]), [])
-		'entries of list' |> t.eq(
+		'entries of list' |> t.assert(
 			std.range(10) |>
 				entries() |>
 				with std.every() fn(x) std.range(10) |> std.map(fn(n) [n, n]) |> std.contains?(x)
-			true
+		)
+
+		'fromEntries of empty obj' |> t.eq(fromEntries([]), {})
+		'fromEntries of obj' |> t.eq(
+			fromEntries([['a', :ay], ['b', 2], ['c', [1, 2]]])
+			{ a: :ay, b: 2, c: [1, 2] }
 		)
 
 		'merge no objects' |> t.eq(merge(), ?)

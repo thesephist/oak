@@ -477,9 +477,14 @@ fn values(obj) keys(obj) |> with map() fn(key) obj.(key)
 // entries takes an object and returns a list of pairs [key, value] in arbitrary order.
 fn entries(obj) keys(obj) |> with map() fn(key) [key, obj.(key)]
 
+// fromEntries takes an object entry list (of the shape that entries() returns)
+// and assembles it into an object.
+fn fromEntries(entries) entries |>
+	with reduce({}) fn(o, entry) o.(entry.0) := entry.1
+
 // merge takes a list of objects and merges entries of all subsequent objects
 // onto the first object, mutating the first object. If there are no objects
-// given, merge returns ?
+// given, merge returns ?.
 fn merge(os...) if len(os) {
 	0 -> ?
 	_ -> with reduce(os, os.0) fn(acc, o) {
