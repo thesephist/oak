@@ -428,6 +428,20 @@ fn find(xs, pred) {
 	sub(0)
 }
 
+// rfind returns the index of the last item in the iterable xs for which the
+// predicate returns true, searching backwards from the end. If no match is
+// found, rfind returns -1.
+fn rfind(xs, pred) {
+	fn sub(i) if i {
+		-1 -> -1
+		_ -> if pred(xs.(i)) {
+			true -> i
+			_ -> sub(i - 1)
+		}
+	}
+	sub(len(xs) - 1)
+}
+
 // indexOf returns the index of the first item equal to x in the iterable xs.
 // If no match is found, indexOf returns -1.
 fn indexOf(xs, x) {
@@ -439,6 +453,19 @@ fn indexOf(xs, x) {
 		}
 	}
 	sub(0)
+}
+
+// rindexOf returns the index of the last item equal to x in the iterable xs,
+// searching backwards from the end. If no match is found, rindexOf returns -1.
+fn rindexOf(xs, x) {
+	fn sub(i) if i {
+		-1 -> -1
+		_ -> if xs.(i) {
+			x -> i
+			_ -> sub(i - 1)
+		}
+	}
+	sub(len(xs) - 1)
 }
 
 // contains? reports whether an iterable contains an item equal to x.

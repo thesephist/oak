@@ -1270,7 +1270,9 @@ fn run(t) {
 	{
 		{
 			find: find
+			rfind: rfind
 			indexOf: indexOf
+			rindexOf: rindexOf
 			contains?: contains?
 		} := std
 
@@ -1286,6 +1288,15 @@ fn run(t) {
 		'find existent char in string' |> t.eq(find('quick brown', space?), 5)
 		'find duplicate char in string' |> t.eq(find('quick brown fox', space?), 5)
 
+		'rfind empty list' |> t.eq(rfind([], even?), -1)
+		'rfind nonexistent item in list' |> t.eq(rfind([1, 3, 5], even?), -1)
+		'rfind existent item in list' |> t.eq(rfind([1, 5, 6, 7], even?), 2)
+		'rfind duplicate item in list' |> t.eq(rfind([9, 11, 12, 13, 14], even?), 4)
+		'rfind empty string' |> t.eq(rfind('', space?), -1)
+		'rfind nonexistent char in string' |> t.eq(rfind('abc', space?), -1)
+		'rfind existent char in string' |> t.eq(rfind('quick brown', space?), 5)
+		'rfind duplicate char in string' |> t.eq(rfind('quick brown fox', space?), 11)
+
 		'indexOf empty list' |> t.eq(indexOf([], :a), -1)
 		'indexOf nonexistent item' |> t.eq(indexOf([:a, :b, :c], :x), -1)
 		'indexOf existent item' |> t.eq(indexOf([:a, :b, :c], :b), 1)
@@ -1294,6 +1305,15 @@ fn run(t) {
 		'indexOf nonexistent char in string' |> t.eq(indexOf('abc', 'x'), -1)
 		'indexOf existent char in string' |> t.eq(indexOf('abc', 'b'), 1)
 		'indexOf duplicate char in string' |> t.eq(indexOf('oaklang', 'a'), 1)
+
+		'rindexOf empty list' |> t.eq(rindexOf([], :a), -1)
+		'rindexOf nonexistent item' |> t.eq(rindexOf([:a, :b, :c], :x), -1)
+		'rindexOf existent item' |> t.eq(rindexOf([:a, :b, :c], :b), 1)
+		'rindexOf duplicate item' |> t.eq(rindexOf([:a, :b, :c, :d, :c], :c), 4)
+		'rindexOf empty string' |> t.eq(rindexOf('', 'x'), -1)
+		'rindexOf nonexistent char in string' |> t.eq(rindexOf('abc', 'x'), -1)
+		'rindexOf existent char in string' |> t.eq(rindexOf('abc', 'b'), 1)
+		'rindexOf duplicate char in string' |> t.eq(rindexOf('oaklang', 'a'), 4)
 
 		'contains? empty list' |> t.eq(contains?([], :a), false)
 		'contains? nonexistent item' |> t.eq(contains?([:a, :b, :c], :x), false)
