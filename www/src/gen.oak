@@ -8,9 +8,9 @@
 	take: take
 	slice: slice
 	filter: filter
-	reduce: reduce
 	compact: compact
 	reverse: reverse
+	fromEntries: fromEntries
 } := import('std')
 {
 	cut: cut
@@ -89,7 +89,7 @@ with fs.listFiles('./www/content') fn(files) {
 				frontMatter |>
 					split('\n') |>
 					map(fn(line) line |> cut(':') |> map(fn(s) trim(s))) |>
-					reduce({}, fn(meta, pair) meta.(pair.0) := pair.1)
+					fromEntries()
 			}
 			_ -> {}
 		}
