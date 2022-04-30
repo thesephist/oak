@@ -12,7 +12,10 @@
 	map: map
 	each: each
 	filter: filter
+	exclude: exclude
 	reduce: reduce
+	entries: entries
+	fromEntries: fromEntries
 } := import('std')
 {
 	checkRange: checkRange
@@ -33,6 +36,38 @@
 {
 	printf: printf
 } := import('fmt')
+sort := import('sort')
+json := import('json')
+
+// queryEncode takes an object of parameters and returns a query string that
+// encodes the given params. If any parameter values are composite (lists or
+// objects themselves), they will be encoded as serialized JSON strings.
+fn queryEncode(params) {
+	fn prepare(val) if type(val) {
+		:list, :object -> json.serialize(val)
+		_ -> string(val)
+	}
+
+	params |>
+		entries() |>
+		exclude(fn(entry) entry.1 = ? | type(entry.1) = :function) |>
+		map(fn(entry) [entry.0, prepare(entry.1)]) |>
+		sort.sort(0) |>
+		map(fn(entry) percentEncode(entry.0) + '=' + percentEncode(entry.1)) |>
+		join('&')
+}
+
+// queryDecode takes a query string and decodes it into an object of key-value
+// pairs representing the query string parameters. Note that because query
+// strings are untyped, all values in the returned object will be of type
+// :string.
+fn queryDecode(params) {
+	params |>
+		split('&') |>
+		filter(fn(s) s != '') |>
+		map(fn(kv) kv |> cut('=') |> map(percentDecode)) |>
+		fromEntries()
+}
 
 // percent encoding, also known as URI encoding
 fn _encodeChar(uri?) fn(c) if {

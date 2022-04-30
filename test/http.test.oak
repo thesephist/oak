@@ -3,6 +3,65 @@ fmt := import('fmt')
 http := import('http')
 
 fn run(t) {
+	// query string encodings
+	{
+		{
+			queryEncode: queryEncode
+			queryDecode: queryDecode
+		} := http
+
+		[
+			// basic
+			[{}, '']
+			[{ a: 'bcd' }, 'a=bcd']
+			[
+				{ results: -24.5, max_tokens: 100 }
+				'max_tokens=100&results=-24.5'
+				{ results: '-24.5', max_tokens: '100' }
+			]
+			[
+				{ query: 'climate change', show_inactives: false }
+				'query=climate%20change&show_inactives=false'
+				{ query: 'climate change', show_inactives: 'false' }
+			]
+
+			// with nulls, functions, atoms
+			[
+				{ empty: '', gone: ?, xyz: 200 }
+				'empty=&xyz=200'
+				{ empty: '', xyz: '200' }
+			]
+			[
+				{ adder: fn(a, b) a + b, type: :fn }
+				'type=fn'
+				{ type: 'fn' }
+			]
+
+			// with lists and objects
+			[
+				{ numbers: [1, 2, 3, 10], count: 4 }
+				'count=4&numbers=%5B1%2C2%2C3%2C10%5D'
+				{ numbers: '[1,2,3,10]', count: '4' }
+			]
+			[
+				{ advancedSearch: [:coupe, '>600', { make: 'Ferrari' }] }
+				'advancedSearch=%5B%22coupe%22%2C%22%3E600%22%2C%7B%22make%22%3A%22Ferrari%22%7D%5D'
+				{ advancedSearch: '["coupe",">600",{"make":"Ferrari"}]' }
+			]
+
+			// with complex percent-encoding keys and values
+			[{ 'hey? there': 'how are you?' }, 'hey%3F%20there=how%20are%20you%3F']
+		] |> with std.each() fn(spec) {
+			[params, encoded, decoded] := spec
+			decoded := decoded |> std.default(params)
+
+			'queryEncode "{{0}}"' |> fmt.format(params) |>
+				t.eq(queryEncode(params), encoded)
+			'queryDecode "{{0}}"' |> fmt.format(encoded) |>
+				t.eq(queryDecode(encoded), decoded)
+		}
+	}
+
 	// percent encodings
 	{
 		{
@@ -11,7 +70,7 @@ fn run(t) {
 			percentDecode: decode
 		} := http
 
-		URIComponents := [
+		[
 			// basic strings
 			['', '']
 			['oaklang.org', 'oaklang.org']
