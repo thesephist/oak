@@ -513,7 +513,7 @@ fn once(f) {
 fn loop(max, f) {
 	// allow passing just a callback with no loop count, implying an infinite
 	// loop with max = -1
-	if f = ? -> [max, f] <- [-1, max]
+	if type(max) = :function -> [max, f] <- [-1, max]
 	max := default(max, -1)
 
 	ret := ?
@@ -530,6 +530,66 @@ fn loop(max, f) {
 		}
 	}
 	sub(0)
+}
+
+// aloop takes a loop count `max` and a callback, and invokes the callback
+// `max` times asynchronously. It can be used to infinitely loop if max < 0.
+// Callback is called with three arguments:
+// - count, the current loop count starting from 0
+// - next, a fn to be called when the current iteration is done
+// - done, a fn to be called to exit early from the loop
+fn aloop(max, f, done) {
+	// allow passing just the callbacks with no loop count, implying an infinite
+	// loop with max = -1
+	if type(max) = :function -> [max, f, done] <- [-1, max, f]
+	max := default(max, -1)
+	done := done |> default(fn {})
+
+	fn sub(count) if count {
+		max -> done()
+		_ -> f(count, fn() sub(count + 1), done)
+	}
+	sub(0)
+}
+
+// serial enables asynchronous iteration over xs such that only one item is
+// processed at once. This is the asynchronous version of each. The predicate f
+// is invoked with four arguments:
+// - x, the item being iterated over
+// - i, the index of x in xs
+// - next, a fn to be called when the current iteration is done
+// - done, a fn to be called to exit early from the loop
+fn serial(xs, f, done) {
+	done := done |> default(fn {})
+	fn sub(i) if i {
+		len(xs) -> done()
+		_ -> f(xs.(i), i, fn() sub(i + 1), done)
+	}
+	sub(0)
+}
+
+// parallel enables asynchronous iteration over xs such that all items are
+// processed at once, and the callback is invoked when the last item to finish
+// has processed. The predicate f is invoked with four arguments:
+// - x, the item being iterated over
+// - i, the index of x in xs
+// - next, a fn to be called when the current iteration is done
+// - done, a fn to be called to exit early from the loop. Calling this will
+//   effectively make parallel behave as if all iterations are "racing" to a
+//   first result
+fn parallel(xs, f, done) {
+	done := done |> default(fn {})
+	count := 0
+	broken? := false
+	xs |> with each() fn(x, i) {
+		with f(x, i, fn if !broken? -> {
+			count <- count + 1
+			if count = len(xs) -> done()
+		}) fn {
+			broken? <- true
+			done()
+		}
+	}
 }
 
 // debounce takes a function f, and returns a new function g that wraps f so
