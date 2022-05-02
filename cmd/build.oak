@@ -37,7 +37,6 @@
 	resolve: resolve
 } := import('path')
 cli := import('cli')
-debug := import('debug')
 syntax := import('syntax')
 
 Cli := cli.parse()
@@ -737,7 +736,15 @@ fn renderJSBundle(bundleNode) {
 	fn renderNode(node) if node.type {
 		:null -> 'null'
 		:empty -> '__Oak_Empty'
-		:string -> '__Oak_String(' + debug.inspect(node.val) + ')'
+		:string -> '__Oak_String(\'' + node.val |> map(fn(c) if c {
+			'\\' -> '\\\\'
+			'\'' -> '\\\''
+			'\n' -> '\\n'
+			'\r' -> '\\r'
+			'\f' -> '\\f'
+			'\t' -> '\\t'
+			_ -> c
+		}) + '\')'
 		:int, :float, :bool -> string(node.val)
 		:identifier -> formatIdent(node.val)
 		:atom -> 'Symbol.for(\'' << node.val << '\')'
