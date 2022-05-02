@@ -38,6 +38,12 @@
 <span class="oak-comment">// identity returns its first argument</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">identity</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-identifier">x</span>
 
+<span class="oak-comment">// is returns a predicate that reports whether its argument is equal to x</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">is</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">y</span><span class="oak-rightParen">) </span><span class="oak-identifier">x </span><span class="oak-eq">= </span><span class="oak-identifier">y</span>
+
+<span class="oak-comment">// constantly returns a function that always returns x</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">constantly</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-identifier">x</span>
+
 <span class="oak-comment">// _baseIterator is a helper function that returns the "base iterator" of a</span>
 <span class="oak-comment">// type, or the "zero value" version of the type.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">_baseIterator</span><span class="oak-leftParen">(</span><span class="oak-identifier">v</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">type</span><span class="oak-leftParen">(</span><span class="oak-identifier">v</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
@@ -265,6 +271,40 @@
 	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-fnName">_baseIterator</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
 <span class="oak-rightBrace">}</span>
 
+<span class="oak-comment">// exclude produces an iterable containing only the elements of xs that return</span>
+<span class="oak-comment">// false when passed to the exclude predicate f. If f is a function, it</span>
+<span class="oak-comment">// receives arguments (element, index).</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">exclude</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">f </span><span class="oak-assign">:= </span><span class="oak-fnName">_asPredicate</span><span class="oak-leftParen">(</span><span class="oak-identifier">f</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">acc</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">acc</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-ifKeyword">if </span><span class="oak-exclam">!</span><span class="oak-fnName">f</span><span class="oak-leftParen">(</span><span class="oak-identifier">x </span><span class="oak-assign">:= </span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">acc </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">x</span><span class="oak-newline">
+			</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">acc</span><span class="oak-comma">, </span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-fnName">_baseIterator</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// separate produces a pair of two iterables [is, isnt], where is contains the</span>
+<span class="oak-comment">// result of filter(xs, f) and isnt contains the result of exclude(xs, f).</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">separate</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">f </span><span class="oak-assign">:= </span><span class="oak-fnName">_asPredicate</span><span class="oak-leftParen">(</span><span class="oak-identifier">f</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">is</span><span class="oak-comma">, </span><span class="oak-identifier">isnt</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-leftBracket">[</span><span class="oak-identifier">is</span><span class="oak-comma">, </span><span class="oak-identifier">isnt</span><span class="oak-rightBracket">]</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-ifKeyword">if </span><span class="oak-fnName">f</span><span class="oak-leftParen">(</span><span class="oak-identifier">x </span><span class="oak-assign">:= </span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+				</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">is </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">x</span><span class="oak-newline">
+				</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">isnt </span><span class="oak-pushArrow">&lt;&lt; </span><span class="oak-identifier">x</span><span class="oak-newline">
+			</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+			</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">is</span><span class="oak-comma">, </span><span class="oak-identifier">isnt</span><span class="oak-comma">, </span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-fnName">_baseIterator</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-fnName">_baseIterator</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
 <span class="oak-comment">// reduce accumulates elements of the iterable xs on a value, starting with</span>
 <span class="oak-comment">// seed and passing it to the reducer function f. The reducer receives</span>
 <span class="oak-comment">// arguments (accumulator, element, index).</span>
@@ -420,6 +460,20 @@
 	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
 <span class="oak-rightBrace">}</span>
 
+<span class="oak-comment">// rfind returns the index of the last item in the iterable xs for which the</span>
+<span class="oak-comment">// predicate returns true, searching backwards from the end. If no match is</span>
+<span class="oak-comment">// found, rfind returns -1.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">rfind</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">pred</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-minus">-</span><span class="oak-numberLiteral">1 </span><span class="oak-branchArrow">-> </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">pred</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">i</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
 <span class="oak-comment">// indexOf returns the index of the first item equal to x in the iterable xs.</span>
 <span class="oak-comment">// If no match is found, indexOf returns -1.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">indexOf</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
@@ -433,6 +487,19 @@
 	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
 <span class="oak-rightBrace">}</span>
 
+<span class="oak-comment">// rindexOf returns the index of the last item equal to x in the iterable xs,</span>
+<span class="oak-comment">// searching backwards from the end. If no match is found, rindexOf returns -1.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">rindexOf</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-minus">-</span><span class="oak-numberLiteral">1 </span><span class="oak-branchArrow">-> </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">x </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">i</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
 <span class="oak-comment">// contains? reports whether an iterable contains an item equal to x.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">contains?</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-fnName">indexOf</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">x</span><span class="oak-rightParen">) </span><span class="oak-greater">> </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span>
 
@@ -442,9 +509,14 @@
 <span class="oak-comment">// entries takes an object and returns a list of pairs [key, value] in arbitrary order.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">entries</span><span class="oak-leftParen">(</span><span class="oak-identifier">obj</span><span class="oak-rightParen">) </span><span class="oak-fnName">keys</span><span class="oak-leftParen">(</span><span class="oak-identifier">obj</span><span class="oak-rightParen">) </span><span class="oak-pipeArrow">|> </span><span class="oak-withKeyword">with </span><span class="oak-fnName">map</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">) </span><span class="oak-leftBracket">[</span><span class="oak-identifier">key</span><span class="oak-comma">, </span><span class="oak-identifier">obj</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">key</span><span class="oak-rightParen">)</span><span class="oak-rightBracket">]</span>
 
+<span class="oak-comment">// fromEntries takes an object entry list (of the shape that entries() returns)</span>
+<span class="oak-comment">// and assembles it into an object.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">fromEntries</span><span class="oak-leftParen">(</span><span class="oak-identifier">entries</span><span class="oak-rightParen">) </span><span class="oak-identifier">entries </span><span class="oak-pipeArrow">|></span><span class="oak-newline">
+	</span><span class="oak-withKeyword">with </span><span class="oak-fnName">reduce</span><span class="oak-leftParen">(</span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">o</span><span class="oak-comma">, </span><span class="oak-identifier">entry</span><span class="oak-rightParen">) </span><span class="oak-identifier">o</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">entry</span><span class="oak-dot">.</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">) </span><span class="oak-assign">:= </span><span class="oak-identifier">entry</span><span class="oak-dot">.</span><span class="oak-numberLiteral">1</span>
+
 <span class="oak-comment">// merge takes a list of objects and merges entries of all subsequent objects</span>
 <span class="oak-comment">// onto the first object, mutating the first object. If there are no objects</span>
-<span class="oak-comment">// given, merge returns ?</span>
+<span class="oak-comment">// given, merge returns ?.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">merge</span><span class="oak-leftParen">(</span><span class="oak-identifier">os</span><span class="oak-ellipsis">...</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">os</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
 	</span><span class="oak-numberLiteral">0 </span><span class="oak-branchArrow">-> </span><span class="oak-qmark">?</span><span class="oak-newline">
 	</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-withKeyword">with </span><span class="oak-fnName">reduce</span><span class="oak-leftParen">(</span><span class="oak-identifier">os</span><span class="oak-comma">, </span><span class="oak-identifier">os</span><span class="oak-dot">.</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">acc</span><span class="oak-comma">, </span><span class="oak-identifier">o</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
@@ -473,7 +545,7 @@
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">loop</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
 	</span><span class="oak-comment">// allow passing just a callback with no loop count, implying an infinite</span><span class="oak-newline">
 	</span><span class="oak-comment">// loop with max = -1</span><span class="oak-newline">
-	</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">f </span><span class="oak-eq">= </span><span class="oak-qmark">? </span><span class="oak-branchArrow">-> </span><span class="oak-leftBracket">[</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightBracket">] </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-leftBracket">[</span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-comma">, </span><span class="oak-identifier">max</span><span class="oak-rightBracket">]</span><span class="oak-newline">
+	</span><span class="oak-ifKeyword">if </span><span class="oak-fnName">type</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-rightParen">) </span><span class="oak-eq">= </span><span class="oak-colon">:</span><span class="oak-identifier">function </span><span class="oak-branchArrow">-> </span><span class="oak-leftBracket">[</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightBracket">] </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-leftBracket">[</span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-comma">, </span><span class="oak-identifier">max</span><span class="oak-rightBracket">]</span><span class="oak-newline">
 	</span><span class="oak-identifier">max </span><span class="oak-assign">:= </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span>
 <span class="oak-newline">
 	</span><span class="oak-identifier">ret </span><span class="oak-assign">:= </span><span class="oak-qmark">?</span><span class="oak-newline">
@@ -490,6 +562,66 @@
 		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
 	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
 	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// aloop takes a loop count `max` and a callback, and invokes the callback</span>
+<span class="oak-comment">// `max` times asynchronously. It can be used to infinitely loop if max &lt; 0.</span>
+<span class="oak-comment">// Callback is called with three arguments:</span>
+<span class="oak-comment">// - count, the current loop count starting from 0</span>
+<span class="oak-comment">// - next, a fn to be called when the current iteration is done</span>
+<span class="oak-comment">// - done, a fn to be called to exit early from the loop</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">aloop</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-comment">// allow passing just the callbacks with no loop count, implying an infinite</span><span class="oak-newline">
+	</span><span class="oak-comment">// loop with max = -1</span><span class="oak-newline">
+	</span><span class="oak-ifKeyword">if </span><span class="oak-fnName">type</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-rightParen">) </span><span class="oak-eq">= </span><span class="oak-colon">:</span><span class="oak-identifier">function </span><span class="oak-branchArrow">-> </span><span class="oak-leftBracket">[</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightBracket">] </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-leftBracket">[</span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-comma">, </span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-rightBracket">]</span><span class="oak-newline">
+	</span><span class="oak-identifier">max </span><span class="oak-assign">:= </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-comma">, </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">done </span><span class="oak-assign">:= </span><span class="oak-identifier">done </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span>
+<span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">count</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">count </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-identifier">max </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">done</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">f</span><span class="oak-leftParen">(</span><span class="oak-identifier">count</span><span class="oak-comma">, </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">count </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// serial enables asynchronous iteration over xs such that only one item is</span>
+<span class="oak-comment">// processed at once. This is the asynchronous version of each. The predicate f</span>
+<span class="oak-comment">// is invoked with four arguments:</span>
+<span class="oak-comment">// - x, the item being iterated over</span>
+<span class="oak-comment">// - i, the index of x in xs</span>
+<span class="oak-comment">// - next, a fn to be called when the current iteration is done</span>
+<span class="oak-comment">// - done, a fn to be called to exit early from the loop</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">serial</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">done </span><span class="oak-assign">:= </span><span class="oak-identifier">done </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">done</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">f</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-comma">, </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
+<span class="oak-comment">// parallel enables asynchronous iteration over xs such that all items are</span>
+<span class="oak-comment">// processed at once, and the callback is invoked when the last item to finish</span>
+<span class="oak-comment">// has processed. The predicate f is invoked with four arguments:</span>
+<span class="oak-comment">// - x, the item being iterated over</span>
+<span class="oak-comment">// - i, the index of x in xs</span>
+<span class="oak-comment">// - next, a fn to be called when the current iteration is done</span>
+<span class="oak-comment">// - done, a fn to be called to exit early from the loop. Calling this will</span>
+<span class="oak-comment">//   effectively make parallel behave as if all iterations are "racing" to a</span>
+<span class="oak-comment">//   first result</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">parallel</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-comma">, </span><span class="oak-identifier">f</span><span class="oak-comma">, </span><span class="oak-identifier">done</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">done </span><span class="oak-assign">:= </span><span class="oak-identifier">done </span><span class="oak-pipeArrow">|> </span><span class="oak-fnName">default</span><span class="oak-leftParen">(</span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">count </span><span class="oak-assign">:= </span><span class="oak-numberLiteral">0</span><span class="oak-newline">
+	</span><span class="oak-identifier">broken? </span><span class="oak-assign">:= </span><span class="oak-falseLiteral">false</span><span class="oak-newline">
+	</span><span class="oak-identifier">xs </span><span class="oak-pipeArrow">|> </span><span class="oak-withKeyword">with </span><span class="oak-fnName">each</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-withKeyword">with </span><span class="oak-fnName">f</span><span class="oak-leftParen">(</span><span class="oak-identifier">x</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-comma">, </span><span class="oak-fnKeyword">fn </span><span class="oak-ifKeyword">if </span><span class="oak-exclam">!</span><span class="oak-identifier">broken? </span><span class="oak-branchArrow">-> </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">count </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-identifier">count </span><span class="oak-plus">+ </span><span class="oak-numberLiteral">1</span><span class="oak-newline">
+			</span><span class="oak-ifKeyword">if </span><span class="oak-identifier">count </span><span class="oak-eq">= </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">xs</span><span class="oak-rightParen">) </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">done</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-rightParen">) </span><span class="oak-fnKeyword">fn </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-identifier">broken? </span><span class="oak-nonlocalAssign">&lt;- </span><span class="oak-trueLiteral">true</span><span class="oak-newline">
+			</span><span class="oak-fnName">done</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span>
 <span class="oak-rightBrace">}</span>
 
 <span class="oak-comment">// debounce takes a function f, and returns a new function g that wraps f so</span>
