@@ -106,15 +106,18 @@ server.start(9999)</code></pre>
             stabilize and document much of anything yet!</p>
 
             <h2 id="start">Try Oak</h2>
-            <p>You can download Oak from
-            <a href="https://github.com/thesephist/oak/releases">the GitHub releases page</a>.
-            I currently build and test release versions of Oak for Linux and
-            macOS. To install, follow the instructions below for your operating
-            system.</p>
+            <p>I currently build and test release versions of Oak for Linux and
+            macOS on x86, but other builds are also available from package
+            repositories. To install, follow the instructions below for your
+            operating system.</p>
             <details open class="try-details os-macos">
                 <summary><h3>macOS</h3></summary>
-                <p>On macOS, you may be able to run the following commands to
-                install Oak to your <code>$PATH</code>.</p>
+                <p>Oak is available on <a href="https://brew.sh/">Homebrew</a>.
+                To install, just run</p>
+                <pre><code>brew install oak</code></pre>
+                <p>If you don't have Homebrew or don't want to use it for some
+                reason, you may be able to run the following commands instead
+                to install Oak to your <code>$PATH</code>.</p>
                 <pre><code># Download the released executable
 curl -L https://github.com/thesephist/oak/releases/latest/download/oak-darwin &gt; /usr/local/bin/oak
 
@@ -132,17 +135,23 @@ chmod +x /usr/local/bin/oak</code></pre>
             </details>
             <details class="try-details os-other">
                 <summary><h3>Other platforms</h3></summary>
-                <p>Once you download the executable for your platform, mark it
-                as an executable file if necessary, and try running <code>oak
-                version</code>.</p>
+                <p>You can download Oak from
+                <a href="https://github.com/thesephist/oak/releases">the GitHub releases page</a>
+                if there's a build for your platform. If not, you can clone the
+                repository and build from source with <a href="https://go.dev/">Go</a>
+                by running</p>
+                <pre><code>go build -o ./oak</code></pre>
+                <p>Once you download the executable for your platform or build
+                the binary, mark it as an executable file if necessary, and try
+                running <code>oak version</code>.</p>
                 <pre><code>$ ./oak version
-Oak v0.1</code></pre>
+Oak v0.2</code></pre>
                 <p>If you see a version number like above, you’re all set. If
                 you want to run Oak without the preceding <code>./</code>, add
                 it to your <code>$PATH</code> environment variable.</p>
             </details>
 
-            <h2>An introduction to Oak</h2>
+            <h2 id="intro">An introduction to Oak</h2>
             <p><em>What follows here is a work-in-progress — it'll probably evolve as Oak itself grows.</em></p>
 
             <details open>

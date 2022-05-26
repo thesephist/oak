@@ -54,6 +54,16 @@ with server.route('/hello/:name') fn(params) {
 server.start(9999)
 ```
 
+## Install
+
+On macOS, Oak can be installed through [Homebrew](https://brew.sh/).
+
+```sh
+brew install oak
+```
+
+On other platforms or macOS without Homebrew, check the [installation guide](https://oaklang.org/#start) on the Oak website to install the Oak CLI or build it from source.
+
 ## Overview
 
 Oak has 7 primitive and 3 complex types.
