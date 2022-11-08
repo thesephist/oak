@@ -5,11 +5,11 @@
 // such behavior is desired, but I haven't hit any such use cases yet.
 //
 // libdatetime deals with UNIX timestamps, positive and negative, extending
-// back to 1 CE and forward arbitrary until integer overflow, but does not deal
-// with millisecond resolution timestamps with the exception of parse() which
-// can parse milliseconds out of an ISO8601 date time string. The library also
-// does not concern itself with time zones, pushing that complexity to call
-// sites.
+// back to 1 CE and forward until integer overflow, but does not deal with
+// millisecond resolution timestamps with the exception of format() and parse()
+// which can format and parse milliseconds into and out of ISO8601 datetime
+// strings. The library also does not concern itself with time zones, pushing
+// that complexity to call sites.
 
 {
 	default: default
@@ -26,6 +26,9 @@
 	padEnd: padEnd
 	split: split
 } := import('str')
+{
+	round: round
+} := import('math')
 {
 	format: fmtFormat
 } := import('fmt')
@@ -202,7 +205,7 @@ fn format(t, tzOffset) {
 		second: second
 	} := describe(t + tzOffset * 60)
 
-	'{{0}}-{{1}}-{{2}}T{{3}}:{{4}}:{{5}}{{6}}' |> fmtFormat(
+	'{{0}}-{{1}}-{{2}}T{{3}}:{{4}}:{{5}}{{6}}{{7}}' |> fmtFormat(
 		if {
 			year > 9999 -> year |> string() |> padStart(6, '0')
 			year < 0 -> '-' << -year |> string() |> padStart(6, '0')
@@ -212,7 +215,11 @@ fn format(t, tzOffset) {
 		day |> string() |> padStart(2, '0')
 		hour |> string() |> padStart(2, '0')
 		minute |> string() |> padStart(2, '0')
-		second |> string() |> padStart(2, '0')
+		second |> int() |> string() |> padStart(2, '0')
+		if millis := round((second * 1000) % 1000, 0) {
+			0 -> ''
+			_ -> '.' + millis |> string()
+		}
 		if {
 			tzOffset = 0 -> 'Z'
 			tzOffset > 0 -> '+' << '{{0}}:{{1}}' |> fmtFormat(
@@ -233,7 +240,7 @@ fn _parseTZOffset(offsetString) if [hh, mm] := offsetString |> split(':') |> map
 	_ -> hh * 60 + mm
 }
 
-// parse takes an ISO8601-compliant date string and returns a timestamp
+// parse takes an ISO8601-compliant date string and returns a time description
 fn parse(s) if [date, clock] := s |> split('T') {
 	[], [_]
 	[?, _], [_, ?] -> ?
@@ -263,8 +270,7 @@ fn parse(s) if [date, clock] := s |> split('T') {
 					day: day
 					hour: hour
 					minute: minute
-					second: second
-					millis: default(maybeMillis, 0)
+					second: second + (maybeMillis |> default(0)) / 1000
 					tzOffset: tzOffset
 				}
 			}

@@ -15,6 +15,8 @@ Conversions := [
 	['UNIX zero', 0, T(1970, 1, 1), '1970-01-01T00:00:00Z']
 	// guess this date ¯\_(ツ)_/¯
 	['October 15, 1998', 908417643, T(1998, 10, 15, 2, 14, 3), '1998-10-15T02:14:03Z']
+	// when I moved to the US
+	['Big Move', 1248917025.875, T(2009, 7, 30, 1, 23, 45.875), '2009-07-30T01:23:45.875Z']
 	// Y2K
 	['start of 2000', 946684800, T(2000, 1, 1), '2000-01-01T00:00:00Z']
 	// Zero CE
@@ -73,6 +75,7 @@ fn run(t) {
 		{
 			format: format
 			parse: parse
+			timestamp: timestamp
 		} := datetime
 
 		Conversions |> with std.each() fn(spec) {
@@ -80,7 +83,7 @@ fn run(t) {
 			t.eq('format ' << name
 				format(secs), iso)
 			t.eq('parse ' << name
-				parse(iso), std.merge({ millis: 0, tzOffset: 0 }, description))
+				parse(iso), std.merge({ tzOffset: 0 }, description))
 		}
 
 		// edge cases, with tzOffset = 0 ("Z")
@@ -88,8 +91,7 @@ fn run(t) {
 			parse('2023-10-21T12:34:56.529Z')
 			{
 				year: 2023, month: 10, day: 21
-				hour: 12, minute: 34, second: 56
-				millis: 529
+				hour: 12, minute: 34, second: 56.529
 				tzOffset: 0
 			}
 		)
@@ -104,7 +106,6 @@ fn run(t) {
 			{
 				year: 2000, month: 1, day: 2
 				hour: 0, minute: 0, second: 0
-				millis: 0
 				tzOffset: 0
 			}
 		)
@@ -113,7 +114,6 @@ fn run(t) {
 			{
 				year: 2000, month: 1, day: 2
 				hour: 0, minute: 0, second: 0
-				millis: 0
 				tzOffset: 4 * 60 + 15
 			}
 		)
@@ -121,8 +121,7 @@ fn run(t) {
 			parse('2000-01-02T00:00:00.123+04:15')
 			{
 				year: 2000, month: 1, day: 2
-				hour: 0, minute: 0, second: 0
-				millis: 123
+				hour: 0, minute: 0, second: 0.123
 				tzOffset: 4 * 60 + 15
 			}
 		)
@@ -131,7 +130,6 @@ fn run(t) {
 			{
 				year: 2000, month: 1, day: 2
 				hour: 0, minute: 0, second: 0
-				millis: 0
 				tzOffset: - (4 * 60 + 15)
 			}
 		)
@@ -139,8 +137,7 @@ fn run(t) {
 			parse('2000-01-02T00:00:00.456-04:15')
 			{
 				year: 2000, month: 1, day: 2
-				hour: 0, minute: 0, second: 0
-				millis: 456
+				hour: 0, minute: 0, second: 0.456
 				tzOffset: - (4 * 60 + 15)
 			}
 		)
@@ -165,6 +162,43 @@ fn run(t) {
 		'parse with malformed tzOffset returns ?' |> t.eq(
 			parse('2000-01-02T00:00:00-0z:00')
 			?
+		)
+
+		// format with time zone offsets
+		'format with time zone offset = 0' |> t.eq(
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+			} |> timestamp() |> format(0)
+			'2000-01-02T00:00:00Z'
+		)
+		'format with time zone offset > 0' |> t.eq(
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+			} |> timestamp() |> format(4 * 60 + 15)
+			'2000-01-02T04:15:00+04:15'
+		)
+		'format with time zone offset > 0 and millis' |> t.eq(
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0.123
+			} |> timestamp() |> format(4 * 60 + 15)
+			'2000-01-02T04:15:00.123+04:15'
+		)
+		'format with time zone offset < 0' |> t.eq(
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0
+			} |> timestamp() |> format(- (4 * 60 + 15))
+			'2000-01-01T19:45:00-04:15'
+		)
+		'format with time zone offset < 0 and millis' |> t.eq(
+			{
+				year: 2000, month: 1, day: 2
+				hour: 0, minute: 0, second: 0.456
+			} |> timestamp() |> format(- (4 * 60 + 15))
+			'2000-01-01T19:45:00.456-04:15'
 		)
 
 		// round-trip tests on 200 generated times, spaced 701 days and 2161
