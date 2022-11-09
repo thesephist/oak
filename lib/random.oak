@@ -5,6 +5,12 @@
 // security-sensitive work. For such code, use srand() for secure randomness or
 // the 'crypto' standard library.
 
+{
+	Pi: Pi
+	E: E
+	sqrt: sqrt
+} := import('math')
+
 // boolean returns either true or false with equal probability
 fn boolean rand() > 0.5
 
@@ -21,4 +27,11 @@ fn number(min, max) {
 // choice returns an item from the given list, with each item having equal
 // probability of being selected on any given call
 fn choice(list) list.(integer(0, len(list)))
+
+// sample from a standard normal distribution: µ = 0, σ = 1
+fn normal {
+	u := 1 - rand()
+	v := 2 * Pi * rand()
+	sqrt(-2 * log(E, u)) * cos(v)
+}
 

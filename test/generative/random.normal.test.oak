@@ -1,0 +1,37 @@
+// Generative tests for statistical correctness of random.normal, which should
+// sample from a standard normal distribution
+//
+// renders a histogram and computes the mean and stddev of the generated
+// samples, and in the process also stress-tests debug.histo.
+
+{
+	println: println
+	default: default
+	range: range
+	map: map
+	each: each
+	loop: loop
+	filter: filter
+} := import('std')
+{
+	join: join
+} := import('str')
+math := import('math')
+fmt := import('fmt')
+{
+	normal: normal
+} := import('random')
+debug := import('debug')
+
+N := 100000
+xs := range(N) |> map(normal)
+debug.histo(xs, {
+	min: -5
+	max: 5
+	bars: 50
+	label: :end
+}) |> println()
+fmt.printf('µ = {{0}}, σ = {{1}}'
+	math.mean(xs)
+	math.stddev(xs))
+
