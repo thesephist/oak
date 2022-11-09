@@ -4,8 +4,10 @@
 {
 	println: stdPrintln
 	default: default
+	range: range
 	toHex: toHex
 	map: map
+	each: each
 	some: some
 	every: every
 	values: values
@@ -18,6 +20,7 @@
 	join: join
 	padStart: padStart
 } := import('str')
+math := import('math')
 {
 	sort!: sort!
 } := import('sort')
@@ -150,4 +153,66 @@ fn inspect(x, options) {
 // std.println is variadic, but debug.println takes one argument and one
 // (optional) options object.
 fn println(x, options) stdPrintln(inspect(x, options))
+
+// bar draws a histogram bar as a Unicode string, with 1 character representing
+// a value of "1". Very small but non-zero values are rounded up to the
+// smallest representable unit, as distinguishing them from zero is usually
+// more important at that scale than quantitative correctness.
+//
+// bar is used to render a histogram in histo.
+fn bar(n) {
+	n := math.max(n * 8, 0)
+	whole := int(n / 8)
+	rem := n % 8
+	graph := range(whole) |> map(fn '█') |> join() + if math.round(rem) {
+		0 -> ''
+		1 -> '▏'
+		2 -> '▎'
+		3 -> '▍'
+		4 -> '▌'
+		5 -> '▋'
+		6 -> '▊'
+		7 -> '▉'
+		8 -> '█'
+	}
+	if graph = '' & n > 0 {
+		true -> '▏'
+		_ -> graph
+	}
+}
+
+
+// histo draws a histogram from a given list of numbers using Unicode symbols,
+// using bar to draw each bar.
+fn histo(xs, opts) if len(xs) {
+	0 -> ''
+	_ -> {
+		opts := opts |> default({})
+		min := opts.min |> default(math.min(xs...))
+		max := opts.max |> default(math.max(xs...))
+		bars := opts.bars |> default(10) |> math.min(len(xs)) |> math.max(1)
+		label := opts.label |> default(?)
+		cols := opts.cols |> default(80)
+		unit := (max - min) / bars
+
+		buckets := range(bars) |> map(fn 0)
+		xs |> each(fn(x) if x >= min & x < max -> {
+			i := int((x - min) / unit)
+			buckets.(i) := buckets.(i) + 1
+		})
+		maxcount := math.max(buckets...)
+
+		labels := buckets |> map(string)
+		maxlen := math.max(labels |> map(len)...)
+		if label = :start -> labels := labels |> map(fn(l) l |> padStart(maxlen, ' '))
+		buckets |> map(fn(n, i) {
+			b := n |> math.scale(0, maxcount, 0, cols) |> bar()
+			if label {
+				:start -> labels.(i) + ' ' + b
+				:end -> b + ' ' + labels.(i)
+				_ -> b
+			}
+		}) |> join('\n')
+	}
+}
 
