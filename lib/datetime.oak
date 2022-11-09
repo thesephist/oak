@@ -216,7 +216,7 @@ fn format(t, tzOffset) {
 		hour |> string() |> padStart(2, '0')
 		minute |> string() |> padStart(2, '0')
 		second |> int() |> string() |> padStart(2, '0')
-		if millis := round((second * 1000) % 1000, 0) {
+		if millis := round((second * 1000) % 1000) {
 			0 -> ''
 			_ -> '.' + millis |> string()
 		}
