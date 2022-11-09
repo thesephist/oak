@@ -84,6 +84,20 @@ fn indexOf(s, substr) {
 	sub(0)
 }
 
+// rindexOf returns the last index at which the given substring `substr`
+// appears in the string `s`. If the substring does not exist, it returns -1.
+fn rindexOf(s, substr) {
+	max := len(s) - len(substr)
+	fn sub(i) if _matchesAt?(s, substr, i) {
+		true -> i
+		_ -> if i > 0 {
+			true -> sub(i - 1)
+			_ -> -1
+		}
+	}
+	sub(max)
+}
+
 // contains? reports whether the string `s` contains the substring `substr`.
 fn contains?(s, substr) indexOf(s, substr) >= 0
 

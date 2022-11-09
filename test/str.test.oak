@@ -173,6 +173,7 @@ fn run(t) {
 	{
 		{
 			indexOf: indexOf
+			rindexOf: rindexOf
 			contains?: contains?
 			cut: cut
 		} := str
@@ -181,6 +182,11 @@ fn run(t) {
 		'indexOf nonexistent part' |> t.eq(indexOf('abc', 'x'), -1)
 		'indexOf existent part' |> t.eq(indexOf('abc', 'b'), 1)
 		'indexOf duplicate part' |> t.eq(indexOf('abcdc', 'c'), 2)
+
+		'rindexOf empty string' |> t.eq(rindexOf('', 'a'), -1)
+		'rindexOf nonexistent part' |> t.eq(rindexOf('abc', 'x'), -1)
+		'rindexOf existent part' |> t.eq(rindexOf('abc', 'b'), 1)
+		'rindexOf duplicate part' |> t.eq(rindexOf('abcdc', 'c'), 4)
 
 		'contains? empty string' |> t.eq(contains?('', 'a'), false)
 		'contains? nonexistent part' |> t.eq(contains?('abc', 'x'), false)
