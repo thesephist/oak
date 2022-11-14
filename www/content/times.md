@@ -3,7 +3,7 @@ title: Building a personal time zone CLI with Oak
 date: 2022-03-20T00:50:30-05:00
 ---
 
-`times` is a little command-line utility I wrote to show me dates and times in all the time zones I care about quickly. It's the next in a series of [toy Oak programs](http://localhost:9898/posts/ackermann/) I've been writing when I get bored, but what sets it apart is that I've used Oak's new [`oak pack` feature](/posts/pack/) to install it as a stand-alone executable on my Mac, so I can call it with `times` anywhere, and share it with my friends, too.
+`times` is a little command-line utility I wrote to show me dates and times in all the time zones I care about quickly. It's the next in a series of [toy Oak programs](/posts/ackermann/) I've been writing when I get bored, but what sets it apart is that I've used Oak's new [`oak pack` feature](/posts/pack/) to install it as a stand-alone executable on my Mac, so I can call it with `times` anywhere, and share it with my friends, too.
 
 `times` takes no input or command-line arguments, and does exactly one thing: print this list:
 
