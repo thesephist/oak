@@ -116,6 +116,20 @@
 	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-rightParen">)</span>
 <span class="oak-rightBrace">}</span>
 
+<span class="oak-comment">// rindexOf returns the last index at which the given substring `substr`</span>
+<span class="oak-comment">// appears in the string `s`. If the substring does not exist, it returns -1.</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">rindexOf</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-comma">, </span><span class="oak-identifier">substr</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">max </span><span class="oak-assign">:= </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-rightParen">) </span><span class="oak-minus">- </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">substr</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-fnKeyword">fn </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-ifKeyword">if </span><span class="oak-fnName">_matchesAt?</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-comma">, </span><span class="oak-identifier">substr</span><span class="oak-comma">, </span><span class="oak-identifier">i</span><span class="oak-rightParen">) </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+		</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-identifier">i</span><span class="oak-newline">
+		</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-ifKeyword">if </span><span class="oak-identifier">i </span><span class="oak-greater">> </span><span class="oak-numberLiteral">0 </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+			</span><span class="oak-trueLiteral">true </span><span class="oak-branchArrow">-> </span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">i </span><span class="oak-minus">- </span><span class="oak-numberLiteral">1</span><span class="oak-rightParen">)</span><span class="oak-newline">
+			</span><span class="oak-underscore">_ </span><span class="oak-branchArrow">-> </span><span class="oak-minus">-</span><span class="oak-numberLiteral">1</span><span class="oak-newline">
+		</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-rightBrace">}</span><span class="oak-newline">
+	</span><span class="oak-fnName">sub</span><span class="oak-leftParen">(</span><span class="oak-identifier">max</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
+
 <span class="oak-comment">// contains? reports whether the string `s` contains the substring `substr`.</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">contains?</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-comma">, </span><span class="oak-identifier">substr</span><span class="oak-rightParen">) </span><span class="oak-fnName">indexOf</span><span class="oak-leftParen">(</span><span class="oak-identifier">s</span><span class="oak-comma">, </span><span class="oak-identifier">substr</span><span class="oak-rightParen">) </span><span class="oak-geq">>= </span><span class="oak-numberLiteral">0</span>
 

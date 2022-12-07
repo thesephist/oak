@@ -37,6 +37,12 @@
 <span class="oak-comment">// security-sensitive work. For such code, use srand() for secure randomness or</span>
 <span class="oak-comment">// the 'crypto' standard library.</span>
 
+<span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">Pi</span><span class="oak-colon">: </span><span class="oak-identifier">Pi</span><span class="oak-newline">
+	</span><span class="oak-identifier">E</span><span class="oak-colon">: </span><span class="oak-identifier">E</span><span class="oak-newline">
+	</span><span class="oak-identifier">sqrt</span><span class="oak-colon">: </span><span class="oak-identifier">sqrt</span>
+<span class="oak-rightBrace">} </span><span class="oak-assign">:= </span><span class="oak-fnName">import</span><span class="oak-leftParen">(</span><span class="oak-stringLiteral">'math'</span><span class="oak-rightParen">)</span>
+
 <span class="oak-comment">// boolean returns either true or false with equal probability</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">boolean </span><span class="oak-fnName">rand</span><span class="oak-leftParen">(</span><span class="oak-rightParen">) </span><span class="oak-greater">> </span><span class="oak-numberLiteral">0.5</span>
 
@@ -53,6 +59,13 @@
 <span class="oak-comment">// choice returns an item from the given list, with each item having equal</span>
 <span class="oak-comment">// probability of being selected on any given call</span>
 <span class="oak-fnKeyword">fn </span><span class="oak-fnName">choice</span><span class="oak-leftParen">(</span><span class="oak-identifier">list</span><span class="oak-rightParen">) </span><span class="oak-identifier">list</span><span class="oak-dot">.</span><span class="oak-leftParen">(</span><span class="oak-fnName">integer</span><span class="oak-leftParen">(</span><span class="oak-numberLiteral">0</span><span class="oak-comma">, </span><span class="oak-fnName">len</span><span class="oak-leftParen">(</span><span class="oak-identifier">list</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span><span class="oak-rightParen">)</span>
+
+<span class="oak-comment">// sample from a standard normal distribution: µ = 0, σ = 1</span>
+<span class="oak-fnKeyword">fn </span><span class="oak-fnName">normal </span><span class="oak-leftBrace">{</span><span class="oak-newline">
+	</span><span class="oak-identifier">u </span><span class="oak-assign">:= </span><span class="oak-numberLiteral">1 </span><span class="oak-minus">- </span><span class="oak-fnName">rand</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-identifier">v </span><span class="oak-assign">:= </span><span class="oak-numberLiteral">2 </span><span class="oak-times">* </span><span class="oak-identifier">Pi </span><span class="oak-times">* </span><span class="oak-fnName">rand</span><span class="oak-leftParen">(</span><span class="oak-rightParen">)</span><span class="oak-newline">
+	</span><span class="oak-fnName">sqrt</span><span class="oak-leftParen">(</span><span class="oak-minus">-</span><span class="oak-numberLiteral">2 </span><span class="oak-times">* </span><span class="oak-fnName">log</span><span class="oak-leftParen">(</span><span class="oak-identifier">E</span><span class="oak-comma">, </span><span class="oak-identifier">u</span><span class="oak-rightParen">)</span><span class="oak-rightParen">) </span><span class="oak-times">* </span><span class="oak-fnName">cos</span><span class="oak-leftParen">(</span><span class="oak-identifier">v</span><span class="oak-rightParen">)</span>
+<span class="oak-rightBrace">}</span>
 
 </code></pre>
         </article>
