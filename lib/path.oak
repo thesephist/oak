@@ -4,6 +4,7 @@
 {
 	default: default
 	slice: slice
+	last: last
 	filter: filter
 	reduce: reduce
 } := import('std')
@@ -66,15 +67,15 @@ fn clean(path) {
 	rooted := path.0 = '/'
 	cleaned := path |>
 		strSplit('/') |>
-		reduce([], fn(parts, part, i) if part {
+		reduce([], fn(stack, part) if part {
 			// remove consecutive slashes and '.'
-			'', '.' -> parts
-			// remove '..' and its leading dir
-			'..' -> if i {
-				0 -> parts << part
-				_ -> parts |> slice(0, len(parts) - 1)
+			'', '.' -> stack
+			// '..' should pop a dir if available
+			'..' -> if stack |> last() {
+				?, '..' -> stack << part
+				_ -> stack |> slice(0, len(stack) - 1)
 			}
-			_ -> parts << part
+			_ -> stack << part
 	}) |> strJoin('/')
 	if rooted {
 		true -> '/' << cleaned

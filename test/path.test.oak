@@ -113,6 +113,14 @@ fn run(t) {
 			clean('../magic/a/../pocket..dir/x/y/../../x.gif')
 			'../magic/pocket..dir/x.gif'
 		)
+		'do not collapse consecutive sequences of ".."' |> t.eq(
+			clean('../../x/../../')
+			'../../..'
+		)
+		'correctly clean consecutive sequences of "." and ".."' |> t.eq(
+			clean('.././../one/two/./../three/.././four')
+			'../../one/four'
+		)
 	}
 
 	// joining, splitting, resolve
