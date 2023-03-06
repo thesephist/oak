@@ -236,7 +236,8 @@ func (t *tokenizer) back() {
 
 	if t.source[t.index] == '\n' {
 		t.line--
-		// TODO: reset col correctly
+		lines := strings.Split(string(t.source), "\n")
+		t.col = len(lines[t.line])
 	} else {
 		t.col--
 	}
