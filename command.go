@@ -171,11 +171,25 @@ func runStdin() {
 
 func runRepl() {
 	var historyFilePath string
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		historyFilePath = path.Join(homeDir, ".oak_history")
+	var cacheDir string
+	if rootCacheDir, err := os.UserCacheDir(); err == nil && rootCacheDir != "" {
+		cacheDir = path.Join(rootCacheDir, "oak")
+		_, err = os.Stat(cacheDir)
+		if os.IsNotExist(err) {
+			if err := os.Mkdir(cacheDir, 0755); err != nil {
+				fmt.Println("Could not create cache directory:", cacheDir)
+				fmt.Println(err)
+				cacheDir = ""
+			}
+		}
 	}
-
+	if cacheDir != "" {
+		historyFilePath = path.Join(cacheDir, ".oak_history")
+	} else {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			historyFilePath = path.Join(homeDir, ".oak_history")
+		}
+	}
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:      "> ",
 		HistoryFile: historyFilePath,
