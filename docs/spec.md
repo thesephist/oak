@@ -125,3 +125,16 @@ block
     body: _
   })
   ```
+  
+# Math Functions
+- Trigonometric functions
+  - `sin(n)`: Calculates the sine of the angle `n`.
+  - `cos(n)`: Calculates the cosine of the angle `n`.
+  - `tan(n)`: Calculates the tangent of the angle `n`.
+- Inverse Trigonometric functions
+  - `asin(n)`: Calculates the arcsine of the value `n`.
+  - `acos(n)`: Calculates the arccosine of the value `n`.
+  - `atan(n)`: Calculates the arctangent of the value `n`.
+- Power and logarithmic functions
+  - `pow(b, n)`: Raises the base `b` to the power of `n`.
+  - `log(b, n)`: Calculates the logarithm of `n` with base `b`.
