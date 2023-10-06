@@ -1,12 +1,10 @@
-# Oak programming language
-
-This is a work-in-progress rough draft of things that will end up in a rough informal language specification.
+# Oak Programming Language Documentation
 
 ## Syntax
 
 Oak, like [Ink](https://dotink.co), has automatic comma insertion at end of lines. This means if a comma can be inserted at the end of a line, it will automatically be inserted.
 
-```
+```go
 program := expr*
 
 expr := literal | identifier |
@@ -57,7 +55,7 @@ block := '{' expr+ '}' | '(' expr* ')'
 
 ### AST node types
 
-```
+```c
 nullLiteral
 stringLiteral
 numberLiteral
@@ -76,120 +74,67 @@ ifExpr
 block
 ```
 
-## Builtin functions
+## Language Functions
 
-```
--- language
-import(path)
-string(x)
-int(x)
-float(x)
-atom(c)
-codepoint(c)
-char(n)
-type(x)
-len(x)
-keys(x)
+- `import(path)`: Imports a module located at the specified `path`.
+- `string(x)`: Converts the argument `x` to a string.
+- `int(x)`: Converts the argument `x` to an integer.
+- `float(x)`: Converts the argument `x` to a floating-point number.
+- `atom(c)`: Creates an atom with the specified character `c`.
+- `codepoint(c)`: Returns the Unicode code point of the character `c`.
+- `char(n)`: Converts the Unicode code point `n` to a character.
+- `type(x)`: Returns the type of the argument `x`.
+- `len(x)`: Returns the length of the argument `x`.
+- `keys(x)`: Returns an array of keys of the argument `x`.
 
--- os
-args()
-env()
-time() // returns float
-nanotime() // returns int
-exit(code)
-rand()
-srand(length)
-wait(duration)
-exec(path, args, stdin) // returns stdout, stderr, end events
+## OS Functions
 
----- I/O interfaces
-input()
-print()
-ls(path)
-mkdir(path)
-rm(path)
-stat(path)
-open(path, flags, perm)
-close(fd)
-read(fd, offset, length)
-write(fd, offset, data)
-close := listen(host, handler)
-req(data)
+- `args()`: Returns command-line arguments as an array of strings.
+- `env()`: Returns the environment variables as an object.
+- `time()`: Returns the current time as a float.
+- `nanotime()`: Returns the current time in nanoseconds as an integer.
+- `exit(code)`: Exits the program with the specified exit code.
+- `rand()`: Generates a random floating-point number between 0 and 1.
+- `srand(length)`: Seeds the random number generator with the specified length.
+- `wait(duration)`: Pauses the program execution for the specified duration.
+- `exec(path, args, stdin)`: Executes a command specified by `path` with the given `args` and optional standard input `stdin`. Returns stdout, stderr, and end events.
 
--- math
-sin(n)
-cos(n)
-tan(n)
-asin(n)
-acos(n)
-atan(n)
-pow(b, n)
-log(b, n)
-```
+## I/O Interfaces
 
-## Code samples
-
-```js
-// hello world
-std.println('Hello, World!')
-
-// some math
-sq := fn(n) n * n
-fn sq(n) n * n
-fn sq(n) { n * n } // equivalent
-
-// side-effecting functions
-fn say() { std.println('Hi!') }
-// if no arguments, () is optiona
-fn { std.println('Hi!') }
-
-// factorial
-fn factorial(n) if n <= 1 {
-	true -> 1
-	_ -> n * factorial(n - 1)
-}
-```
-
-```js
-// methods are emulated by pipe notation
-scores |> sum()
-names |> join(', ')
-fn sum(xs...) xs |> reduce(0, fn(a, b) a + b)
-oakFiles := fileNames |> filter(fn(name) name |> endsWith?('.oak'))
-```
-
-```js
-// "with" keyword just makes the last fn a callback as last arg
-with loop(10) fn(n) std.println(n)
-with wait(1) fn {
-	std.println('Done!')
-}
-with fetch('example.com') fn(resp) {
-	with resp.json() fn(json) {
-		std.println(json)
-	}
-}
-```
-
-```js
-// raw file read
-with open('name.txt') fn(evt) if evt.type {
-	:error -> std.println(evt.message)
-	_ -> with read(fd := evt.fd, 0, -1) fn(evt) {
-		if evt.type {
-			:error -> std.println(evt.message)
-			_ -> fmt.printf('file data: {{0}}', evt.data)
-		}
-		close(fd)
-	}
-}
-
-// with stdlib
-std := import('std')
-fs := import('fs')
-with fs.readFile('names.txt') fn(file) if file {
-	? -> std.println('[error] could not read file')
-	_ -> std.println(file)
-}
-```
-
+- `input()`: Reads input from the standard input.
+- `print()`: Writes output to the standard output.
+- `ls(path)`: Lists files and directories in the specified path.
+- `mkdir(path)`: Creates a directory at the specified path.
+- `rm(path)`: Removes the file or directory at the specified path.
+- `stat(path)`: Retrieves file or directory information at the specified path.
+- `open(path, flags, perm)`: Opens a file at the specified path with the given flags and permissions.
+- `close(fd)`: Closes the file descriptor `fd`.
+- `read(fd, offset, length)`: Reads data from the file descriptor `fd` starting at the specified `offset` and reading `length` bytes.
+- `write(fd, offset, data)`: Writes data to the file descriptor `fd` starting at the specified `offset`.
+- `close := listen(host, handler)`: Listens for incoming connections on the specified `host` and handles them with the provided `handler` function.
+- `req(data)`: Sends an HTTP request with the provided data.
+  
+  ```go
+  // Req syntax:
+  // ---
+  
+  req({
+    url: ''
+    method: 'GET'
+    headers: {}
+    body: _
+  })
+  ```
+  
+# Math Functions
+- Trigonometric functions
+  - `sin(n)`: Calculates the sine of the angle `n`.
+  - `cos(n)`: Calculates the cosine of the angle `n`.
+  - `tan(n)`: Calculates the tangent of the angle `n`.
+- Inverse Trigonometric functions
+  - `asin(n)`: Calculates the arcsine of the value `n`.
+  - `acos(n)`: Calculates the arccosine of the value `n`.
+  - `atan(n)`: Calculates the arctangent of the value `n`.
+- Power and logarithmic functions
+  - `pow(b, n)`: Raises the base `b` to the power of `n`.
+  - `log(b, n)`: Calculates the logarithm of `n` with base `b`.
